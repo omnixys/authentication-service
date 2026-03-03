@@ -61,7 +61,7 @@ jobs:
         run: |
           gh variable set CURRENT_VERSION \
             --body "$CURRENT_VERSION" \
-            --repo omnixys/omnixys-${{ vars.SERVICE }}-service
+            --repo omnixys/${{ vars.SERVICE }}-service
 
       - name: Update org variable
         env:
