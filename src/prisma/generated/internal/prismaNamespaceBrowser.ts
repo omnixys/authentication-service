@@ -59,6 +59,7 @@ export const ModelName = {
   WebAuthnCredential: 'WebAuthnCredential',
   BackupCode: 'BackupCode',
   SecurityQuestion: 'SecurityQuestion',
+  UserSecurityQuestion: 'UserSecurityQuestion',
   PasswordResetToken: 'PasswordResetToken',
   RateLimitBucket: 'RateLimitBucket',
   KnownDevice: 'KnownDevice',
@@ -136,12 +137,20 @@ export type BackupCodeScalarFieldEnum =
 export const SecurityQuestionScalarFieldEnum = {
   id: 'id',
   question: 'question',
-  answerHash: 'answerHash',
-  userId: 'userId',
 } as const;
 
 export type SecurityQuestionScalarFieldEnum =
   (typeof SecurityQuestionScalarFieldEnum)[keyof typeof SecurityQuestionScalarFieldEnum];
+
+export const UserSecurityQuestionScalarFieldEnum = {
+  id: 'id',
+  answerHash: 'answerHash',
+  userId: 'userId',
+  questionId: 'questionId',
+} as const;
+
+export type UserSecurityQuestionScalarFieldEnum =
+  (typeof UserSecurityQuestionScalarFieldEnum)[keyof typeof UserSecurityQuestionScalarFieldEnum];
 
 export const PasswordResetTokenScalarFieldEnum = {
   id: 'id',

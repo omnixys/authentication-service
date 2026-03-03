@@ -12,6 +12,7 @@ export type * from './models/TotpCredential.js';
 export type * from './models/WebAuthnCredential.js';
 export type * from './models/BackupCode.js';
 export type * from './models/SecurityQuestion.js';
+export type * from './models/UserSecurityQuestion.js';
 export type * from './models/PasswordResetToken.js';
 export type * from './models/RateLimitBucket.js';
 export type * from './models/KnownDevice.js';

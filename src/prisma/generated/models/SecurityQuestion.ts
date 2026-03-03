@@ -27,44 +27,32 @@ export type AggregateSecurityQuestion = {
 export type SecurityQuestionMinAggregateOutputType = {
   id: string | null;
   question: string | null;
-  answerHash: string | null;
-  userId: string | null;
 };
 
 export type SecurityQuestionMaxAggregateOutputType = {
   id: string | null;
   question: string | null;
-  answerHash: string | null;
-  userId: string | null;
 };
 
 export type SecurityQuestionCountAggregateOutputType = {
   id: number;
   question: number;
-  answerHash: number;
-  userId: number;
   _all: number;
 };
 
 export type SecurityQuestionMinAggregateInputType = {
   id?: true;
   question?: true;
-  answerHash?: true;
-  userId?: true;
 };
 
 export type SecurityQuestionMaxAggregateInputType = {
   id?: true;
   question?: true;
-  answerHash?: true;
-  userId?: true;
 };
 
 export type SecurityQuestionCountAggregateInputType = {
   id?: true;
   question?: true;
-  answerHash?: true;
-  userId?: true;
   _all?: true;
 };
 
@@ -154,8 +142,6 @@ export type SecurityQuestionGroupByArgs<
 export type SecurityQuestionGroupByOutputType = {
   id: string;
   question: string;
-  answerHash: string;
-  userId: string;
   _count: SecurityQuestionCountAggregateOutputType | null;
   _min: SecurityQuestionMinAggregateOutputType | null;
   _max: SecurityQuestionMaxAggregateOutputType | null;
@@ -181,25 +167,19 @@ export type SecurityQuestionWhereInput = {
   NOT?: Prisma.SecurityQuestionWhereInput | Prisma.SecurityQuestionWhereInput[];
   id?: Prisma.StringFilter<'SecurityQuestion'> | string;
   question?: Prisma.StringFilter<'SecurityQuestion'> | string;
-  answerHash?: Prisma.StringFilter<'SecurityQuestion'> | string;
-  userId?: Prisma.StringFilter<'SecurityQuestion'> | string;
-  user?: Prisma.XOR<
-    Prisma.AuthUserScalarRelationFilter,
-    Prisma.AuthUserWhereInput
-  >;
+  userAnswers?: Prisma.UserSecurityQuestionListRelationFilter;
 };
 
 export type SecurityQuestionOrderByWithRelationInput = {
   id?: Prisma.SortOrder;
   question?: Prisma.SortOrder;
-  answerHash?: Prisma.SortOrder;
-  userId?: Prisma.SortOrder;
-  user?: Prisma.AuthUserOrderByWithRelationInput;
+  userAnswers?: Prisma.UserSecurityQuestionOrderByRelationAggregateInput;
 };
 
 export type SecurityQuestionWhereUniqueInput = Prisma.AtLeast<
   {
     id?: string;
+    question?: string;
     AND?:
       | Prisma.SecurityQuestionWhereInput
       | Prisma.SecurityQuestionWhereInput[];
@@ -207,22 +187,14 @@ export type SecurityQuestionWhereUniqueInput = Prisma.AtLeast<
     NOT?:
       | Prisma.SecurityQuestionWhereInput
       | Prisma.SecurityQuestionWhereInput[];
-    question?: Prisma.StringFilter<'SecurityQuestion'> | string;
-    answerHash?: Prisma.StringFilter<'SecurityQuestion'> | string;
-    userId?: Prisma.StringFilter<'SecurityQuestion'> | string;
-    user?: Prisma.XOR<
-      Prisma.AuthUserScalarRelationFilter,
-      Prisma.AuthUserWhereInput
-    >;
+    userAnswers?: Prisma.UserSecurityQuestionListRelationFilter;
   },
-  'id'
+  'id' | 'question'
 >;
 
 export type SecurityQuestionOrderByWithAggregationInput = {
   id?: Prisma.SortOrder;
   question?: Prisma.SortOrder;
-  answerHash?: Prisma.SortOrder;
-  userId?: Prisma.SortOrder;
   _count?: Prisma.SecurityQuestionCountOrderByAggregateInput;
   _max?: Prisma.SecurityQuestionMaxOrderByAggregateInput;
   _min?: Prisma.SecurityQuestionMinOrderByAggregateInput;
@@ -238,290 +210,177 @@ export type SecurityQuestionScalarWhereWithAggregatesInput = {
     | Prisma.SecurityQuestionScalarWhereWithAggregatesInput[];
   id?: Prisma.StringWithAggregatesFilter<'SecurityQuestion'> | string;
   question?: Prisma.StringWithAggregatesFilter<'SecurityQuestion'> | string;
-  answerHash?: Prisma.StringWithAggregatesFilter<'SecurityQuestion'> | string;
-  userId?: Prisma.StringWithAggregatesFilter<'SecurityQuestion'> | string;
 };
 
 export type SecurityQuestionCreateInput = {
   id?: string;
   question: string;
-  answerHash: string;
-  user: Prisma.AuthUserCreateNestedOneWithoutSecurityQuestionsInput;
+  userAnswers?: Prisma.UserSecurityQuestionCreateNestedManyWithoutQuestionInput;
 };
 
 export type SecurityQuestionUncheckedCreateInput = {
   id?: string;
   question: string;
-  answerHash: string;
-  userId: string;
+  userAnswers?: Prisma.UserSecurityQuestionUncheckedCreateNestedManyWithoutQuestionInput;
 };
 
 export type SecurityQuestionUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string;
   question?: Prisma.StringFieldUpdateOperationsInput | string;
-  answerHash?: Prisma.StringFieldUpdateOperationsInput | string;
-  user?: Prisma.AuthUserUpdateOneRequiredWithoutSecurityQuestionsNestedInput;
+  userAnswers?: Prisma.UserSecurityQuestionUpdateManyWithoutQuestionNestedInput;
 };
 
 export type SecurityQuestionUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string;
   question?: Prisma.StringFieldUpdateOperationsInput | string;
-  answerHash?: Prisma.StringFieldUpdateOperationsInput | string;
-  userId?: Prisma.StringFieldUpdateOperationsInput | string;
+  userAnswers?: Prisma.UserSecurityQuestionUncheckedUpdateManyWithoutQuestionNestedInput;
 };
 
 export type SecurityQuestionCreateManyInput = {
   id?: string;
   question: string;
-  answerHash: string;
-  userId: string;
 };
 
 export type SecurityQuestionUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string;
   question?: Prisma.StringFieldUpdateOperationsInput | string;
-  answerHash?: Prisma.StringFieldUpdateOperationsInput | string;
 };
 
 export type SecurityQuestionUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string;
   question?: Prisma.StringFieldUpdateOperationsInput | string;
-  answerHash?: Prisma.StringFieldUpdateOperationsInput | string;
-  userId?: Prisma.StringFieldUpdateOperationsInput | string;
-};
-
-export type SecurityQuestionListRelationFilter = {
-  every?: Prisma.SecurityQuestionWhereInput;
-  some?: Prisma.SecurityQuestionWhereInput;
-  none?: Prisma.SecurityQuestionWhereInput;
-};
-
-export type SecurityQuestionOrderByRelationAggregateInput = {
-  _count?: Prisma.SortOrder;
 };
 
 export type SecurityQuestionCountOrderByAggregateInput = {
   id?: Prisma.SortOrder;
   question?: Prisma.SortOrder;
-  answerHash?: Prisma.SortOrder;
-  userId?: Prisma.SortOrder;
 };
 
 export type SecurityQuestionMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder;
   question?: Prisma.SortOrder;
-  answerHash?: Prisma.SortOrder;
-  userId?: Prisma.SortOrder;
 };
 
 export type SecurityQuestionMinOrderByAggregateInput = {
   id?: Prisma.SortOrder;
   question?: Prisma.SortOrder;
-  answerHash?: Prisma.SortOrder;
-  userId?: Prisma.SortOrder;
 };
 
-export type SecurityQuestionCreateNestedManyWithoutUserInput = {
-  create?:
-    | Prisma.XOR<
-        Prisma.SecurityQuestionCreateWithoutUserInput,
-        Prisma.SecurityQuestionUncheckedCreateWithoutUserInput
-      >
-    | Prisma.SecurityQuestionCreateWithoutUserInput[]
-    | Prisma.SecurityQuestionUncheckedCreateWithoutUserInput[];
-  connectOrCreate?:
-    | Prisma.SecurityQuestionCreateOrConnectWithoutUserInput
-    | Prisma.SecurityQuestionCreateOrConnectWithoutUserInput[];
-  createMany?: Prisma.SecurityQuestionCreateManyUserInputEnvelope;
-  connect?:
-    | Prisma.SecurityQuestionWhereUniqueInput
-    | Prisma.SecurityQuestionWhereUniqueInput[];
+export type SecurityQuestionScalarRelationFilter = {
+  is?: Prisma.SecurityQuestionWhereInput;
+  isNot?: Prisma.SecurityQuestionWhereInput;
 };
 
-export type SecurityQuestionUncheckedCreateNestedManyWithoutUserInput = {
-  create?:
-    | Prisma.XOR<
-        Prisma.SecurityQuestionCreateWithoutUserInput,
-        Prisma.SecurityQuestionUncheckedCreateWithoutUserInput
-      >
-    | Prisma.SecurityQuestionCreateWithoutUserInput[]
-    | Prisma.SecurityQuestionUncheckedCreateWithoutUserInput[];
-  connectOrCreate?:
-    | Prisma.SecurityQuestionCreateOrConnectWithoutUserInput
-    | Prisma.SecurityQuestionCreateOrConnectWithoutUserInput[];
-  createMany?: Prisma.SecurityQuestionCreateManyUserInputEnvelope;
-  connect?:
-    | Prisma.SecurityQuestionWhereUniqueInput
-    | Prisma.SecurityQuestionWhereUniqueInput[];
+export type SecurityQuestionCreateNestedOneWithoutUserAnswersInput = {
+  create?: Prisma.XOR<
+    Prisma.SecurityQuestionCreateWithoutUserAnswersInput,
+    Prisma.SecurityQuestionUncheckedCreateWithoutUserAnswersInput
+  >;
+  connectOrCreate?: Prisma.SecurityQuestionCreateOrConnectWithoutUserAnswersInput;
+  connect?: Prisma.SecurityQuestionWhereUniqueInput;
 };
 
-export type SecurityQuestionUpdateManyWithoutUserNestedInput = {
-  create?:
-    | Prisma.XOR<
-        Prisma.SecurityQuestionCreateWithoutUserInput,
-        Prisma.SecurityQuestionUncheckedCreateWithoutUserInput
-      >
-    | Prisma.SecurityQuestionCreateWithoutUserInput[]
-    | Prisma.SecurityQuestionUncheckedCreateWithoutUserInput[];
-  connectOrCreate?:
-    | Prisma.SecurityQuestionCreateOrConnectWithoutUserInput
-    | Prisma.SecurityQuestionCreateOrConnectWithoutUserInput[];
-  upsert?:
-    | Prisma.SecurityQuestionUpsertWithWhereUniqueWithoutUserInput
-    | Prisma.SecurityQuestionUpsertWithWhereUniqueWithoutUserInput[];
-  createMany?: Prisma.SecurityQuestionCreateManyUserInputEnvelope;
-  set?:
-    | Prisma.SecurityQuestionWhereUniqueInput
-    | Prisma.SecurityQuestionWhereUniqueInput[];
-  disconnect?:
-    | Prisma.SecurityQuestionWhereUniqueInput
-    | Prisma.SecurityQuestionWhereUniqueInput[];
-  delete?:
-    | Prisma.SecurityQuestionWhereUniqueInput
-    | Prisma.SecurityQuestionWhereUniqueInput[];
-  connect?:
-    | Prisma.SecurityQuestionWhereUniqueInput
-    | Prisma.SecurityQuestionWhereUniqueInput[];
-  update?:
-    | Prisma.SecurityQuestionUpdateWithWhereUniqueWithoutUserInput
-    | Prisma.SecurityQuestionUpdateWithWhereUniqueWithoutUserInput[];
-  updateMany?:
-    | Prisma.SecurityQuestionUpdateManyWithWhereWithoutUserInput
-    | Prisma.SecurityQuestionUpdateManyWithWhereWithoutUserInput[];
-  deleteMany?:
-    | Prisma.SecurityQuestionScalarWhereInput
-    | Prisma.SecurityQuestionScalarWhereInput[];
-};
-
-export type SecurityQuestionUncheckedUpdateManyWithoutUserNestedInput = {
-  create?:
-    | Prisma.XOR<
-        Prisma.SecurityQuestionCreateWithoutUserInput,
-        Prisma.SecurityQuestionUncheckedCreateWithoutUserInput
-      >
-    | Prisma.SecurityQuestionCreateWithoutUserInput[]
-    | Prisma.SecurityQuestionUncheckedCreateWithoutUserInput[];
-  connectOrCreate?:
-    | Prisma.SecurityQuestionCreateOrConnectWithoutUserInput
-    | Prisma.SecurityQuestionCreateOrConnectWithoutUserInput[];
-  upsert?:
-    | Prisma.SecurityQuestionUpsertWithWhereUniqueWithoutUserInput
-    | Prisma.SecurityQuestionUpsertWithWhereUniqueWithoutUserInput[];
-  createMany?: Prisma.SecurityQuestionCreateManyUserInputEnvelope;
-  set?:
-    | Prisma.SecurityQuestionWhereUniqueInput
-    | Prisma.SecurityQuestionWhereUniqueInput[];
-  disconnect?:
-    | Prisma.SecurityQuestionWhereUniqueInput
-    | Prisma.SecurityQuestionWhereUniqueInput[];
-  delete?:
-    | Prisma.SecurityQuestionWhereUniqueInput
-    | Prisma.SecurityQuestionWhereUniqueInput[];
-  connect?:
-    | Prisma.SecurityQuestionWhereUniqueInput
-    | Prisma.SecurityQuestionWhereUniqueInput[];
-  update?:
-    | Prisma.SecurityQuestionUpdateWithWhereUniqueWithoutUserInput
-    | Prisma.SecurityQuestionUpdateWithWhereUniqueWithoutUserInput[];
-  updateMany?:
-    | Prisma.SecurityQuestionUpdateManyWithWhereWithoutUserInput
-    | Prisma.SecurityQuestionUpdateManyWithWhereWithoutUserInput[];
-  deleteMany?:
-    | Prisma.SecurityQuestionScalarWhereInput
-    | Prisma.SecurityQuestionScalarWhereInput[];
-};
-
-export type SecurityQuestionCreateWithoutUserInput = {
-  id?: string;
-  question: string;
-  answerHash: string;
-};
-
-export type SecurityQuestionUncheckedCreateWithoutUserInput = {
-  id?: string;
-  question: string;
-  answerHash: string;
-};
-
-export type SecurityQuestionCreateOrConnectWithoutUserInput = {
-  where: Prisma.SecurityQuestionWhereUniqueInput;
-  create: Prisma.XOR<
-    Prisma.SecurityQuestionCreateWithoutUserInput,
-    Prisma.SecurityQuestionUncheckedCreateWithoutUserInput
+export type SecurityQuestionUpdateOneRequiredWithoutUserAnswersNestedInput = {
+  create?: Prisma.XOR<
+    Prisma.SecurityQuestionCreateWithoutUserAnswersInput,
+    Prisma.SecurityQuestionUncheckedCreateWithoutUserAnswersInput
+  >;
+  connectOrCreate?: Prisma.SecurityQuestionCreateOrConnectWithoutUserAnswersInput;
+  upsert?: Prisma.SecurityQuestionUpsertWithoutUserAnswersInput;
+  connect?: Prisma.SecurityQuestionWhereUniqueInput;
+  update?: Prisma.XOR<
+    Prisma.XOR<
+      Prisma.SecurityQuestionUpdateToOneWithWhereWithoutUserAnswersInput,
+      Prisma.SecurityQuestionUpdateWithoutUserAnswersInput
+    >,
+    Prisma.SecurityQuestionUncheckedUpdateWithoutUserAnswersInput
   >;
 };
 
-export type SecurityQuestionCreateManyUserInputEnvelope = {
-  data:
-    | Prisma.SecurityQuestionCreateManyUserInput
-    | Prisma.SecurityQuestionCreateManyUserInput[];
-  skipDuplicates?: boolean;
+export type SecurityQuestionCreateWithoutUserAnswersInput = {
+  id?: string;
+  question: string;
 };
 
-export type SecurityQuestionUpsertWithWhereUniqueWithoutUserInput = {
+export type SecurityQuestionUncheckedCreateWithoutUserAnswersInput = {
+  id?: string;
+  question: string;
+};
+
+export type SecurityQuestionCreateOrConnectWithoutUserAnswersInput = {
   where: Prisma.SecurityQuestionWhereUniqueInput;
+  create: Prisma.XOR<
+    Prisma.SecurityQuestionCreateWithoutUserAnswersInput,
+    Prisma.SecurityQuestionUncheckedCreateWithoutUserAnswersInput
+  >;
+};
+
+export type SecurityQuestionUpsertWithoutUserAnswersInput = {
   update: Prisma.XOR<
-    Prisma.SecurityQuestionUpdateWithoutUserInput,
-    Prisma.SecurityQuestionUncheckedUpdateWithoutUserInput
+    Prisma.SecurityQuestionUpdateWithoutUserAnswersInput,
+    Prisma.SecurityQuestionUncheckedUpdateWithoutUserAnswersInput
   >;
   create: Prisma.XOR<
-    Prisma.SecurityQuestionCreateWithoutUserInput,
-    Prisma.SecurityQuestionUncheckedCreateWithoutUserInput
+    Prisma.SecurityQuestionCreateWithoutUserAnswersInput,
+    Prisma.SecurityQuestionUncheckedCreateWithoutUserAnswersInput
   >;
+  where?: Prisma.SecurityQuestionWhereInput;
 };
 
-export type SecurityQuestionUpdateWithWhereUniqueWithoutUserInput = {
-  where: Prisma.SecurityQuestionWhereUniqueInput;
+export type SecurityQuestionUpdateToOneWithWhereWithoutUserAnswersInput = {
+  where?: Prisma.SecurityQuestionWhereInput;
   data: Prisma.XOR<
-    Prisma.SecurityQuestionUpdateWithoutUserInput,
-    Prisma.SecurityQuestionUncheckedUpdateWithoutUserInput
+    Prisma.SecurityQuestionUpdateWithoutUserAnswersInput,
+    Prisma.SecurityQuestionUncheckedUpdateWithoutUserAnswersInput
   >;
 };
 
-export type SecurityQuestionUpdateManyWithWhereWithoutUserInput = {
-  where: Prisma.SecurityQuestionScalarWhereInput;
-  data: Prisma.XOR<
-    Prisma.SecurityQuestionUpdateManyMutationInput,
-    Prisma.SecurityQuestionUncheckedUpdateManyWithoutUserInput
-  >;
-};
-
-export type SecurityQuestionScalarWhereInput = {
-  AND?:
-    | Prisma.SecurityQuestionScalarWhereInput
-    | Prisma.SecurityQuestionScalarWhereInput[];
-  OR?: Prisma.SecurityQuestionScalarWhereInput[];
-  NOT?:
-    | Prisma.SecurityQuestionScalarWhereInput
-    | Prisma.SecurityQuestionScalarWhereInput[];
-  id?: Prisma.StringFilter<'SecurityQuestion'> | string;
-  question?: Prisma.StringFilter<'SecurityQuestion'> | string;
-  answerHash?: Prisma.StringFilter<'SecurityQuestion'> | string;
-  userId?: Prisma.StringFilter<'SecurityQuestion'> | string;
-};
-
-export type SecurityQuestionCreateManyUserInput = {
-  id?: string;
-  question: string;
-  answerHash: string;
-};
-
-export type SecurityQuestionUpdateWithoutUserInput = {
+export type SecurityQuestionUpdateWithoutUserAnswersInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string;
   question?: Prisma.StringFieldUpdateOperationsInput | string;
-  answerHash?: Prisma.StringFieldUpdateOperationsInput | string;
 };
 
-export type SecurityQuestionUncheckedUpdateWithoutUserInput = {
+export type SecurityQuestionUncheckedUpdateWithoutUserAnswersInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string;
   question?: Prisma.StringFieldUpdateOperationsInput | string;
-  answerHash?: Prisma.StringFieldUpdateOperationsInput | string;
 };
 
-export type SecurityQuestionUncheckedUpdateManyWithoutUserInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string;
-  question?: Prisma.StringFieldUpdateOperationsInput | string;
-  answerHash?: Prisma.StringFieldUpdateOperationsInput | string;
+/**
+ * Count Type SecurityQuestionCountOutputType
+ */
+
+export type SecurityQuestionCountOutputType = {
+  userAnswers: number;
+};
+
+export type SecurityQuestionCountOutputTypeSelect<
+  ExtArgs extends runtime.Types.Extensions.InternalArgs =
+    runtime.Types.Extensions.DefaultArgs,
+> = {
+  userAnswers?: boolean | SecurityQuestionCountOutputTypeCountUserAnswersArgs;
+};
+
+/**
+ * SecurityQuestionCountOutputType without action
+ */
+export type SecurityQuestionCountOutputTypeDefaultArgs<
+  ExtArgs extends runtime.Types.Extensions.InternalArgs =
+    runtime.Types.Extensions.DefaultArgs,
+> = {
+  /**
+   * Select specific fields to fetch from the SecurityQuestionCountOutputType
+   */
+  select?: Prisma.SecurityQuestionCountOutputTypeSelect<ExtArgs> | null;
+};
+
+/**
+ * SecurityQuestionCountOutputType without action
+ */
+export type SecurityQuestionCountOutputTypeCountUserAnswersArgs<
+  ExtArgs extends runtime.Types.Extensions.InternalArgs =
+    runtime.Types.Extensions.DefaultArgs,
+> = {
+  where?: Prisma.UserSecurityQuestionWhereInput;
 };
 
 export type SecurityQuestionSelect<
@@ -531,9 +390,10 @@ export type SecurityQuestionSelect<
   {
     id?: boolean;
     question?: boolean;
-    answerHash?: boolean;
-    userId?: boolean;
-    user?: boolean | Prisma.AuthUserDefaultArgs<ExtArgs>;
+    userAnswers?: boolean | Prisma.SecurityQuestion$userAnswersArgs<ExtArgs>;
+    _count?:
+      | boolean
+      | Prisma.SecurityQuestionCountOutputTypeDefaultArgs<ExtArgs>;
   },
   ExtArgs['result']['securityQuestion']
 >;
@@ -545,9 +405,6 @@ export type SecurityQuestionSelectCreateManyAndReturn<
   {
     id?: boolean;
     question?: boolean;
-    answerHash?: boolean;
-    userId?: boolean;
-    user?: boolean | Prisma.AuthUserDefaultArgs<ExtArgs>;
   },
   ExtArgs['result']['securityQuestion']
 >;
@@ -559,9 +416,6 @@ export type SecurityQuestionSelectUpdateManyAndReturn<
   {
     id?: boolean;
     question?: boolean;
-    answerHash?: boolean;
-    userId?: boolean;
-    user?: boolean | Prisma.AuthUserDefaultArgs<ExtArgs>;
   },
   ExtArgs['result']['securityQuestion']
 >;
@@ -569,35 +423,30 @@ export type SecurityQuestionSelectUpdateManyAndReturn<
 export type SecurityQuestionSelectScalar = {
   id?: boolean;
   question?: boolean;
-  answerHash?: boolean;
-  userId?: boolean;
 };
 
 export type SecurityQuestionOmit<
   ExtArgs extends runtime.Types.Extensions.InternalArgs =
     runtime.Types.Extensions.DefaultArgs,
 > = runtime.Types.Extensions.GetOmit<
-  'id' | 'question' | 'answerHash' | 'userId',
+  'id' | 'question',
   ExtArgs['result']['securityQuestion']
 >;
 export type SecurityQuestionInclude<
   ExtArgs extends runtime.Types.Extensions.InternalArgs =
     runtime.Types.Extensions.DefaultArgs,
 > = {
-  user?: boolean | Prisma.AuthUserDefaultArgs<ExtArgs>;
+  userAnswers?: boolean | Prisma.SecurityQuestion$userAnswersArgs<ExtArgs>;
+  _count?: boolean | Prisma.SecurityQuestionCountOutputTypeDefaultArgs<ExtArgs>;
 };
 export type SecurityQuestionIncludeCreateManyAndReturn<
   ExtArgs extends runtime.Types.Extensions.InternalArgs =
     runtime.Types.Extensions.DefaultArgs,
-> = {
-  user?: boolean | Prisma.AuthUserDefaultArgs<ExtArgs>;
-};
+> = {};
 export type SecurityQuestionIncludeUpdateManyAndReturn<
   ExtArgs extends runtime.Types.Extensions.InternalArgs =
     runtime.Types.Extensions.DefaultArgs,
-> = {
-  user?: boolean | Prisma.AuthUserDefaultArgs<ExtArgs>;
-};
+> = {};
 
 export type $SecurityQuestionPayload<
   ExtArgs extends runtime.Types.Extensions.InternalArgs =
@@ -605,14 +454,12 @@ export type $SecurityQuestionPayload<
 > = {
   name: 'SecurityQuestion';
   objects: {
-    user: Prisma.$AuthUserPayload<ExtArgs>;
+    userAnswers: Prisma.$UserSecurityQuestionPayload<ExtArgs>[];
   };
   scalars: runtime.Types.Extensions.GetPayloadResult<
     {
       id: string;
       question: string;
-      answerHash: string;
-      userId: string;
     },
     ExtArgs['result']['securityQuestion']
   >;
@@ -1185,19 +1032,16 @@ export interface Prisma__SecurityQuestionClient<
   GlobalOmitOptions = {},
 > extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: 'PrismaPromise';
-  user<T extends Prisma.AuthUserDefaultArgs<ExtArgs> = {}>(
-    args?: Prisma.Subset<T, Prisma.AuthUserDefaultArgs<ExtArgs>>,
-  ): Prisma.Prisma__AuthUserClient<
+  userAnswers<T extends Prisma.SecurityQuestion$userAnswersArgs<ExtArgs> = {}>(
+    args?: Prisma.Subset<T, Prisma.SecurityQuestion$userAnswersArgs<ExtArgs>>,
+  ): Prisma.PrismaPromise<
     | runtime.Types.Result.GetResult<
-        Prisma.$AuthUserPayload<ExtArgs>,
+        Prisma.$UserSecurityQuestionPayload<ExtArgs>,
         T,
-        'findUniqueOrThrow',
+        'findMany',
         GlobalOmitOptions
       >
-    | Null,
-    Null,
-    ExtArgs,
-    GlobalOmitOptions
+    | Null
   >;
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
@@ -1243,8 +1087,6 @@ export interface Prisma__SecurityQuestionClient<
 export interface SecurityQuestionFieldRefs {
   readonly id: Prisma.FieldRef<'SecurityQuestion', 'String'>;
   readonly question: Prisma.FieldRef<'SecurityQuestion', 'String'>;
-  readonly answerHash: Prisma.FieldRef<'SecurityQuestion', 'String'>;
-  readonly userId: Prisma.FieldRef<'SecurityQuestion', 'String'>;
 }
 
 // Custom InputTypes
@@ -1536,10 +1378,6 @@ export type SecurityQuestionCreateManyAndReturnArgs<
     | Prisma.SecurityQuestionCreateManyInput
     | Prisma.SecurityQuestionCreateManyInput[];
   skipDuplicates?: boolean;
-  /**
-   * Choose, which related nodes to fetch as well
-   */
-  include?: Prisma.SecurityQuestionIncludeCreateManyAndReturn<ExtArgs> | null;
 };
 
 /**
@@ -1628,10 +1466,6 @@ export type SecurityQuestionUpdateManyAndReturnArgs<
    * Limit how many SecurityQuestions to update.
    */
   limit?: number;
-  /**
-   * Choose, which related nodes to fetch as well
-   */
-  include?: Prisma.SecurityQuestionIncludeUpdateManyAndReturn<ExtArgs> | null;
 };
 
 /**
@@ -1713,6 +1547,37 @@ export type SecurityQuestionDeleteManyArgs<
    * Limit how many SecurityQuestions to delete.
    */
   limit?: number;
+};
+
+/**
+ * SecurityQuestion.userAnswers
+ */
+export type SecurityQuestion$userAnswersArgs<
+  ExtArgs extends runtime.Types.Extensions.InternalArgs =
+    runtime.Types.Extensions.DefaultArgs,
+> = {
+  /**
+   * Select specific fields to fetch from the UserSecurityQuestion
+   */
+  select?: Prisma.UserSecurityQuestionSelect<ExtArgs> | null;
+  /**
+   * Omit specific fields from the UserSecurityQuestion
+   */
+  omit?: Prisma.UserSecurityQuestionOmit<ExtArgs> | null;
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.UserSecurityQuestionInclude<ExtArgs> | null;
+  where?: Prisma.UserSecurityQuestionWhereInput;
+  orderBy?:
+    | Prisma.UserSecurityQuestionOrderByWithRelationInput
+    | Prisma.UserSecurityQuestionOrderByWithRelationInput[];
+  cursor?: Prisma.UserSecurityQuestionWhereUniqueInput;
+  take?: number;
+  skip?: number;
+  distinct?:
+    | Prisma.UserSecurityQuestionScalarFieldEnum
+    | Prisma.UserSecurityQuestionScalarFieldEnum[];
 };
 
 /**

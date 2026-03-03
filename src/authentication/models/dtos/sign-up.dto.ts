@@ -15,8 +15,8 @@
  * For more information, visit <https://www.gnu.org/licenses/>.
  */
 
-import type { PhoneNumberInput } from '../inputs/phone-number.input.js';
 import { Field, InputType } from '@nestjs/graphql';
+import { PhoneNumberInput } from '@omnixys/graphql';
 import { IsEmail, IsString, Length } from 'class-validator';
 
 export interface GuestSignUpDTO {

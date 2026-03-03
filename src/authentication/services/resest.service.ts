@@ -1,7 +1,10 @@
+/* eslint-disable @typescript-eslint/no-unsafe-enum-comparison */
+
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
 
 import { KafkaProducerService } from '../../kafka/kafka-producer.service.js';
 import { LoggerPlusService } from '../../logger/logger-plus.service.js';
+import { ResetTokenState } from '../../prisma/generated/client.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { TraceContextProvider } from '../../trace/trace-context.provider.js';
 import { RequestMeta } from '../models/dtos/request-meta.dto.js';
@@ -63,8 +66,16 @@ export class ResetService extends AuthenticateBaseService {
 
       // 3) optionally invalidate previous tokens to reduce attack surface
       await this.prisma.passwordResetToken.updateMany({
-        where: { userId: user.id, usedAt: null, locked: false },
-        data: { locked: true, state: 'EXPIRED' },
+        where: {
+          userId: user.id,
+          state: {
+            notIn: [ResetTokenState.COMPLETED, ResetTokenState.LOCKED, ResetTokenState.EXPIRED],
+          },
+        },
+        data: {
+          state: ResetTokenState.EXPIRED,
+          usedAt: new Date(),
+        },
       });
 
       // 4) create token
@@ -101,18 +112,18 @@ export class ResetService extends AuthenticateBaseService {
     return this.withSpan('reset.verify-token', async () => {
       const token = await this.validateAndLoadToken(rawToken);
 
-      if (token.state !== 'ISSUED') {
+      if (token.state !== ResetTokenState.ISSUED) {
         throw new UnauthorizedException('Invalid token state');
       }
 
       await this.prisma.passwordResetToken.update({
         where: { id: token.id },
-        data: { state: 'TOKEN_VERIFIED' },
+        data: { state: ResetTokenState.TOKEN_VERIFIED },
       });
 
       return {
         resetId: token.id, // recommended
-        mfaRequired: token.user.mfaPreference !== 'NONE',
+        mfaRequired: token.user.mfaPreference !== MfaPreference.NONE,
         mfaMethod: token.user.mfaPreference as MfaPreference,
       };
     });
@@ -124,7 +135,7 @@ export class ResetService extends AuthenticateBaseService {
       const token = await this.validateAndLoadToken(input.token);
 
       // Enforce correct flow order
-      if (token.state !== 'TOKEN_VERIFIED') {
+      if (token.state !== ResetTokenState.TOKEN_VERIFIED) {
         throw new UnauthorizedException('Invalid token state');
       }
 
@@ -202,7 +213,7 @@ export class ResetService extends AuthenticateBaseService {
         // Step-up succeeded -> transition state
         await this.prisma.passwordResetToken.update({
           where: { id: token.id },
-          data: { state: 'STEPUP_VERIFIED' },
+          data: { state: ResetTokenState.STEP_UP_VERIFIED },
         });
       } catch (e) {
         // On any step-up failure: register attempt on token + user
@@ -213,7 +224,8 @@ export class ResetService extends AuthenticateBaseService {
         if (e instanceof BadRequestException) {
           throw e;
         }
-        throw new UnauthorizedException(`Step-up verification failed: ${(e as Error).message}`);
+        this.logger.error(`Step-up verification failed: ${(e as Error).message}`);
+        throw new UnauthorizedException('Step-up verification failed');
       }
     });
   }
@@ -223,7 +235,7 @@ export class ResetService extends AuthenticateBaseService {
       const token = await this.validateAndLoadToken(input.token);
 
       // 1️⃣ Enforce correct flow state
-      if (token.state !== 'STEPUP_VERIFIED') {
+      if (token.state !== ResetTokenState.STEP_UP_VERIFIED) {
         throw new UnauthorizedException('Step-up verification required');
       }
 
@@ -255,7 +267,7 @@ export class ResetService extends AuthenticateBaseService {
       await this.prisma.passwordResetToken.update({
         where: { id: token.id },
         data: {
-          state: 'COMPLETED',
+          state: ResetTokenState.COMPLETED,
           usedAt: new Date(),
         },
       });
@@ -288,14 +300,18 @@ export class ResetService extends AuthenticateBaseService {
       throw new UnauthorizedException();
     }
 
-    if (token.locked) {
+    if (token.state === ResetTokenState.LOCKED) {
       throw new UnauthorizedException('Token locked');
+    }
+
+    if (token.state === ResetTokenState.EXPIRED) {
+      throw new UnauthorizedException('Token expired');
     }
 
     if (token.expiresAt < new Date()) {
       await this.prisma.passwordResetToken.update({
         where: { id: token.id },
-        data: { locked: true, state: 'EXPIRED' },
+        data: { state: ResetTokenState.EXPIRED },
       });
       throw new UnauthorizedException('Token expired');
     }
@@ -312,7 +328,7 @@ export class ResetService extends AuthenticateBaseService {
     if (token.attempts >= 5) {
       await this.prisma.passwordResetToken.update({
         where: { id: tokenId },
-        data: { locked: true, state: 'LOCKED' },
+        data: { state: ResetTokenState.LOCKED },
       });
     }
   }
@@ -321,14 +337,12 @@ export class ResetService extends AuthenticateBaseService {
     await this.prisma.passwordResetToken.updateMany({
       where: {
         userId,
-        usedAt: null,
         state: {
-          notIn: ['COMPLETED', 'LOCKED', 'EXPIRED'],
+          notIn: [ResetTokenState.COMPLETED, ResetTokenState.LOCKED, ResetTokenState.EXPIRED],
         },
       },
       data: {
-        state: 'LOCKED',
-        locked: true,
+        state: ResetTokenState.LOCKED,
         usedAt: new Date(),
       },
     });

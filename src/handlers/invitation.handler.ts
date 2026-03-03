@@ -19,7 +19,6 @@
  */
 import { GuestSignUpDTO } from '../authentication/models/dtos/sign-up.dto.js';
 import { PhoneNumberType } from '../authentication/models/enums/phone-number-type.enum.js';
-import { PhoneNumberInput } from '../authentication/models/inputs/phone-number.input.js';
 import { PendingContactService } from '../authentication/services/pending-contact.service.js';
 import { UserWriteService } from '../authentication/services/user-write.service.js';
 import {
@@ -33,6 +32,7 @@ import {
 import { getTopic, getTopics } from '../kafka/kafka-topic.properties.js';
 import { LoggerPlusService } from '../logger/logger-plus.service.js';
 import { Injectable } from '@nestjs/common';
+import { PhoneNumberInput } from '@omnixys/graphql';
 
 /**
  * Kafka event handler responsible for useristrative commands such as
@@ -157,6 +157,7 @@ export class InvitationHandler implements KafkaEventHandler {
       // Convert: value -> number
       out.push({
         type: kind as PhoneNumberType,
+        countryCode: 'DE',
         number: rawValue, // <-- the correct field for PhoneNumberInput
         isPrimary,
         label,

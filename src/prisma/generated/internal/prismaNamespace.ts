@@ -93,12 +93,12 @@ export type PrismaVersion = {
 };
 
 /**
- * Prisma Client JS version: 7.4.1
- * Query Engine version: 55ae170b1ced7fc6ed07a15f110549408c501bb3
+ * Prisma Client JS version: 7.4.2
+ * Query Engine version: 94a226be1cf2967af2541cca5529f0f7ba866919
  */
 export const prismaVersion: PrismaVersion = {
-  client: '7.4.1',
-  engine: '55ae170b1ced7fc6ed07a15f110549408c501bb3',
+  client: '7.4.2',
+  engine: '94a226be1cf2967af2541cca5529f0f7ba866919',
 };
 
 /**
@@ -417,6 +417,7 @@ export const ModelName = {
   WebAuthnCredential: 'WebAuthnCredential',
   BackupCode: 'BackupCode',
   SecurityQuestion: 'SecurityQuestion',
+  UserSecurityQuestion: 'UserSecurityQuestion',
   PasswordResetToken: 'PasswordResetToken',
   RateLimitBucket: 'RateLimitBucket',
   KnownDevice: 'KnownDevice',
@@ -449,6 +450,7 @@ export type TypeMap<
       | 'webAuthnCredential'
       | 'backupCode'
       | 'securityQuestion'
+      | 'userSecurityQuestion'
       | 'passwordResetToken'
       | 'rateLimitBucket'
       | 'knownDevice'
@@ -833,6 +835,82 @@ export type TypeMap<
           args: Prisma.SecurityQuestionCountArgs<ExtArgs>;
           result:
             | runtime.Types.Utils.Optional<Prisma.SecurityQuestionCountAggregateOutputType>
+            | number;
+        };
+      };
+    };
+    UserSecurityQuestion: {
+      payload: Prisma.$UserSecurityQuestionPayload<ExtArgs>;
+      fields: Prisma.UserSecurityQuestionFieldRefs;
+      operations: {
+        findUnique: {
+          args: Prisma.UserSecurityQuestionFindUniqueArgs<ExtArgs>;
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserSecurityQuestionPayload> | null;
+        };
+        findUniqueOrThrow: {
+          args: Prisma.UserSecurityQuestionFindUniqueOrThrowArgs<ExtArgs>;
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserSecurityQuestionPayload>;
+        };
+        findFirst: {
+          args: Prisma.UserSecurityQuestionFindFirstArgs<ExtArgs>;
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserSecurityQuestionPayload> | null;
+        };
+        findFirstOrThrow: {
+          args: Prisma.UserSecurityQuestionFindFirstOrThrowArgs<ExtArgs>;
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserSecurityQuestionPayload>;
+        };
+        findMany: {
+          args: Prisma.UserSecurityQuestionFindManyArgs<ExtArgs>;
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserSecurityQuestionPayload>[];
+        };
+        create: {
+          args: Prisma.UserSecurityQuestionCreateArgs<ExtArgs>;
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserSecurityQuestionPayload>;
+        };
+        createMany: {
+          args: Prisma.UserSecurityQuestionCreateManyArgs<ExtArgs>;
+          result: BatchPayload;
+        };
+        createManyAndReturn: {
+          args: Prisma.UserSecurityQuestionCreateManyAndReturnArgs<ExtArgs>;
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserSecurityQuestionPayload>[];
+        };
+        delete: {
+          args: Prisma.UserSecurityQuestionDeleteArgs<ExtArgs>;
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserSecurityQuestionPayload>;
+        };
+        update: {
+          args: Prisma.UserSecurityQuestionUpdateArgs<ExtArgs>;
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserSecurityQuestionPayload>;
+        };
+        deleteMany: {
+          args: Prisma.UserSecurityQuestionDeleteManyArgs<ExtArgs>;
+          result: BatchPayload;
+        };
+        updateMany: {
+          args: Prisma.UserSecurityQuestionUpdateManyArgs<ExtArgs>;
+          result: BatchPayload;
+        };
+        updateManyAndReturn: {
+          args: Prisma.UserSecurityQuestionUpdateManyAndReturnArgs<ExtArgs>;
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserSecurityQuestionPayload>[];
+        };
+        upsert: {
+          args: Prisma.UserSecurityQuestionUpsertArgs<ExtArgs>;
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserSecurityQuestionPayload>;
+        };
+        aggregate: {
+          args: Prisma.UserSecurityQuestionAggregateArgs<ExtArgs>;
+          result: runtime.Types.Utils.Optional<Prisma.AggregateUserSecurityQuestion>;
+        };
+        groupBy: {
+          args: Prisma.UserSecurityQuestionGroupByArgs<ExtArgs>;
+          result: runtime.Types.Utils.Optional<Prisma.UserSecurityQuestionGroupByOutputType>[];
+        };
+        count: {
+          args: Prisma.UserSecurityQuestionCountArgs<ExtArgs>;
+          result:
+            | runtime.Types.Utils.Optional<Prisma.UserSecurityQuestionCountAggregateOutputType>
             | number;
         };
       };
@@ -1310,12 +1388,20 @@ export type BackupCodeScalarFieldEnum =
 export const SecurityQuestionScalarFieldEnum = {
   id: 'id',
   question: 'question',
-  answerHash: 'answerHash',
-  userId: 'userId',
 } as const;
 
 export type SecurityQuestionScalarFieldEnum =
   (typeof SecurityQuestionScalarFieldEnum)[keyof typeof SecurityQuestionScalarFieldEnum];
+
+export const UserSecurityQuestionScalarFieldEnum = {
+  id: 'id',
+  answerHash: 'answerHash',
+  userId: 'userId',
+  questionId: 'questionId',
+} as const;
+
+export type UserSecurityQuestionScalarFieldEnum =
+  (typeof UserSecurityQuestionScalarFieldEnum)[keyof typeof UserSecurityQuestionScalarFieldEnum];
 
 export const PasswordResetTokenScalarFieldEnum = {
   id: 'id',
@@ -1610,6 +1696,7 @@ export type GlobalOmitConfig = {
   webAuthnCredential?: Prisma.WebAuthnCredentialOmit;
   backupCode?: Prisma.BackupCodeOmit;
   securityQuestion?: Prisma.SecurityQuestionOmit;
+  userSecurityQuestion?: Prisma.UserSecurityQuestionOmit;
   passwordResetToken?: Prisma.PasswordResetTokenOmit;
   rateLimitBucket?: Prisma.RateLimitBucketOmit;
   knownDevice?: Prisma.KnownDeviceOmit;

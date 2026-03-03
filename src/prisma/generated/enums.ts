@@ -21,7 +21,7 @@ export type MfaPreference = (typeof MfaPreference)[keyof typeof MfaPreference];
 export const ResetTokenState = {
   ISSUED: 'ISSUED',
   TOKEN_VERIFIED: 'TOKEN_VERIFIED',
-  STEPUP_VERIFIED: 'STEPUP_VERIFIED',
+  STEP_UP_VERIFIED: 'STEP_UP_VERIFIED',
   COMPLETED: 'COMPLETED',
   LOCKED: 'LOCKED',
   EXPIRED: 'EXPIRED',

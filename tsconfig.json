@@ -33,6 +33,10 @@
     "removeComments": true,
     "forceConsistentCasingInFileNames": true,
 
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+
     /* ──────────────── 🧪 Tests ──────────────── */
     // "isolatedModules": true,
     /* ──────────────── ⚙️ ESM & Decorators ──────────────── */

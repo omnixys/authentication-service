@@ -17,5 +17,10 @@
   },
   "files.eol": "\n",
   "prettier.configPath": ".prettierrc.yaml",
-  "typescript.preferences.importModuleSpecifier": "relative"
+
+  "typescript.preferences.importModuleSpecifier": "non-relative",
+  "javascript.preferences.importModuleSpecifier": "non-relative",
+
+  "typescript.preferences.importModuleSpecifierEnding": "auto",
+  "javascript.preferences.importModuleSpecifierEnding": "auto"
 }

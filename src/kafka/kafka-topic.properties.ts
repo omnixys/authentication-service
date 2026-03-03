@@ -36,7 +36,7 @@ export const KafkaTopics = {
   notification: {
     sendCredentials: `notification.notify.${SERVICE}`,
     sendRequestReset: `notification.requestReset.${SERVICE}`,
-    sendMagigLink: `notification.sendMagigLink.${SERVICE}`,
+    sendMagigLink: `notification.sendMagicLink.${SERVICE}`,
   },
   event: {
     addUserRole: `event.addRole.${SERVICE}`,

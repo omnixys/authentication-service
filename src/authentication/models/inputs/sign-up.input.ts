@@ -15,8 +15,8 @@
  * For more information, visit <https://www.gnu.org/licenses/>.
  */
 
-import { PhoneNumberInput } from './phone-number.input.js';
 import { Field, InputType } from '@nestjs/graphql';
+import { PhoneNumberInput } from '@omnixys/graphql';
 
 @InputType()
 export class AdminSignUpInput {

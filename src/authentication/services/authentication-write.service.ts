@@ -258,6 +258,7 @@ export class AuthWriteService extends AuthenticateBaseService {
     ctx?: { ip?: string; userAgent?: string },
   ): Promise<boolean> {
     return this.withSpan('authentication.login.totp', async (span) => {
+      this.logger.debug('requesting magic link for email %s', email);
       const user = await this.prisma.authUser.findUnique({
         where: { email },
       });

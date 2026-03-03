@@ -243,6 +243,7 @@ export type RateLimitBucketWhereUniqueInput = Prisma.AtLeast<
   {
     id?: string;
     key?: string;
+    key_windowStart?: Prisma.RateLimitBucketKeyWindowStartCompoundUniqueInput;
     AND?: Prisma.RateLimitBucketWhereInput | Prisma.RateLimitBucketWhereInput[];
     OR?: Prisma.RateLimitBucketWhereInput[];
     NOT?: Prisma.RateLimitBucketWhereInput | Prisma.RateLimitBucketWhereInput[];
@@ -254,7 +255,7 @@ export type RateLimitBucketWhereUniqueInput = Prisma.AtLeast<
       | string
       | null;
   },
-  'id' | 'key'
+  'id' | 'key' | 'key_windowStart'
 >;
 
 export type RateLimitBucketOrderByWithAggregationInput = {
@@ -362,6 +363,11 @@ export type RateLimitBucketUncheckedUpdateManyInput = {
     | Date
     | string
     | null;
+};
+
+export type RateLimitBucketKeyWindowStartCompoundUniqueInput = {
+  key: string;
+  windowStart: Date | string;
 };
 
 export type RateLimitBucketCountOrderByAggregateInput = {

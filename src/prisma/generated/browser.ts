@@ -42,6 +42,11 @@ export type BackupCode = Prisma.BackupCodeModel;
  */
 export type SecurityQuestion = Prisma.SecurityQuestionModel;
 /**
+ * Model UserSecurityQuestion
+ *
+ */
+export type UserSecurityQuestion = Prisma.UserSecurityQuestionModel;
+/**
  * Model PasswordResetToken
  *
  */

@@ -22,7 +22,7 @@ enum MfaPreference {
 enum ResetTokenState {
   ISSUED
   TOKEN_VERIFIED
-  STEPUP_VERIFIED
+  STEP_UP_VERIFIED
   COMPLETED
   LOCKED
   EXPIRED
@@ -34,18 +34,18 @@ enum ResetTokenState {
 model AuthUser {
   id            String        @id @default(uuid())
   email         String        @unique
-  mfaPreference MfaPreference @default(NONE)
+  mfaPreference MfaPreference @default(NONE) @map("mfa_preference")
 
-  failedAttempts Int       @default(0)
-  lockedUntil    DateTime?
+  failedAttempts Int       @default(0) @map("failed_attempts")
+  lockedUntil    DateTime? @map("locked_until")
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updatet_at")
 
   totp              TotpCredential?
   webAuthn          WebAuthnCredential[]
   backupCodes       BackupCode[]
-  securityQuestions SecurityQuestion[]
+  securityQuestions UserSecurityQuestion[]
   resetTokens       PasswordResetToken[]
   knownDevices      KnownDevice[]
   loginHistories    LoginHistory[]
@@ -57,10 +57,10 @@ model AuthUser {
 
 model TotpCredential {
   id              String  @id @default(uuid())
-  encryptedSecret String
+  encryptedSecret String  @map("encrypted_secret")
   enabled         Boolean @default(false)
 
-  userId String
+  userId String   @unique @map("user_id")
   user   AuthUser @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("totp_credential")
@@ -69,68 +69,85 @@ model TotpCredential {
 
 model WebAuthnCredential {
   id           String  @id @default(uuid())
-  credentialId String  @unique
-  publicKey    String
+  credentialId String  @unique @map("credential_id")
+  publicKey    String  @map("public_key")
   counter      Int
-  deviceType   String
-  backedUp     Boolean
+  deviceType   String  @map("device_type")
+  backedUp     Boolean @map("backed_up")
   transports   String?
 
   nickname   String? // 👈 user-defined name
-  createdAt  DateTime  @default(now())
-  lastUsedAt DateTime?
-  revokedAt  DateTime?
+  createdAt  DateTime  @default(now()) @map("created_at")
+  lastUsedAt DateTime? @map("last_used_at")
+  revokedAt  DateTime? @map("revoked_at")
 
-  user   AuthUser @relation(fields: [userId], references: [id])
-  userId String
+  user   AuthUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String   @map("user_id")
 
+  @@index([userId])
   @@map("web_auth_n_credentials")
   @@schema("authentication")
 }
 
 model BackupCode {
   id       String    @id @default(uuid())
-  codeHash String
-  usedAt   DateTime?
+  codeHash String    @map("code_hash")
+  usedAt   DateTime? @map("used_at")
 
-  userId String
-  user   AuthUser @relation(fields: [userId], references: [id])
+  userId String   @map("user_id")
+  user   AuthUser @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
   @@map("backup_code")
   @@schema("authentication")
 }
 
 model SecurityQuestion {
-  id         String   @id @default(uuid())
-  question   String
-  answerHash String
-  user       AuthUser @relation(fields: [userId], references: [id])
-  userId     String
+  id       String @id @default(uuid())
+  question String @unique
+
+  userAnswers UserSecurityQuestion[]
 
   @@map("security_question")
+  @@schema("authentication")
+}
+
+model UserSecurityQuestion {
+  id         String @id @default(uuid())
+  answerHash String @map("answer_hash")
+
+  user   AuthUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String   @map("user_id")
+
+  questionId String
+  question   SecurityQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, questionId])
+  @@index([userId])
+  @@map("user_security_question")
   @@schema("authentication")
 }
 
 model PasswordResetToken {
   id String @id @default(uuid())
 
-  tokenHash       String
-  tokenLookupHash String @unique
+  tokenHash       String          @map("token_hash")
+  tokenLookupHash String          @unique @map("token_lookup_hash")
+  state           ResetTokenState @default(ISSUED)
 
-  state ResetTokenState @default(ISSUED)
-
-  expiresAt DateTime
+  expiresAt DateTime  @map("expires_at")
   attempts  Int       @default(0)
   locked    Boolean   @default(false)
-  usedAt    DateTime?
+  usedAt    DateTime? @map("used_at")
 
-  userId String
-  user   AuthUser @relation(fields: [userId], references: [id])
+  userId String   @map("user_id")
+  user   AuthUser @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  createdAt DateTime @default(now())
+  createdAt DateTime @default(now()) @map("created_at")
 
   @@index([userId])
   @@index([expiresAt])
+  @@index([tokenLookupHash, expiresAt])
   @@map("password_reset_token")
   @@schema("authentication")
 }
@@ -138,37 +155,40 @@ model PasswordResetToken {
 model RateLimitBucket {
   id          String    @id @default(uuid())
   key         String    @unique
-  windowStart DateTime
+  windowStart DateTime  @map("window_start")
   count       Int
-  lockedUntil DateTime?
+  lockedUntil DateTime? @map("locked_until")
 
+  @@unique([key, windowStart])
   @@map("rate_limit_bucket")
   @@schema("authentication")
 }
 
 model KnownDevice {
   id          String   @id @default(uuid())
-  userId      String
+  userId      String   @map("user_id")
   fingerprint String
-  firstSeen   DateTime @default(now())
-  lastSeen    DateTime @updatedAt
+  firstSeen   DateTime @default(now()) @map("first_seen")
+  lastSeen    DateTime @updatedAt @map("last_seen")
 
-  user AuthUser @relation(fields: [userId], references: [id])
+  user AuthUser @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, fingerprint])
+  @@index([userId])
   @@schema("authentication")
 }
 
 model LoginHistory {
   id        String   @id @default(uuid())
-  userId    String
+  userId    String   @map("user_id")
   ip        String
   country   String?
   city      String?
   createdAt DateTime @default(now())
 
-  user AuthUser @relation(fields: [userId], references: [id])
+  user AuthUser @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId, createdAt])
   @@index([userId])
   @@schema("authentication")
 }
@@ -176,10 +196,11 @@ model LoginHistory {
 model OAuthAccount {
   id         String   @id @default(uuid())
   provider   String
-  providerId String
-  userId     String
+  providerId String   @map("provider_id")
+  userId     String   @map("user_id")
   user       AuthUser @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerId])
+  @@index([userId])
   @@schema("authentication")
 }
