@@ -168,7 +168,6 @@ export default {
 
 ## 🔎 Release Details
 
-- 
 - Git Tag: <%= nextRelease.gitTag %>
 - Branch: <%= branch.name %>
 - Previous Version: <%= lastRelease ? lastRelease.version : 'N/A' %>
@@ -176,6 +175,7 @@ export default {
 
 ---
 
+🏢 **Organization:** Omnixys
 📦 **Service:** Omnixys Authentication Service  
 🔗 **Repository:** Repository: <%= options.repositoryUrl %>
 🧭 **Docs:** https://omnixys.com/docs

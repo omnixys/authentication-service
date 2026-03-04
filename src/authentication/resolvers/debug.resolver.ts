@@ -18,24 +18,27 @@
  */
 
 import { Roles } from '../../auth/decorators/roles.decorator.js';
+import { CookieAuthGuard } from '../../auth/guards/cookie-auth.guard.js';
 import { getLogger } from '../../logger/get-logger.js';
 import { ResponseTimeInterceptor } from '../../logger/response-time.interceptor.js';
+import { SignUpPayload } from '../models/payloads/sign-in.payload.js';
 import { RegisterService } from '../services/register.service.js';
-import { UseInterceptors } from '@nestjs/common';
+import { UseGuards, UseInterceptors } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 
 @Resolver()
+@UseGuards(CookieAuthGuard)
+@Roles('ADMIN')
 @UseInterceptors(ResponseTimeInterceptor)
-export class RegisterResolver {
-  private readonly logger = getLogger(RegisterResolver.name);
+export class DebugResolver {
+  private readonly logger = getLogger(this.constructor.name);
 
   constructor(private readonly registerService: RegisterService) {}
 
-  @Mutation(() => String)
-  @Roles(['ADMIN'])
-  async verifySignUp(@Args('token') token: string): Promise<string> {
+  @Mutation(() => SignUpPayload, { name: 'DEBUG_verifySignUp' })
+  async verifySignUp(@Args('token') token: string): Promise<SignUpPayload> {
     this.logger.debug('Verify Registration');
-    const { message } = await this.registerService.verifySignup(token);
-    return message ?? 'N/A';
+    const payload = await this.registerService.verifySignup(token);
+    return payload;
   }
 }

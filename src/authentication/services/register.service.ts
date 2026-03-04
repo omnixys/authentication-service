@@ -1,7 +1,9 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-/* eslint-disable @typescript-eslint/explicit-function-return-type */
 import { paths } from '../../config/keycloak.js';
 import { KafkaProducerService } from '../../kafka/kafka-producer.service.js';
 import { LoggerPlusService } from '../../logger/logger-plus.service.js';
@@ -11,10 +13,10 @@ import { TraceContextProvider } from '../../trace/trace-context.provider.js';
 import { ValkeyService } from '../../valkey/valkey.service.js';
 import { KCSignUpDTO } from '../models/dtos/kc-sign-up.dto.js';
 import { RealmRole } from '../models/enums/role.enum.js';
-import { TokenPayload } from '../models/payloads/token.payload.js';
 import { AdminWriteService } from './admin-write.service.js';
 import { AuthWriteService } from './authentication-write.service.js';
 import { AuthenticateBaseService } from './keycloak-base.service.js';
+import { SignUpPayload } from '@/authentication/models/payloads/sign-in.payload.js';
 import { HttpService } from '@nestjs/axios';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import * as argon2 from 'argon2';
@@ -34,30 +36,31 @@ export class RegisterService extends AuthenticateBaseService {
     super(logger, trace, http);
   }
 
-  async verifySignup(token: string) {
+  async verifySignup(token: string): Promise<SignUpPayload> {
     const key = `verification:signup:auth:${token}`;
 
     const raw = await this.valkey.client.get(key);
     if (!raw) {
-      return { status: 'ALREADY_CONSUMED_OR_EXPIRED' };
+      return { message: 'ALREADY_CONSUMED_OR_EXPIRED' };
     }
 
     const input = JSON.parse(raw) as KCSignUpDTO;
 
     try {
       // Call UserService
-      await this.signUp(input, token);
+      const payload = await this.signUp(input, token);
 
       // Delete key
       await this.valkey.client.del(key);
-      return { status: 'OK' };
+      payload.message = 'OK';
+      return payload;
     } catch (e: any) {
       this.logger.debug(e);
-      return { status: 'ALREADY_REGISTERED' };
+      return { message: 'ALREADY_REGISTERED' };
     }
   }
 
-  async signUp(input: KCSignUpDTO, valkeyToken?: string): Promise<TokenPayload> {
+  async signUp(input: KCSignUpDTO, valkeyToken?: string): Promise<SignUpPayload> {
     return this.withSpan('authentication.signUp', async (span) => {
       void this.logger.debug('signUp: input=%o', input);
 
@@ -111,7 +114,7 @@ export class RegisterService extends AuthenticateBaseService {
           const hashedQuestions = await Promise.all(
             input.securityQuestions.map(async (q) => ({
               userId: user.id,
-              question: q.question,
+              questionId: q.questionId,
               answerHash: await argon2.hash(q.answer, {
                 type: argon2.argon2id,
                 memoryCost: 2 ** 16,
@@ -121,7 +124,7 @@ export class RegisterService extends AuthenticateBaseService {
             })),
           );
 
-          await tx.securityQuestion.createMany({
+          await tx.userSecurityQuestion.createMany({
             data: hashedQuestions,
           });
         }
@@ -136,7 +139,7 @@ export class RegisterService extends AuthenticateBaseService {
         );
 
         const token = await this.authService.login({ username, password });
-        return token;
+        return { userId, token };
       });
     });
   }

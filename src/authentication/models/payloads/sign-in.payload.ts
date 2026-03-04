@@ -25,7 +25,7 @@ export class SignUpPayload {
   user?: KcUser;
 
   @Field(() => String)
-  password!: string;
+  password?: string;
 
   @Field(() => String, { nullable: true })
   username?: string;

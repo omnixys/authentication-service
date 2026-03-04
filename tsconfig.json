@@ -33,9 +33,9 @@
     "removeComments": true,
     "forceConsistentCasingInFileNames": true,
 
-    "paths": {
-      "@/*": ["./src/*"]
-    },
+    // "paths": {
+    //   "@/*": ["./src/*"]
+    // },
 
     /* ──────────────── 🧪 Tests ──────────────── */
     // "isolatedModules": true,

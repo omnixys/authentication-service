@@ -93,26 +93,41 @@ async function main() {
   }
 
   /* =====================================================
-     Security Questions
+     Controlled Security Questions
   ===================================================== */
 
-  const answerHash = await argon2.hash('omnixys', {
-    type: argon2.argon2id,
-    memoryCost: memoryCost,
-    timeCost: timeCost,
-    parallelism: parallelism,
+  // 1️⃣ Create global questions (controlled set)
+  const favoriteCompany = await prisma.securityQuestion.upsert({
+    where: { question: 'What is your favorite company?' },
+    update: {},
+    create: { question: 'What is your favorite company?' },
   });
 
-  await prisma.securityQuestion.createMany({
+  const birthPlace = await prisma.securityQuestion.upsert({
+    where: { question: 'Where were you born?' },
+    update: {},
+    create: { question: 'Where were you born?' },
+  });
+
+  // 2️⃣ Hash answer
+  const answerHash = await argon2.hash('omnixys', {
+    type: argon2.argon2id,
+    memoryCost,
+    timeCost,
+    parallelism,
+  });
+
+  // 3️⃣ Assign answers to user
+  await prisma.userSecurityQuestion.createMany({
     data: [
       {
         userId: caleb.id,
-        question: 'What is your favorite company?',
+        questionId: favoriteCompany.id,
         answerHash,
       },
       {
         userId: caleb.id,
-        question: 'Where were you born?',
+        questionId: birthPlace.id,
         answerHash,
       },
     ],

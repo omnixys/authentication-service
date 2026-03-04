@@ -26,6 +26,7 @@ import { OAuthController } from './controllers/o-auth.controller.js';
 import { AdminMutationResolver } from './resolvers/admin-mutation.resolver.js';
 import { AuthMutationResolver } from './resolvers/authentication-mutation.resolver.js';
 import { AuthQueryResolver } from './resolvers/authentication-query.resolver.js';
+import { DebugResolver } from './resolvers/debug.resolver.js';
 import { MfaMutationResolver } from './resolvers/mfa-mutation.resolver.js';
 import { RegisterResolver } from './resolvers/register.resolver.js';
 import { ResetMutationResolver } from './resolvers/reset-mutation.resolver.js';
@@ -72,6 +73,7 @@ import { Module } from '@nestjs/common';
     MfaMutationResolver,
     ResetMutationResolver,
     RegisterResolver,
+    DebugResolver,
 
     AuthenticateReadService,
     UserWriteService,

@@ -4,7 +4,7 @@ import { Field, InputType } from '@nestjs/graphql';
 @InputType()
 export class AddSecurityQuestionInput {
   @Field()
-  question!: string;
+  questionId!: string;
 
   @Field()
   answer!: string;
