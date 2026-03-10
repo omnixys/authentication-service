@@ -1,6 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -13,10 +10,10 @@ import { TraceContextProvider } from '../../trace/trace-context.provider.js';
 import { ValkeyService } from '../../valkey/valkey.service.js';
 import { KCSignUpDTO } from '../models/dtos/kc-sign-up.dto.js';
 import { RealmRole } from '../models/enums/role.enum.js';
+import { SignUpPayload } from '../models/payloads/sign-in.payload.js';
 import { AdminWriteService } from './admin-write.service.js';
 import { AuthWriteService } from './authentication-write.service.js';
 import { AuthenticateBaseService } from './keycloak-base.service.js';
-import { SignUpPayload } from '@/authentication/models/payloads/sign-in.payload.js';
 import { HttpService } from '@nestjs/axios';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import * as argon2 from 'argon2';
@@ -131,6 +128,15 @@ export class RegisterService extends AuthenticateBaseService {
 
         void this.kafka.addUserId(
           { newId: userId, oldId: input.id, token: valkeyToken },
+          'authentication.userSignUp',
+          {
+            traceId: sc.traceId,
+            spanId: sc.spanId,
+          },
+        );
+
+        void this.kafka.createUserAddresses(
+          { userId, token: valkeyToken },
           'authentication.userSignUp',
           {
             traceId: sc.traceId,

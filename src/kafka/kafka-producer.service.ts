@@ -157,6 +157,21 @@ export class KafkaProducerService implements OnModuleInit, OnModuleDestroy {
     await this.send(KafkaTopics.user.addId, envelope, trace);
   }
 
+  async createUserAddresses(
+    payload: { userId: string; token?: string },
+    service: string,
+    trace?: TraceContext,
+  ): Promise<void> {
+    const envelope: KafkaEnvelope<typeof payload> = {
+      event: 'createUserAddresses',
+      service,
+      version: 'v1',
+      trace,
+      payload,
+    };
+    await this.send(KafkaTopics.address.createUserAddresses, envelope, trace);
+  }
+
   async createUser(payload: UserDTO, service: string, trace?: TraceContext): Promise<void> {
     const envelope: KafkaEnvelope<typeof payload> = {
       event: 'createUser',
@@ -240,6 +255,21 @@ export class KafkaProducerService implements OnModuleInit, OnModuleDestroy {
       payload,
     };
     await this.send(KafkaTopics.user.deleteUser, envelope, trace);
+  }
+
+  async deleteAddresses(
+    payload: { id: string },
+    service: string,
+    trace?: TraceContext,
+  ): Promise<void> {
+    const envelope: KafkaEnvelope<typeof payload> = {
+      event: 'deleteAddresses',
+      service,
+      version: 'v1',
+      trace,
+      payload,
+    };
+    await this.send(KafkaTopics.address.deleteAddresses, envelope, trace);
   }
 
   async updateUser(payload: UserUpdateDTO, service: string, trace?: TraceContext): Promise<void> {

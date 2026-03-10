@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-return */
 /**
  * @license GPL-3.0-or-later
  * Copyright (C) 2025 Caleb Gyamfi - Omnixys Technologies
@@ -17,12 +15,17 @@
  * For more information, visit <https://www.gnu.org/licenses/>.
  */
 
-import { Roles } from '../../auth/decorators/roles.decorator.js';
 import { getLogger } from '../../logger/get-logger.js';
 import { ResponseTimeInterceptor } from '../../logger/response-time.interceptor.js';
+import { SignUpPayload } from '../models/payloads/sign-in.payload.js';
 import { RegisterService } from '../services/register.service.js';
+import {
+  cookieOpts,
+  GqlCtx,
+  setCookieSafe,
+} from './authentication-mutation.resolver.js';
 import { UseInterceptors } from '@nestjs/common';
-import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { Args, Context, Mutation, Resolver } from '@nestjs/graphql';
 
 @Resolver()
 @UseInterceptors(ResponseTimeInterceptor)
@@ -31,11 +34,28 @@ export class RegisterResolver {
 
   constructor(private readonly registerService: RegisterService) {}
 
-  @Mutation(() => String)
-  @Roles(['ADMIN'])
-  async verifySignUp(@Args('token') token: string): Promise<string> {
+  @Mutation(() => SignUpPayload)
+  async verifySignUp(
+    @Args('token') token: string,
+    @Context() ctx: GqlCtx,
+  ): Promise<SignUpPayload> {
     this.logger.debug('Verify Registration');
-    const { message } = await this.registerService.verifySignup(token);
-    return message ?? 'N/A';
+    const payload = await this.registerService.verifySignup(token);
+
+    setCookieSafe(
+      ctx.res,
+      'access_token',
+      payload?.token?.accessToken ?? '',
+      cookieOpts(payload?.token?.expiresIn ?? 0 * 1000),
+    );
+
+    setCookieSafe(
+      ctx.res,
+      'refresh_token',
+      payload?.token?.refreshToken ?? '',
+      cookieOpts(payload?.token?.refreshExpiresIn ?? 0 * 1000),
+    );
+
+    return payload;
   }
 }

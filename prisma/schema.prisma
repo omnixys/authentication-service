@@ -31,6 +31,19 @@ enum ResetTokenState {
   @@schema("authentication")
 }
 
+enum SecurityQuestionType {
+  FIRST_PET
+  BIRTH_CITY
+  MOTHER_MAIDEN_NAME
+  FAVORITE_SCHOOL_SUBJECT
+  CHILDHOOD_BEST_FRIEND
+  FAVOURITE_COMPANY
+  BIRTH_DATE
+
+  @@map("security_question_key")
+  @@schema("authentication")
+}
+
 model AuthUser {
   id            String        @id @default(uuid())
   email         String        @unique
@@ -103,8 +116,9 @@ model BackupCode {
 }
 
 model SecurityQuestion {
-  id       String @id @default(uuid())
-  question String @unique
+  id       String               @id @default(uuid())
+  key      SecurityQuestionType @unique
+  question String               @unique
 
   userAnswers UserSecurityQuestion[]
 

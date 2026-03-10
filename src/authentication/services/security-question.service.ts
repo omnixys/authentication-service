@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
 
+import { SecurityQuestion } from '../../prisma/generated/client.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
+import { SecurityQuestionInput } from '../models/inputs/security-question.input.js';
 import { Argon2Service } from './argon2.service.js';
 import { Injectable, BadRequestException } from '@nestjs/common';
 
@@ -24,9 +26,9 @@ export class SecurityQuestionService {
   // --------------------------------------------------
   // Admin: create controlled question
   // --------------------------------------------------
-  async addSecurityQuestion(question: string) {
+  async addSecurityQuestion(question: SecurityQuestionInput) {
     return this.prisma.securityQuestion.create({
-      data: { question: question.trim() },
+      data: { question: question.question.trim(), key: question.key },
     });
   }
 
@@ -114,5 +116,9 @@ export class SecurityQuestionService {
     }
 
     return true;
+  }
+
+  async getAllQuestions(): Promise<SecurityQuestion[]> {
+    return this.prisma.securityQuestion.findMany({});
   }
 }

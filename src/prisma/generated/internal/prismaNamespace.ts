@@ -1387,6 +1387,7 @@ export type BackupCodeScalarFieldEnum =
 
 export const SecurityQuestionScalarFieldEnum = {
   id: 'id',
+  key: 'key',
   question: 'question',
 } as const;
 
@@ -1557,6 +1558,18 @@ export type BooleanFieldRefInput<$PrismaModel> = FieldRefInputType<
   $PrismaModel,
   'Boolean'
 >;
+
+/**
+ * Reference to a field of type 'SecurityQuestionType'
+ */
+export type EnumSecurityQuestionTypeFieldRefInput<$PrismaModel> =
+  FieldRefInputType<$PrismaModel, 'SecurityQuestionType'>;
+
+/**
+ * Reference to a field of type 'SecurityQuestionType[]'
+ */
+export type ListEnumSecurityQuestionTypeFieldRefInput<$PrismaModel> =
+  FieldRefInputType<$PrismaModel, 'SecurityQuestionType[]'>;
 
 /**
  * Reference to a field of type 'ResetTokenState'

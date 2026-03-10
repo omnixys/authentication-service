@@ -136,6 +136,7 @@ export type BackupCodeScalarFieldEnum =
 
 export const SecurityQuestionScalarFieldEnum = {
   id: 'id',
+  key: 'key',
   question: 'question',
 } as const;
 

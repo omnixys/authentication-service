@@ -233,6 +233,40 @@ export type StringNullableWithAggregatesFilter<$PrismaModel = never> = {
   _max?: Prisma.NestedStringNullableFilter<$PrismaModel>;
 };
 
+export type EnumSecurityQuestionTypeFilter<$PrismaModel = never> = {
+  equals?:
+    | $Enums.SecurityQuestionType
+    | Prisma.EnumSecurityQuestionTypeFieldRefInput<$PrismaModel>;
+  in?:
+    | $Enums.SecurityQuestionType[]
+    | Prisma.ListEnumSecurityQuestionTypeFieldRefInput<$PrismaModel>;
+  notIn?:
+    | $Enums.SecurityQuestionType[]
+    | Prisma.ListEnumSecurityQuestionTypeFieldRefInput<$PrismaModel>;
+  not?:
+    | Prisma.NestedEnumSecurityQuestionTypeFilter<$PrismaModel>
+    | $Enums.SecurityQuestionType;
+};
+
+export type EnumSecurityQuestionTypeWithAggregatesFilter<$PrismaModel = never> =
+  {
+    equals?:
+      | $Enums.SecurityQuestionType
+      | Prisma.EnumSecurityQuestionTypeFieldRefInput<$PrismaModel>;
+    in?:
+      | $Enums.SecurityQuestionType[]
+      | Prisma.ListEnumSecurityQuestionTypeFieldRefInput<$PrismaModel>;
+    notIn?:
+      | $Enums.SecurityQuestionType[]
+      | Prisma.ListEnumSecurityQuestionTypeFieldRefInput<$PrismaModel>;
+    not?:
+      | Prisma.NestedEnumSecurityQuestionTypeWithAggregatesFilter<$PrismaModel>
+      | $Enums.SecurityQuestionType;
+    _count?: Prisma.NestedIntFilter<$PrismaModel>;
+    _min?: Prisma.NestedEnumSecurityQuestionTypeFilter<$PrismaModel>;
+    _max?: Prisma.NestedEnumSecurityQuestionTypeFilter<$PrismaModel>;
+  };
+
 export type EnumResetTokenStateFilter<$PrismaModel = never> = {
   equals?:
     | $Enums.ResetTokenState
@@ -499,6 +533,41 @@ export type NestedStringNullableWithAggregatesFilter<$PrismaModel = never> = {
   _count?: Prisma.NestedIntNullableFilter<$PrismaModel>;
   _min?: Prisma.NestedStringNullableFilter<$PrismaModel>;
   _max?: Prisma.NestedStringNullableFilter<$PrismaModel>;
+};
+
+export type NestedEnumSecurityQuestionTypeFilter<$PrismaModel = never> = {
+  equals?:
+    | $Enums.SecurityQuestionType
+    | Prisma.EnumSecurityQuestionTypeFieldRefInput<$PrismaModel>;
+  in?:
+    | $Enums.SecurityQuestionType[]
+    | Prisma.ListEnumSecurityQuestionTypeFieldRefInput<$PrismaModel>;
+  notIn?:
+    | $Enums.SecurityQuestionType[]
+    | Prisma.ListEnumSecurityQuestionTypeFieldRefInput<$PrismaModel>;
+  not?:
+    | Prisma.NestedEnumSecurityQuestionTypeFilter<$PrismaModel>
+    | $Enums.SecurityQuestionType;
+};
+
+export type NestedEnumSecurityQuestionTypeWithAggregatesFilter<
+  $PrismaModel = never,
+> = {
+  equals?:
+    | $Enums.SecurityQuestionType
+    | Prisma.EnumSecurityQuestionTypeFieldRefInput<$PrismaModel>;
+  in?:
+    | $Enums.SecurityQuestionType[]
+    | Prisma.ListEnumSecurityQuestionTypeFieldRefInput<$PrismaModel>;
+  notIn?:
+    | $Enums.SecurityQuestionType[]
+    | Prisma.ListEnumSecurityQuestionTypeFieldRefInput<$PrismaModel>;
+  not?:
+    | Prisma.NestedEnumSecurityQuestionTypeWithAggregatesFilter<$PrismaModel>
+    | $Enums.SecurityQuestionType;
+  _count?: Prisma.NestedIntFilter<$PrismaModel>;
+  _min?: Prisma.NestedEnumSecurityQuestionTypeFilter<$PrismaModel>;
+  _max?: Prisma.NestedEnumSecurityQuestionTypeFilter<$PrismaModel>;
 };
 
 export type NestedEnumResetTokenStateFilter<$PrismaModel = never> = {

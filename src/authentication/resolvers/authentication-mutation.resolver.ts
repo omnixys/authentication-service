@@ -174,33 +174,33 @@ export class AuthMutationResolver {
     this.logger = this.loggerService.getLogger(AuthMutationResolver.name);
   }
 
-  @Mutation(() => TokenPayload, { name: 'login' })
-  async login2(
-    @Args('input', { type: () => LogInInput }) input: LogInInput,
-    @Context() ctx: GqlCtx,
-  ): Promise<TokenPayload> {
-    const ip =
-      (ctx.req.headers['x-forwarded-for'] as string | undefined)
-        ?.split(',')[0]
-        ?.trim() ??
-      ctx.req.socket?.remoteAddress ??
-      undefined;
+  // @Mutation(() => TokenPayload, { name: 'login' })
+  // async login2(
+  //   @Args('input', { type: () => LogInInput }) input: LogInInput,
+  //   @Context() ctx: GqlCtx,
+  // ): Promise<TokenPayload> {
+  //   const ip =
+  //     (ctx.req.headers['x-forwarded-for'] as string | undefined)
+  //       ?.split(',')[0]
+  //       ?.trim() ??
+  //     ctx.req.socket?.remoteAddress ??
+  //     undefined;
 
-    const userAgent = ctx.req.headers['user-agent'] ?? undefined;
-    const acceptLanguage = ctx.req.headers['accept-language'] ?? undefined;
+  //   const userAgent = ctx.req.headers['user-agent'] ?? undefined;
+  //   const acceptLanguage = ctx.req.headers['accept-language'] ?? undefined;
 
-    // English comment tailored for VS:
-    // Provide a stable client-generated ID via header for stronger device fingerprinting.
-    const clientDeviceId =
-      (ctx.req.headers['x-device-id'] as string | undefined) ?? undefined;
+  //   // English comment tailored for VS:
+  //   // Provide a stable client-generated ID via header for stronger device fingerprinting.
+  //   const clientDeviceId =
+  //     (ctx.req.headers['x-device-id'] as string | undefined) ?? undefined;
 
-    return this.authService.loginWithRisk(input.username, input.password, {
-      ip,
-      userAgent,
-      acceptLanguage,
-      clientDeviceId,
-    });
-  }
+  //   return this.authService.loginWithRisk(input.username, input.password, {
+  //     ip,
+  //     userAgent,
+  //     acceptLanguage,
+  //     clientDeviceId,
+  //   });
+  // }
 
   /**
    * Performs a password-based login (ROPC flow).
@@ -214,8 +214,8 @@ export class AuthMutationResolver {
    * @returns {@link TokenPayload} containing access and refresh tokens.
    * @throws {@link BadUserInputError} If credentials are invalid.
    */
-  @Mutation(() => TokenPayload, { name: 'login' })
-  async login(
+  @Mutation(() => TokenPayload)
+  async credentialsLogin(
     @Args('input', { type: () => LogInInput }) input: LogInInput,
     @Context() ctx: GqlCtx,
   ): Promise<TokenPayload> {
@@ -426,7 +426,7 @@ export class AuthMutationResolver {
   }
 
   @Mutation(() => Boolean)
-  async requestMagicLink(
+  async sendMagicLink(
     @Args('email') email: string,
     @Context() ctx: GqlCtx,
   ): Promise<boolean> {

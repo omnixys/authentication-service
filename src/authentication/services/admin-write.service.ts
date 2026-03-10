@@ -105,6 +105,11 @@ export class AdminWriteService extends AuthenticateBaseService {
         traceId: sc.traceId,
         spanId: sc.spanId,
       });
+
+      void this.kafka.deleteAddresses({ id }, 'authentication.deleteUser', {
+        traceId: sc.traceId,
+        spanId: sc.spanId,
+      });
     });
   }
 

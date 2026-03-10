@@ -28,7 +28,10 @@ import { JsonScalar } from '../../core/scalars/json.scalar.js';
 import { ResponseTimeInterceptor } from '../../logger/response-time.interceptor.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { MfaPreference } from '../models/dtos/reset-verification-result.dto.js';
+import { SecurityQuestionMapper } from '../models/mappers/security-question.mapper.js';
 import { TotpSetupPayload } from '../models/payloads/mfa.types.js';
+import { SecurityQuestionPayload } from '../models/payloads/security-question.payload.js';
+import { SecurityQuestionService } from '../services/security-question.service.js';
 import {
   AuthenticationResponseJSON,
   RegistrationResponseJSON,
@@ -59,7 +62,6 @@ export class WebAuthnDevicePayload {
 }
 
 @Resolver()
-@UseGuards(CookieAuthGuard)
 @UseInterceptors(ResponseTimeInterceptor)
 export class MfaMutationResolver {
   constructor(
@@ -67,8 +69,10 @@ export class MfaMutationResolver {
     private readonly webAuthnService: WebAuthnService,
     private readonly backupCodeService: BackupCodeService,
     private readonly prisma: PrismaService,
+    private readonly securityQuestionService: SecurityQuestionService,
   ) {}
 
+  @UseGuards(CookieAuthGuard)
   @Mutation(() => Boolean)
   async setMfaPreference(
     @CurrentUser() user: CurrentUserData,
@@ -83,6 +87,7 @@ export class MfaMutationResolver {
     return true;
   }
 
+  @UseGuards(CookieAuthGuard)
   @Query(() => [WebAuthnDevicePayload])
   async listWebAuthnDevices(@CurrentUser() currentUser: CurrentUserData) {
     // : Promise<WebAuthnDevicePayload[]>
@@ -91,6 +96,7 @@ export class MfaMutationResolver {
     return this.webAuthnService.listDevices(userId);
   }
 
+  @UseGuards(CookieAuthGuard)
   @Mutation(() => Boolean)
   async revokeWebAuthnCredential(
     @CurrentUser() currentUser: CurrentUserData,
@@ -115,6 +121,7 @@ export class MfaMutationResolver {
      TOTP
   ======================================================= */
 
+  @UseGuards(CookieAuthGuard)
   @Mutation(() => TotpSetupPayload)
   async enableTotp(
     @CurrentUser() currentUser: CurrentUserData,
@@ -125,6 +132,7 @@ export class MfaMutationResolver {
     return this.totpService.generateForUser(userId, email);
   }
 
+  @UseGuards(CookieAuthGuard)
   @Mutation(() => Boolean)
   async confirmTotp(
     @CurrentUser() currentUser: CurrentUserData,
@@ -139,6 +147,7 @@ export class MfaMutationResolver {
      WEBAUTHN REGISTRATION
   ======================================================= */
 
+  @UseGuards(CookieAuthGuard)
   @Mutation(() => JsonScalar)
   async generateWebAuthnRegistrationOptions(
     @CurrentUser() currentUser: CurrentUserData,
@@ -151,6 +160,7 @@ export class MfaMutationResolver {
     return options;
   }
 
+  @UseGuards(CookieAuthGuard)
   @Mutation(() => Boolean)
   async verifyWebAuthnRegistration(
     @CurrentUser() currentUser: CurrentUserData,
@@ -168,6 +178,7 @@ export class MfaMutationResolver {
      WEBAUTHN AUTHENTICATION (Step-up / Login verification)
   ======================================================= */
 
+  @UseGuards(CookieAuthGuard)
   @Mutation(() => JsonScalar, { name: 'generateWebAuthnAuthOptions2' })
   async generateWebAuthnAuthOptions(
     @CurrentUser() currentUser: CurrentUserData,
@@ -178,6 +189,7 @@ export class MfaMutationResolver {
     return this.webAuthnService.generateAuthOptions(userId);
   }
 
+  @UseGuards(CookieAuthGuard)
   @Mutation(() => Boolean, { name: 'verifyWebAuthnAuthentication2' })
   async verifyWebAuthnAuthentication(
     @CurrentUser() currentUser: CurrentUserData,
@@ -205,6 +217,7 @@ export class MfaMutationResolver {
      BACKUP CODES
   ======================================================= */
 
+  @UseGuards(CookieAuthGuard)
   @Mutation(() => [String])
   async regenerateBackupCodes(
     @CurrentUser() currentUser: CurrentUserData,
@@ -217,6 +230,7 @@ export class MfaMutationResolver {
   /* =====================================================
    DEVICE RENAME
 ===================================================== */
+  @UseGuards(CookieAuthGuard)
   @Mutation(() => Boolean)
   async renameWebAuthnCredential(
     @CurrentUser() currentUser: CurrentUserData,
@@ -234,5 +248,14 @@ export class MfaMutationResolver {
     }
 
     return true;
+  }
+
+  @Query(() => [SecurityQuestionPayload])
+  async getSecurityQuestions(): Promise<SecurityQuestionPayload[]> {
+    const securityQuestions =
+      await this.securityQuestionService.getAllQuestions();
+    return securityQuestions
+      ? SecurityQuestionMapper.toPayloadList(securityQuestions)
+      : [];
   }
 }

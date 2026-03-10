@@ -29,3 +29,16 @@ export const ResetTokenState = {
 
 export type ResetTokenState =
   (typeof ResetTokenState)[keyof typeof ResetTokenState];
+
+export const SecurityQuestionType = {
+  FIRST_PET: 'FIRST_PET',
+  BIRTH_CITY: 'BIRTH_CITY',
+  MOTHER_MAIDEN_NAME: 'MOTHER_MAIDEN_NAME',
+  FAVORITE_SCHOOL_SUBJECT: 'FAVORITE_SCHOOL_SUBJECT',
+  CHILDHOOD_BEST_FRIEND: 'CHILDHOOD_BEST_FRIEND',
+  FAVOURITE_COMPANY: 'FAVOURITE_COMPANY',
+  BIRTH_DATE: 'BIRTH_DATE',
+} as const;
+
+export type SecurityQuestionType =
+  (typeof SecurityQuestionType)[keyof typeof SecurityQuestionType];

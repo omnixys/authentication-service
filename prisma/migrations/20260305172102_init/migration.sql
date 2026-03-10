@@ -4,6 +4,9 @@ CREATE TYPE "mfa_preference" AS ENUM ('NONE', 'TOTP', 'WEBAUTHN', 'BACKUP_CODES'
 -- CreateEnum
 CREATE TYPE "reset_token_state" AS ENUM ('ISSUED', 'TOKEN_VERIFIED', 'STEP_UP_VERIFIED', 'COMPLETED', 'LOCKED', 'EXPIRED');
 
+-- CreateEnum
+CREATE TYPE "security_question_key" AS ENUM ('FIRST_PET', 'BIRTH_CITY', 'MOTHER_MAIDEN_NAME', 'FAVORITE_SCHOOL_SUBJECT', 'CHILDHOOD_BEST_FRIEND', 'FAVOURITE_COMPANY', 'BIRTH_DATE');
+
 -- CreateTable
 CREATE TABLE "auth_user" (
     "id" TEXT NOT NULL,
@@ -58,6 +61,7 @@ CREATE TABLE "backup_code" (
 -- CreateTable
 CREATE TABLE "security_question" (
     "id" TEXT NOT NULL,
+    "key" "security_question_key" NOT NULL,
     "question" TEXT NOT NULL,
 
     CONSTRAINT "security_question_pkey" PRIMARY KEY ("id")
@@ -147,6 +151,9 @@ CREATE INDEX "web_auth_n_credentials_user_id_idx" ON "web_auth_n_credentials"("u
 
 -- CreateIndex
 CREATE INDEX "backup_code_user_id_idx" ON "backup_code"("user_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "security_question_key_key" ON "security_question"("key");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "security_question_question_key" ON "security_question"("question");

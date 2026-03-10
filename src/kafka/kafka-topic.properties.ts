@@ -33,6 +33,10 @@ export const KafkaTopics = {
     addId: `user.addId.${SERVICE}`,
     createProviderUser: `user.addProviderUser.${SERVICE}`,
   },
+  address: {
+    createUserAddresses: `address.createUserAddresses.${SERVICE}`,
+    deleteAddresses: `address.delete.${SERVICE}`,
+  },
   notification: {
     sendCredentials: `notification.notify.${SERVICE}`,
     sendRequestReset: `notification.requestReset.${SERVICE}`,

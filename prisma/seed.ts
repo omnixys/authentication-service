@@ -1,4 +1,8 @@
-import { PrismaClient, MfaPreference } from '../src/prisma/generated/client.js';
+import {
+  PrismaClient,
+  MfaPreference,
+  SecurityQuestionType,
+} from '../src/prisma/generated/client.js';
 import { PrismaPg } from '@prisma/adapter-pg';
 import * as argon2 from 'argon2';
 import { randomBytes } from 'crypto';
@@ -11,6 +15,29 @@ const memoryCost = Number(process.env.ARGON2_MEMORY ?? 65536);
 const timeCost = Number(process.env.ARGON2_TIME ?? 3);
 const parallelism = Number(process.env.ARGON2_PARALLELISM ?? 1);
 const pepper = process.env.ARGON2_PEPPER ?? '';
+
+const SECURITY_QUESTIONS: { question: string; key: SecurityQuestionType }[] = [
+  {
+    question: 'Wie hieß Ihr erstes Haustier?',
+    key: SecurityQuestionType.FIRST_PET,
+  },
+  {
+    question: 'In welcher Stadt wurden Sie geboren?',
+    key: SecurityQuestionType.BIRTH_CITY,
+  },
+  {
+    question: 'Wie lautet der Mädchenname Ihrer Mutter?',
+    key: SecurityQuestionType.MOTHER_MAIDEN_NAME,
+  },
+  {
+    question: 'Was war Ihr Lieblingsfach in der Schule?',
+    key: SecurityQuestionType.FAVORITE_SCHOOL_SUBJECT,
+  },
+  {
+    question: 'Wie hieß Ihr bester Freund in der Kindheit?',
+    key: SecurityQuestionType.CHILDHOOD_BEST_FRIEND,
+  },
+];
 /**
  * Generates random backup codes and hashes them.
  */
@@ -96,17 +123,35 @@ async function main() {
      Controlled Security Questions
   ===================================================== */
 
+  const createdQuestions = [];
+
+  for (const question of SECURITY_QUESTIONS) {
+    const q = await prisma.securityQuestion.upsert({
+      where: { key: question.key },
+      update: {},
+      create: { question: question.question, key: question.key },
+    });
+
+    createdQuestions.push(q);
+  }
+
   // 1️⃣ Create global questions (controlled set)
   const favoriteCompany = await prisma.securityQuestion.upsert({
     where: { question: 'What is your favorite company?' },
     update: {},
-    create: { question: 'What is your favorite company?' },
+    create: {
+      question: 'What is your favorite company?',
+      key: SecurityQuestionType.FAVOURITE_COMPANY,
+    },
   });
 
   const birthPlace = await prisma.securityQuestion.upsert({
-    where: { question: 'Where were you born?' },
+    where: { question: 'When were you born?' },
     update: {},
-    create: { question: 'Where were you born?' },
+    create: {
+      question: 'When were you born?',
+      key: SecurityQuestionType.BIRTH_DATE,
+    },
   });
 
   // 2️⃣ Hash answer

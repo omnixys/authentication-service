@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-return */
 /**
  * @license GPL-3.0-or-later
  * Copyright (C) 2025 Caleb Gyamfi - Omnixys Technologies
@@ -23,8 +21,13 @@ import { getLogger } from '../../logger/get-logger.js';
 import { ResponseTimeInterceptor } from '../../logger/response-time.interceptor.js';
 import { SignUpPayload } from '../models/payloads/sign-in.payload.js';
 import { RegisterService } from '../services/register.service.js';
+import {
+  cookieOpts,
+  GqlCtx,
+  setCookieSafe,
+} from './authentication-mutation.resolver.js';
 import { UseGuards, UseInterceptors } from '@nestjs/common';
-import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { Args, Context, Mutation, Resolver } from '@nestjs/graphql';
 
 @Resolver()
 @UseGuards(CookieAuthGuard)
@@ -36,9 +39,27 @@ export class DebugResolver {
   constructor(private readonly registerService: RegisterService) {}
 
   @Mutation(() => SignUpPayload, { name: 'DEBUG_verifySignUp' })
-  async verifySignUp(@Args('token') token: string): Promise<SignUpPayload> {
+  async verifySignUp(
+    @Args('token') token: string,
+    @Context() ctx: GqlCtx,
+  ): Promise<SignUpPayload> {
     this.logger.debug('Verify Registration');
     const payload = await this.registerService.verifySignup(token);
+
+    setCookieSafe(
+      ctx.res,
+      'access_token',
+      payload?.token?.accessToken ?? '',
+      cookieOpts(payload?.token?.expiresIn ?? 0 * 1000),
+    );
+
+    setCookieSafe(
+      ctx.res,
+      'refresh_token',
+      payload?.token?.refreshToken ?? '',
+      cookieOpts(payload?.token?.refreshExpiresIn ?? 0 * 1000),
+    );
+
     return payload;
   }
 }

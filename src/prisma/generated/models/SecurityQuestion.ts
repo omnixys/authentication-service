@@ -26,32 +26,38 @@ export type AggregateSecurityQuestion = {
 
 export type SecurityQuestionMinAggregateOutputType = {
   id: string | null;
+  key: $Enums.SecurityQuestionType | null;
   question: string | null;
 };
 
 export type SecurityQuestionMaxAggregateOutputType = {
   id: string | null;
+  key: $Enums.SecurityQuestionType | null;
   question: string | null;
 };
 
 export type SecurityQuestionCountAggregateOutputType = {
   id: number;
+  key: number;
   question: number;
   _all: number;
 };
 
 export type SecurityQuestionMinAggregateInputType = {
   id?: true;
+  key?: true;
   question?: true;
 };
 
 export type SecurityQuestionMaxAggregateInputType = {
   id?: true;
+  key?: true;
   question?: true;
 };
 
 export type SecurityQuestionCountAggregateInputType = {
   id?: true;
+  key?: true;
   question?: true;
   _all?: true;
 };
@@ -141,6 +147,7 @@ export type SecurityQuestionGroupByArgs<
 
 export type SecurityQuestionGroupByOutputType = {
   id: string;
+  key: $Enums.SecurityQuestionType;
   question: string;
   _count: SecurityQuestionCountAggregateOutputType | null;
   _min: SecurityQuestionMinAggregateOutputType | null;
@@ -166,12 +173,16 @@ export type SecurityQuestionWhereInput = {
   OR?: Prisma.SecurityQuestionWhereInput[];
   NOT?: Prisma.SecurityQuestionWhereInput | Prisma.SecurityQuestionWhereInput[];
   id?: Prisma.StringFilter<'SecurityQuestion'> | string;
+  key?:
+    | Prisma.EnumSecurityQuestionTypeFilter<'SecurityQuestion'>
+    | $Enums.SecurityQuestionType;
   question?: Prisma.StringFilter<'SecurityQuestion'> | string;
   userAnswers?: Prisma.UserSecurityQuestionListRelationFilter;
 };
 
 export type SecurityQuestionOrderByWithRelationInput = {
   id?: Prisma.SortOrder;
+  key?: Prisma.SortOrder;
   question?: Prisma.SortOrder;
   userAnswers?: Prisma.UserSecurityQuestionOrderByRelationAggregateInput;
 };
@@ -179,6 +190,7 @@ export type SecurityQuestionOrderByWithRelationInput = {
 export type SecurityQuestionWhereUniqueInput = Prisma.AtLeast<
   {
     id?: string;
+    key?: $Enums.SecurityQuestionType;
     question?: string;
     AND?:
       | Prisma.SecurityQuestionWhereInput
@@ -189,11 +201,12 @@ export type SecurityQuestionWhereUniqueInput = Prisma.AtLeast<
       | Prisma.SecurityQuestionWhereInput[];
     userAnswers?: Prisma.UserSecurityQuestionListRelationFilter;
   },
-  'id' | 'question'
+  'id' | 'key' | 'question'
 >;
 
 export type SecurityQuestionOrderByWithAggregationInput = {
   id?: Prisma.SortOrder;
+  key?: Prisma.SortOrder;
   question?: Prisma.SortOrder;
   _count?: Prisma.SecurityQuestionCountOrderByAggregateInput;
   _max?: Prisma.SecurityQuestionMaxOrderByAggregateInput;
@@ -209,66 +222,91 @@ export type SecurityQuestionScalarWhereWithAggregatesInput = {
     | Prisma.SecurityQuestionScalarWhereWithAggregatesInput
     | Prisma.SecurityQuestionScalarWhereWithAggregatesInput[];
   id?: Prisma.StringWithAggregatesFilter<'SecurityQuestion'> | string;
+  key?:
+    | Prisma.EnumSecurityQuestionTypeWithAggregatesFilter<'SecurityQuestion'>
+    | $Enums.SecurityQuestionType;
   question?: Prisma.StringWithAggregatesFilter<'SecurityQuestion'> | string;
 };
 
 export type SecurityQuestionCreateInput = {
   id?: string;
+  key: $Enums.SecurityQuestionType;
   question: string;
   userAnswers?: Prisma.UserSecurityQuestionCreateNestedManyWithoutQuestionInput;
 };
 
 export type SecurityQuestionUncheckedCreateInput = {
   id?: string;
+  key: $Enums.SecurityQuestionType;
   question: string;
   userAnswers?: Prisma.UserSecurityQuestionUncheckedCreateNestedManyWithoutQuestionInput;
 };
 
 export type SecurityQuestionUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string;
+  key?:
+    | Prisma.EnumSecurityQuestionTypeFieldUpdateOperationsInput
+    | $Enums.SecurityQuestionType;
   question?: Prisma.StringFieldUpdateOperationsInput | string;
   userAnswers?: Prisma.UserSecurityQuestionUpdateManyWithoutQuestionNestedInput;
 };
 
 export type SecurityQuestionUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string;
+  key?:
+    | Prisma.EnumSecurityQuestionTypeFieldUpdateOperationsInput
+    | $Enums.SecurityQuestionType;
   question?: Prisma.StringFieldUpdateOperationsInput | string;
   userAnswers?: Prisma.UserSecurityQuestionUncheckedUpdateManyWithoutQuestionNestedInput;
 };
 
 export type SecurityQuestionCreateManyInput = {
   id?: string;
+  key: $Enums.SecurityQuestionType;
   question: string;
 };
 
 export type SecurityQuestionUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string;
+  key?:
+    | Prisma.EnumSecurityQuestionTypeFieldUpdateOperationsInput
+    | $Enums.SecurityQuestionType;
   question?: Prisma.StringFieldUpdateOperationsInput | string;
 };
 
 export type SecurityQuestionUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string;
+  key?:
+    | Prisma.EnumSecurityQuestionTypeFieldUpdateOperationsInput
+    | $Enums.SecurityQuestionType;
   question?: Prisma.StringFieldUpdateOperationsInput | string;
 };
 
 export type SecurityQuestionCountOrderByAggregateInput = {
   id?: Prisma.SortOrder;
+  key?: Prisma.SortOrder;
   question?: Prisma.SortOrder;
 };
 
 export type SecurityQuestionMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder;
+  key?: Prisma.SortOrder;
   question?: Prisma.SortOrder;
 };
 
 export type SecurityQuestionMinOrderByAggregateInput = {
   id?: Prisma.SortOrder;
+  key?: Prisma.SortOrder;
   question?: Prisma.SortOrder;
 };
 
 export type SecurityQuestionScalarRelationFilter = {
   is?: Prisma.SecurityQuestionWhereInput;
   isNot?: Prisma.SecurityQuestionWhereInput;
+};
+
+export type EnumSecurityQuestionTypeFieldUpdateOperationsInput = {
+  set?: $Enums.SecurityQuestionType;
 };
 
 export type SecurityQuestionCreateNestedOneWithoutUserAnswersInput = {
@@ -299,11 +337,13 @@ export type SecurityQuestionUpdateOneRequiredWithoutUserAnswersNestedInput = {
 
 export type SecurityQuestionCreateWithoutUserAnswersInput = {
   id?: string;
+  key: $Enums.SecurityQuestionType;
   question: string;
 };
 
 export type SecurityQuestionUncheckedCreateWithoutUserAnswersInput = {
   id?: string;
+  key: $Enums.SecurityQuestionType;
   question: string;
 };
 
@@ -337,11 +377,17 @@ export type SecurityQuestionUpdateToOneWithWhereWithoutUserAnswersInput = {
 
 export type SecurityQuestionUpdateWithoutUserAnswersInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string;
+  key?:
+    | Prisma.EnumSecurityQuestionTypeFieldUpdateOperationsInput
+    | $Enums.SecurityQuestionType;
   question?: Prisma.StringFieldUpdateOperationsInput | string;
 };
 
 export type SecurityQuestionUncheckedUpdateWithoutUserAnswersInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string;
+  key?:
+    | Prisma.EnumSecurityQuestionTypeFieldUpdateOperationsInput
+    | $Enums.SecurityQuestionType;
   question?: Prisma.StringFieldUpdateOperationsInput | string;
 };
 
@@ -389,6 +435,7 @@ export type SecurityQuestionSelect<
 > = runtime.Types.Extensions.GetSelect<
   {
     id?: boolean;
+    key?: boolean;
     question?: boolean;
     userAnswers?: boolean | Prisma.SecurityQuestion$userAnswersArgs<ExtArgs>;
     _count?:
@@ -404,6 +451,7 @@ export type SecurityQuestionSelectCreateManyAndReturn<
 > = runtime.Types.Extensions.GetSelect<
   {
     id?: boolean;
+    key?: boolean;
     question?: boolean;
   },
   ExtArgs['result']['securityQuestion']
@@ -415,6 +463,7 @@ export type SecurityQuestionSelectUpdateManyAndReturn<
 > = runtime.Types.Extensions.GetSelect<
   {
     id?: boolean;
+    key?: boolean;
     question?: boolean;
   },
   ExtArgs['result']['securityQuestion']
@@ -422,6 +471,7 @@ export type SecurityQuestionSelectUpdateManyAndReturn<
 
 export type SecurityQuestionSelectScalar = {
   id?: boolean;
+  key?: boolean;
   question?: boolean;
 };
 
@@ -429,7 +479,7 @@ export type SecurityQuestionOmit<
   ExtArgs extends runtime.Types.Extensions.InternalArgs =
     runtime.Types.Extensions.DefaultArgs,
 > = runtime.Types.Extensions.GetOmit<
-  'id' | 'question',
+  'id' | 'key' | 'question',
   ExtArgs['result']['securityQuestion']
 >;
 export type SecurityQuestionInclude<
@@ -459,6 +509,7 @@ export type $SecurityQuestionPayload<
   scalars: runtime.Types.Extensions.GetPayloadResult<
     {
       id: string;
+      key: $Enums.SecurityQuestionType;
       question: string;
     },
     ExtArgs['result']['securityQuestion']
@@ -1086,6 +1137,7 @@ export interface Prisma__SecurityQuestionClient<
  */
 export interface SecurityQuestionFieldRefs {
   readonly id: Prisma.FieldRef<'SecurityQuestion', 'String'>;
+  readonly key: Prisma.FieldRef<'SecurityQuestion', 'SecurityQuestionType'>;
   readonly question: Prisma.FieldRef<'SecurityQuestion', 'String'>;
 }
 
