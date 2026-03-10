@@ -41,7 +41,11 @@ ARG OMNIXYS_TOKEN
 ENV OMNIXYS_TOKEN=$OMNIXYS_TOKEN
 
 COPY --chown=node:node package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile --ignore-scripts
+
+RUN --mount=type=secret,id=omnixys_token \
+    export OMNIXYS_TOKEN=$(cat /run/secrets/omnixys_token) && \
+    pnpm install --frozen-lockfile --ignore-scripts
+
 COPY --chown=node:node . .
 RUN pnpm run build
 
@@ -56,7 +60,10 @@ ARG OMNIXYS_TOKEN
 ENV OMNIXYS_TOKEN=$OMNIXYS_TOKEN
 
 COPY --chown=node:node package.json pnpm-lock.yaml ./
-RUN pnpm install --prod --frozen-lockfile --ignore-scripts
+
+RUN --mount=type=secret,id=omnixys_token \
+    export OMNIXYS_TOKEN=$(cat /run/secrets/omnixys_token) && \
+    pnpm install --frozen-lockfile --ignore-scripts
 
 # ---------------------------------------------------------------------------------------
 # Stage 3: Final runtime image
