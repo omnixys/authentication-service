@@ -2,6 +2,11 @@
 
 All notable changes in this project will be documented in this file.
 
+## <small>2.0.6 (2026-03-10)</small>
+
+- fix(dockerfile): update dockerfile ([c672ebbba30e37912ed33f4fef1d806f6dbcc5b9](https://github.com/omnixys/authentication-service/commit/c672ebbba30e37912ed33f4fef1d806f6dbcc5b9))
+- Merge branch 'main' of https://github.com/omnixys/authentication-service ([9ffe0cdace890ed65b3883feddf78df3e719673d](https://github.com/omnixys/authentication-service/commit/9ffe0cdace890ed65b3883feddf78df3e719673d))
+
 ## <small>2.0.5 (2026-03-10)</small>
 
 - fix(dockerfile): update dockerfile ([df14c2e565dcfe6f81042fe9df37cd3aac287a13](https://github.com/omnixys/authentication-service/commit/df14c2e565dcfe6f81042fe9df37cd3aac287a13))
