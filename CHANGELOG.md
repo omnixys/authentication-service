@@ -2,6 +2,20 @@
 
 All notable changes in this project will be documented in this file.
 
+## 2.0.0 (2026-03-10)
+
+- fix(ci): update release.yml ([1b77206c13d8ea2a5fdd27aa241f457e2510988b](https://github.com/omnixys/authentication-service/commit/1b77206c13d8ea2a5fdd27aa241f457e2510988b))
+- fix(ci): update release.yml ([0be61fe0cf84027e75cedd5044f56d966a3bcda3](https://github.com/omnixys/authentication-service/commit/0be61fe0cf84027e75cedd5044f56d966a3bcda3))
+- fix(docker): update dockerfile ([0fa13704206df3ee3a4d266a8f18bfa370ac8282](https://github.com/omnixys/authentication-service/commit/0fa13704206df3ee3a4d266a8f18bfa370ac8282))
+- feat(mfa): add mfa ([cec00158decadde0b2f12cb12a3c3d13d4b5b78b](https://github.com/omnixys/authentication-service/commit/cec00158decadde0b2f12cb12a3c3d13d4b5b78b))
+- Merge branch 'main' of https://github.com/omnixys/omnixys-authentication-service ([3b15b278f009247d2ea486e75815984e825dee05](https://github.com/omnixys/authentication-service/commit/3b15b278f009247d2ea486e75815984e825dee05))
+- breaking(prisma): update prisma schema ([6545a82fa92b4f29ebe50cbe84883a348321d673](https://github.com/omnixys/authentication-service/commit/6545a82fa92b4f29ebe50cbe84883a348321d673))
+- feat(prisma): add Security Question ([f5e65361a40b640217e3f9dcc362df3dc042e5ed](https://github.com/omnixys/authentication-service/commit/f5e65361a40b640217e3f9dcc362df3dc042e5ed))
+- ci(release): updae release.yml changed repo name ([297be0fdac435a82f693bc21f3a530931241bf42](https://github.com/omnixys/authentication-service/commit/297be0fdac435a82f693bc21f3a530931241bf42))
+- chore(release.config.js): update release.config.js changed releaseBodyTemplate ([b5fe0f2843bef09a10f843341c9628fbffc0586f](https://github.com/omnixys/authentication-service/commit/b5fe0f2843bef09a10f843341c9628fbffc0586f))
+- feat(security-question): Add security-question model ([5374b6aa50fb7bfddfe45eaf82f4825eb86fba67](https://github.com/omnixys/authentication-service/commit/5374b6aa50fb7bfddfe45eaf82f4825eb86fba67))
+- feat(social login): implementd social logIn ([23a05ef60100d7a129ee26a0980d1dd6d3d46ec2](https://github.com/omnixys/authentication-service/commit/23a05ef60100d7a129ee26a0980d1dd6d3d46ec2))
+
 ## 1.1.0 (2026-03-01)
 
 - feat(register): add register flow ([f886677d8a19de95046c42136613d2b6f2b36c4b](https://github.com/omnixys/omnixys-authentication-service/commit/f886677d8a19de95046c42136613d2b6f2b36c4b))
