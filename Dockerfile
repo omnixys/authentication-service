@@ -28,7 +28,6 @@ ARG NODE_VERSION=24.10.0
 FROM node:${NODE_VERSION}-bookworm-slim AS base
 WORKDIR /home/node
 RUN corepack enable pnpm
-USER node
 
 # ---------------------------------------------------------------------------------------
 # Stage 1: Build (dist)
