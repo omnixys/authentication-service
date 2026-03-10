@@ -50,6 +50,7 @@ env:
   OMNIXYS_USER_USERNAME: ${{ secrets.OMNIXYS_USER_USERNAME }}
   OMNIXYS_USER_PASSWORD: ${{ secrets.OMNIXYS_USER_PASSWORD }}
   OMNIXYS_EMAIL_DOMAIN: ${{ secrets.OMNIXYS_EMAIL_DOMAIN }}
+  OMNIXYS_TOKEN: ${{ secrets.OMNIXYS_TOKEN }}
 
   KAFKA_BROKER: ${{ secrets.KAFKA_BROKER }}
   TEMPO_URI: ${{ secrets.TEMPO_URI }}
@@ -143,6 +144,7 @@ jobs:
             APP_VERSION=${{ env.CURRENT_VERSION }}
             APP_NAME=${{ vars.SERVICE }}
             NODE_VERSION=${{ matrix.node-version }}
+            OMNIXYS_TOKEN=${{ env.OMNIXYS_TOKEN}}
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
 
@@ -224,6 +226,7 @@ jobs:
             APP_VERSION=${{ env.CURRENT_VERSION }}
             APP_NAME=${{ vars.SERVICE }}
             NODE_VERSION=${{ matrix.node-version }}
+            OMNIXYS_TOKEN=${{ env.OMNIXYS_TOKEN}}
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
 
