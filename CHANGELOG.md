@@ -2,6 +2,10 @@
 
 All notable changes in this project will be documented in this file.
 
+## <small>2.0.4 (2026-03-10)</small>
+
+- fix(dockerfile): update dockerfile ([5d02e051015b371c162f21a0c43a4e1e64623b39](https://github.com/omnixys/authentication-service/commit/5d02e051015b371c162f21a0c43a4e1e64623b39))
+
 ## <small>2.0.3 (2026-03-10)</small>
 
 - fix(dockerfile): update dockerfile ([9de6706e69c414bcefc997ed17815f3f165c85e3](https://github.com/omnixys/authentication-service/commit/9de6706e69c414bcefc997ed17815f3f165c85e3))
