@@ -36,6 +36,10 @@ USER node
 # - Result: ./dist folder containing compiled JS files.
 # ---------------------------------------------------------------------------------------
 FROM base AS dist
+
+ARG OMNIXYS_TOKEN
+ENV OMNIXYS_TOKEN=$OMNIXYS_TOKEN
+
 COPY --chown=node:node package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile --ignore-scripts
 COPY --chown=node:node . .
@@ -47,6 +51,10 @@ RUN pnpm run build
 # - No dev packages or build tools are included.
 # ---------------------------------------------------------------------------------------
 FROM base AS dependencies
+
+ARG OMNIXYS_TOKEN
+ENV OMNIXYS_TOKEN=$OMNIXYS_TOKEN
+
 COPY --chown=node:node package.json pnpm-lock.yaml ./
 RUN pnpm install --prod --frozen-lockfile --ignore-scripts
 
@@ -63,6 +71,8 @@ ARG APP_NAME
 ARG APP_VERSION
 ARG CREATED
 ARG REVISION
+ARG OMNIXYS_TOKEN
+ENV OMNIXYS_TOKEN=$OMNIXYS_TOKEN
 
 # ----- Image metadata (OCI compliant) -----
 LABEL org.opencontainers.image.title="${APP_NAME}-service" \
