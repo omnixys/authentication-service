@@ -1,5 +1,5 @@
 {
-  "name": "omnixys-authentication-service",
+  "name": "authentication-service",
   "version": "1.1.0",
   "description": "Omnixys Authentication Service – zentrale Authentifizierungs- und Autorisierungskomponente (Keycloak, JWT, SSO).",
   "author": {
@@ -9,10 +9,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/omnixys/omnixys-authentication-service.git"
+    "url": "https://github.com/omnixys/authentication-service.git"
   },
   "bugs": {
-    "url": "https://github.com/omnixys/omnixys-authentication-service/issues"
+    "url": "https://github.com/omnixys/authentication-service/issues"
   },
   "homepage": "https://omnixys.com",
   "license": "GPL-3.0-or-later",

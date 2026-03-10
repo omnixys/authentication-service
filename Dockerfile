@@ -65,18 +65,18 @@ ARG CREATED
 ARG REVISION
 
 # ----- Image metadata (OCI compliant) -----
-LABEL org.opencontainers.image.title="omnixys-${APP_NAME}-service" \
+LABEL org.opencontainers.image.title="${APP_NAME}-service" \
       org.opencontainers.image.description="Omnixys ${APP_NAME}-service – Node.js ${NODE_VERSION}, built with TypeScript, version ${APP_VERSION}, based on Debian Bookworm." \
       org.opencontainers.image.version="${APP_VERSION}" \
       org.opencontainers.image.licenses="GPL-3.0-or-later" \
       org.opencontainers.image.vendor="Omnixys Technologies" \
       org.opencontainers.image.authors="caleb.gyamfi@omnixys.com" \
       org.opencontainers.image.base.name="node:${NODE_VERSION}-bookworm-slim" \
-      org.opencontainers.image.url="https://github.com/omnixys/omnixys-${APP_NAME}-service" \
-      org.opencontainers.image.source="https://github.com/omnixys/omnixys-${APP_NAME}-service" \
+      org.opencontainers.image.url="https://github.com/omnixys/${APP_NAME}-service" \
+      org.opencontainers.image.source="https://github.com/omnixys/${APP_NAME}-service" \
       org.opencontainers.image.created="${CREATED}" \
       org.opencontainers.image.revision="${REVISION}" \
-      org.opencontainers.image.documentation="https://github.com/omnixys/omnixys-${APP_NAME}-service/blob/main/README.md"
+      org.opencontainers.image.documentation="https://github.com/omnixys/${APP_NAME}-service/blob/main/README.md"
 
 # ----- Set working directory -----
 WORKDIR /opt/app
