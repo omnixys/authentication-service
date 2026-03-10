@@ -36,10 +36,12 @@ USER node
 # - Result: ./dist folder containing compiled JS files.
 # ---------------------------------------------------------------------------------------
 FROM base AS dist
-COPY --chown=node:node package.json pnpm-lock.yaml .npmrc ./
+COPY --chown=node:node package.json pnpm-lock.yaml ./
 
 RUN --mount=type=secret,id=omnixys_token \
-    export OMNIXYS_TOKEN=$(cat /run/secrets/omnixys_token) && \
+    TOKEN=$(cat /run/secrets/omnixys_token) && \
+    echo "@omnixys:registry=https://npm.pkg.github.com" > .npmrc && \
+    echo "//npm.pkg.github.com/:_authToken=${TOKEN}" >> .npmrc && \
     pnpm install --frozen-lockfile --ignore-scripts
 
 COPY --chown=node:node . .
@@ -52,10 +54,12 @@ RUN pnpm run build
 # ---------------------------------------------------------------------------------------
 FROM base AS dependencies
 
-COPY --chown=node:node package.json pnpm-lock.yaml .npmrc ./
+COPY --chown=node:node package.json pnpm-lock.yaml ./
 
 RUN --mount=type=secret,id=omnixys_token \
-    export OMNIXYS_TOKEN=$(cat /run/secrets/omnixys_token) && \
+    TOKEN=$(cat /run/secrets/omnixys_token) && \
+    echo "@omnixys:registry=https://npm.pkg.github.com" > .npmrc && \
+    echo "//npm.pkg.github.com/:_authToken=${TOKEN}" >> .npmrc && \
     pnpm install --frozen-lockfile --ignore-scripts
 
 # ---------------------------------------------------------------------------------------
