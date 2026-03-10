@@ -36,11 +36,7 @@ USER node
 # - Result: ./dist folder containing compiled JS files.
 # ---------------------------------------------------------------------------------------
 FROM base AS dist
-
-ARG OMNIXYS_TOKEN
-ENV OMNIXYS_TOKEN=$OMNIXYS_TOKEN
-
-COPY --chown=node:node package.json pnpm-lock.yaml ./
+COPY --chown=node:node package.json pnpm-lock.yaml .npmrc ./
 
 RUN --mount=type=secret,id=omnixys_token \
     export OMNIXYS_TOKEN=$(cat /run/secrets/omnixys_token) && \
@@ -56,10 +52,7 @@ RUN pnpm run build
 # ---------------------------------------------------------------------------------------
 FROM base AS dependencies
 
-ARG OMNIXYS_TOKEN
-ENV OMNIXYS_TOKEN=$OMNIXYS_TOKEN
-
-COPY --chown=node:node package.json pnpm-lock.yaml ./
+COPY --chown=node:node package.json pnpm-lock.yaml .npmrc ./
 
 RUN --mount=type=secret,id=omnixys_token \
     export OMNIXYS_TOKEN=$(cat /run/secrets/omnixys_token) && \
@@ -78,8 +71,6 @@ ARG APP_NAME
 ARG APP_VERSION
 ARG CREATED
 ARG REVISION
-ARG OMNIXYS_TOKEN
-ENV OMNIXYS_TOKEN=$OMNIXYS_TOKEN
 
 # ----- Image metadata (OCI compliant) -----
 LABEL org.opencontainers.image.title="${APP_NAME}-service" \

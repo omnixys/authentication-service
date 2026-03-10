@@ -128,7 +128,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           secrets: |
-            omnixys_token=${{ secrets.OMNIXYS_TOKEN }}
+            omnixys_token=${{ env.OMNIXYS_TOKEN }}
           context: .
           push: true
           platforms: linux/amd64,linux/arm64
@@ -146,7 +146,6 @@ jobs:
             APP_VERSION=${{ env.CURRENT_VERSION }}
             APP_NAME=${{ vars.SERVICE }}
             NODE_VERSION=${{ matrix.node-version }}
-            OMNIXYS_TOKEN=${{ env.OMNIXYS_TOKEN}}
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
 
@@ -212,7 +211,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           secrets: |
-            omnixys_token=${{ secrets.OMNIXYS_TOKEN }}
+            omnixys_token=${{ env.OMNIXYS_TOKEN }}
           context: .
           push: true
           platforms: linux/amd64,linux/arm64
@@ -230,7 +229,6 @@ jobs:
             APP_VERSION=${{ env.CURRENT_VERSION }}
             APP_NAME=${{ vars.SERVICE }}
             NODE_VERSION=${{ matrix.node-version }}
-            OMNIXYS_TOKEN=${{ env.OMNIXYS_TOKEN}}
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
 
