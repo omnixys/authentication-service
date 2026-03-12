@@ -271,14 +271,12 @@ export class OAuthService extends AuthenticateBaseService {
       return user;
     }
 
-    // 3️⃣ Create new user
-    // Falls noch kein KC-User existiert → erstellen
-
     const userId = await this.userWriteService.createKeycloakUser(data);
     user = await this.prisma.authUser.create({
       data: {
         id: userId,
         email: data.email,
+        username: data.name ?? '',
         oauthAccounts: {
           create: {
             provider: data.provider,

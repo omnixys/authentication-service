@@ -14,12 +14,6 @@
  *
  * For more information, visit <https://www.gnu.org/licenses/>.
  */
-
-import {
-  CurrentUser,
-  CurrentUserData,
-} from '../../auth/decorators/current-user.decorator.js';
-import { CookieAuthGuard } from '../../auth/guards/cookie-auth.guard.js';
 import { getLogger } from '../../logger/get-logger.js';
 import { ResponseTimeInterceptor } from '../../logger/response-time.interceptor.js';
 import { UserSignUpInput } from '../models/inputs/sign-up.input.js';
@@ -29,16 +23,13 @@ import { SuccessPayload } from '../models/payloads/success.payload.js';
 import { TokenPayload } from '../models/payloads/token.payload.js';
 import { UserWriteService } from '../services/user-write.service.js';
 import {
-  cookieOpts,
-  setCookieSafe,
-  type GqlCtx,
-} from './authentication-mutation.resolver.js';
-import {
   UnauthorizedException,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { Args, Context, Mutation, Resolver } from '@nestjs/graphql';
+import { CookieAuthGuard, CurrentUser, CurrentUserData } from '@omnixys/auth';
+import { GqlFastifyContext, gqlSetTokens } from '@omnixys/context';
 
 @Resolver()
 @UseInterceptors(ResponseTimeInterceptor)
@@ -58,14 +49,14 @@ export class UserMutationResolver {
       throw new UnauthorizedException('Not authenticated');
     }
 
-    const username = user?.username ?? user?.preferred_username;
-    this.logger.debug('changeMyPassword: sub=%s', user?.sub);
+    const username = user?.username ?? user?.username;
+    this.logger.debug('changeMyPassword: id=%s', user?.id);
 
     // this.logger.debug('changeMyPassword: user=%o', user);
 
     await this.userService.changePassword({
-      userId: user.sub,
-      username, // für Direct Grant Validierung nötig; wenn leer, im Service per Admin-API nachladen
+      userId: user.id,
+      username,
       oldPassword: input.oldPassword,
       newPassword: input.newPassword,
     });
@@ -91,23 +82,14 @@ export class UserMutationResolver {
   @Mutation(() => TokenPayload, { name: 'userSignUp' })
   async userSignIn(
     @Args('input', { type: () => UserSignUpInput }) input: UserSignUpInput,
-    @Context() ctx: GqlCtx,
+    @Context() ctx: GqlFastifyContext,
   ): Promise<TokenPayload> {
     this.logger.debug('signIn: input=%o', input);
     const result = await this.userService.userSignUp(input);
+    const res = ctx?.reply;
 
-    setCookieSafe(
-      ctx?.res,
-      'access_token',
-      result.accessToken,
-      cookieOpts(result.expiresIn * 1000),
-    );
-    setCookieSafe(
-      ctx?.res,
-      'refresh_token',
-      result.refreshToken,
-      cookieOpts(result.refreshExpiresIn * 1000),
-    );
+    gqlSetTokens(res, result.accessToken, result.expiresIn * 1000);
+
     return result;
   }
 

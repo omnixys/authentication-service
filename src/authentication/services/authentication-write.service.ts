@@ -25,6 +25,7 @@ import { TraceContextProvider } from '../../trace/trace-context.provider.js';
 import { ValkeyKey } from '../../valkey/valkey.keys.js';
 import { ValkeyService } from '../../valkey/valkey.service.js';
 import type { KeycloakToken } from '../models/dtos/kc-token.dto.js';
+import { RequestMeta } from '../models/dtos/request-meta.dto.js';
 import { AuthContext } from '../models/entitys/login-context.js';
 import type { LogInInput } from '../models/inputs/log-in.input.js';
 import { toToken } from '../models/mappers/token.mapper.js';
@@ -180,6 +181,7 @@ export class AuthWriteService extends AuthenticateBaseService {
       (await this.prisma.authUser.create({
         data: {
           email,
+          username,
           // mfaPreference default NONE
         },
       }));
@@ -253,10 +255,7 @@ export class AuthWriteService extends AuthenticateBaseService {
     });
   }
 
-  async requestMagicLink(
-    email: string,
-    ctx?: { ip?: string; userAgent?: string },
-  ): Promise<boolean> {
+  async requestMagicLink(email: string, context: RequestMeta): Promise<boolean> {
     return this.withSpan('authentication.login.totp', async (span) => {
       this.logger.debug('requesting magic link for email %s', email);
       const user = await this.prisma.authUser.findUnique({
@@ -275,7 +274,7 @@ export class AuthWriteService extends AuthenticateBaseService {
         userId: user.id,
         email,
         createdAt: new Date().toISOString(),
-        ip: ctx?.ip,
+        ip: context.ip,
       };
 
       await this.valkey.client.set(ValkeyKey.magicLinkToken(token), JSON.stringify(payload), {
@@ -287,6 +286,11 @@ export class AuthWriteService extends AuthenticateBaseService {
         {
           email: user.email,
           token,
+          locale: context.locale,
+          device: context.device,
+          ip: context.ip,
+          location: context.location,
+          username: user.username,
         },
         'authentication.requestMagicLink',
         { traceId: sc.traceId, spanId: sc.spanId },

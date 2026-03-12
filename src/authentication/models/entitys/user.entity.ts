@@ -15,8 +15,8 @@
  * For more information, visit <https://www.gnu.org/licenses/>.
  */
 
-import { RealmRole } from '../enums/role.enum.js';
 import { Field, ID, ObjectType } from '@nestjs/graphql';
+import { RealmRole } from '@omnixys/contracts';
 
 @ObjectType()
 export class KcUser {

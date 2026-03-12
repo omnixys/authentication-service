@@ -28,7 +28,7 @@ import { ApolloFederationDriver, ApolloFederationDriverConfig } from '@nestjs/ap
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { GraphQLModule } from '@nestjs/graphql';
-import { FastifyRequest, FastifyReply } from 'fastify';
+import { GqlFastifyContext } from '@omnixys/context';
 
 const { SCHEMA_TARGET } = env;
 
@@ -60,9 +60,9 @@ const { SCHEMA_TARGET } = env;
         csrfPrevention: false,
         introspection: true,
 
-        context: ({ req, res }: { req: FastifyRequest; res: FastifyReply }) => ({
+        context: ({ req, reply }: GqlFastifyContext) => ({
           req,
-          res,
+          reply,
         }),
       }),
     }),

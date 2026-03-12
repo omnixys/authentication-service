@@ -27,7 +27,7 @@ variable "APP_NAME" {
 
 # Pass APP_VERSION via CLI:
 variable "APP_VERSION" {
-  default = "0.0.0-dev"
+  default = "dev"
 }
 
 variable "NODE_VERSION" {
@@ -53,6 +53,10 @@ group "default" {
 target "build" {
   dockerfile = "./Dockerfile"
   context = "."
+
+  secret = [
+    "id=omnixys_token,src=.secrets/omnixys_token"
+  ]
 
   args = {
     NODE_VERSION = "${NODE_VERSION}"

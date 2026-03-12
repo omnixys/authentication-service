@@ -15,7 +15,6 @@
  * For more information, visit <https://www.gnu.org/licenses/>.
  */
 
-import { AuthModule } from '../auth/auth.module.js';
 import { CoreHttpModule } from '../http.module.js';
 import { KafkaModule } from '../kafka/kafka.module.js';
 import { LoggerModule } from '../logger/logger.module.js';
@@ -40,18 +39,18 @@ import { EncryptionService } from './services/encryption.service.js';
 import { GeoIpService } from './services/geoip.service.js';
 import { HmacService } from './services/hmac.service.js';
 import { LockoutService } from './services/lockout.service.js';
-import { MailService } from './services/mail.service.js';
 import { OAuthService } from './services/o-auth.service.js';
 import { PendingContactService } from './services/pending-contact.service.js';
 import { AuthenticateReadService } from './services/read.service.js';
 import { RegisterService } from './services/register.service.js';
-import { ResetService } from './services/resest.service.js';
+import { ResetService } from './services/reset.service.js';
 import { RiskEngineService } from './services/risk-engine.service.js';
 import { SecurityQuestionService } from './services/security-question.service.js';
 import { TotpService } from './services/totp.service.js';
 import { UserWriteService } from './services/user-write.service.js';
 import { WebAuthnService } from './services/web-authn.service.js';
 import { Module } from '@nestjs/common';
+import { AuthModule } from '@omnixys/auth';
 
 @Module({
   imports: [
@@ -87,7 +86,6 @@ import { Module } from '@nestjs/common';
     EncryptionService,
     Argon2Service,
     LockoutService,
-    MailService,
     HmacService,
     SecurityQuestionService,
     RiskEngineService,

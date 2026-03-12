@@ -74,7 +74,7 @@ env:
   POSTGRES_TEST_USER: ${{ secrets.POSTGRES_TEST_USER }}
   POSTGRES_TEST_PASSWORD: ${{ secrets.POSTGRES_TEST_PASSWORD }}
   POSTGRES_TEST_DB: ${{ secrets.POSTGRES_TEST_DB }}
-  POSTGRES_TEST_URL: postgres://${{ secrets.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@localhost:5433/${{ secrets.POSTGRES_DB }}
+  POSTGRES_TEST_URL: postgres://${{ secrets.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@OMNIXYS_TOKEN:5433/${{ secrets.POSTGRES_DB }}
 
 jobs:
   ci:

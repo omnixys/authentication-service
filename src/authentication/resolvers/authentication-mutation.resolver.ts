@@ -16,16 +16,10 @@
  * For more information, visit <https://www.gnu.org/licenses/>.
  */
 
-import {
-  CurrentUser,
-  CurrentUserData,
-} from '../../auth/decorators/current-user.decorator.js';
-import { CookieAuthGuard } from '../../auth/guards/cookie-auth.guard.js';
-import { env } from '../../config/env.js';
 import { JsonScalar } from '../../core/scalars/json.scalar.js';
 import { LoggerPlusService } from '../../logger/logger-plus.service.js';
 import { ResponseTimeInterceptor } from '../../logger/response-time.interceptor.js';
-import { KeycloakTokenPayload } from '../models/dtos/kc-token.dto.js';
+import { RequestMeta } from '../models/dtos/request-meta.dto.js';
 import { LogInInput } from '../models/inputs/log-in.input.js';
 import { LoginTotpInput } from '../models/inputs/login-totp.input.js';
 import { SuccessPayload } from '../models/payloads/success.payload.js';
@@ -40,114 +34,16 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { Args, Context, Mutation, Resolver } from '@nestjs/graphql';
+import { CookieAuthGuard, CurrentUser, CurrentUserData } from '@omnixys/auth';
+import {
+  ClientIp,
+  Device,
+  GqlFastifyContext,
+  Location,
+  RequestCookies,
+} from '@omnixys/context';
 import { AuthenticationResponseJSON } from '@simplewebauthn/server';
-import type { CookieOptions, Request, Response } from 'express';
-
-/**
- * Represents the standard GraphQL execution context used by resolvers.
- * Provides access to both the incoming HTTP request and outgoing response.
- */
-export interface GqlCtx {
-  req: Request & {
-    cookies?: Record<string, string | undefined>;
-    user?: KeycloakTokenPayload;
-  };
-  res: Response;
-}
-
-/**
- * Express request type containing Keycloak cookies.
- */
-export interface CookieReq {
-  cookies: {
-    access_token: string;
-    refresh_token: string;
-  };
-}
-
-/**
- * Safely reads and returns the `kc_access_token` cookie from the GraphQL context.
- *
- * @param ctx - The current GraphQL context
- * @returns The access token string if available; otherwise, `undefined`
- */
-export function readAccessTokenFromCookie(ctx: GqlCtx): string | undefined {
-  if (!ctx.req) {
-    return undefined;
-  }
-  const cookieReq: CookieReq = ctx.req;
-  const value = cookieReq.cookies?.access_token;
-  return typeof value === 'string' ? value : undefined;
-}
-
-/**
- * @fileoverview
- * GraphQL resolver handling **authentication write operations**.
- *
- * @remarks
- * Includes mutations for:
- * - `login`, `refresh`, `logout`
- * - `adminSignUp`
- * - (commented: `guestSignIn`)
- *
- * Automatically sets and updates the following HTTP-only cookies:
- *  - `kc_access_token`
- *  - `kc_refresh_token`
- *
- * All mutations are marked as `@Public()`. In production, access should
- * be restricted based on user roles and Keycloak policies.
- */
-
-const { NODE_ENV } = env;
-
-const isProd = NODE_ENV === 'production';
-/**
- * Creates a configured set of cookie options based on the runtime environment.
- *
- * @param maxAgeMs - The cookie lifetime in milliseconds.
- * @returns Express-compatible {@link CookieOptions}.
- */
-export const cookieOpts = (maxAgeMs?: number): CookieOptions => ({
-  httpOnly: true,
-  secure: isProd, // MUST be secure in production
-  sameSite: isProd ? 'none' : 'lax', // cross-site cookies require "none"
-  domain: isProd ? '.omnixys.com' : undefined, // allow subdomains
-  path: '/',
-  maxAge: maxAgeMs ?? undefined,
-});
-
-/**
- * Safely sets a cookie on the response if available.
- *
- * @param res - Express response object.
- * @param name - The cookie name.
- * @param value - The cookie value.
- * @param opts - Additional cookie options.
- */
-export function setCookieSafe(
-  res: Response | undefined,
-  name: string,
-  value: string,
-  opts: CookieOptions,
-): void {
-  if (!res) {
-    return;
-  }
-  res.cookie(name, value, opts);
-}
-
-/**
- * Safely clears a cookie from the response if available.
- *
- * @param res - Express response object.
- * @param name - The cookie name to remove.
- */
-function clearCookieSafe(res: Response | undefined, name: string): void {
-  if (!res) {
-    return;
-  }
-  res.clearCookie(name, cookieOpts(undefined));
-}
+import { FastifyReply } from 'fastify';
 
 /**
  * GraphQL resolver providing mutation endpoints for user authentication.
@@ -217,8 +113,8 @@ export class AuthMutationResolver {
   @Mutation(() => TokenPayload)
   async credentialsLogin(
     @Args('input', { type: () => LogInInput }) input: LogInInput,
-    @Context() ctx: GqlCtx,
   ): Promise<TokenPayload> {
+    // const res = ctx?.reply;
     this.logger.debug('login: input=%o', input);
 
     const { username, password } = input;
@@ -228,18 +124,7 @@ export class AuthMutationResolver {
       throw new BadUserInputException('Invalid username or password.');
     }
 
-    setCookieSafe(
-      ctx?.res,
-      'access_token',
-      result.accessToken,
-      cookieOpts(result.expiresIn * 1000),
-    );
-    setCookieSafe(
-      ctx?.res,
-      'refresh_token',
-      result.refreshToken,
-      cookieOpts(result.refreshExpiresIn * 1000),
-    );
+    // gqlSetTokens(res, result.accessToken ?? '', result.expiresIn * 1000);
     return result;
   }
 
@@ -257,10 +142,7 @@ export class AuthMutationResolver {
    */
   @Mutation(() => TokenPayload, { name: 'refresh' })
   @UseGuards(CookieAuthGuard)
-  async refresh(
-    @CurrentUser() user: CurrentUserData,
-    @Context() ctx: GqlCtx,
-  ): Promise<TokenPayload> {
+  async refresh(@CurrentUser() user: CurrentUserData): Promise<TokenPayload> {
     this.logger.debug(
       '[authentication-mutation.resolver.ts] Refresh %s accessToken...',
       user.username,
@@ -272,19 +154,6 @@ export class AuthMutationResolver {
     if (!result) {
       throw new BadUserInputException('Invalid or expired refresh token.');
     }
-
-    setCookieSafe(
-      ctx?.res,
-      'access_token',
-      result.accessToken,
-      cookieOpts(result.expiresIn * 1000),
-    );
-    setCookieSafe(
-      ctx?.res,
-      'refresh_token',
-      result.refreshToken,
-      cookieOpts(result.refreshExpiresIn * 1000),
-    );
 
     this.logger.info('[authentication-mutation.resolver.ts] Refresh Success!');
     return result;
@@ -298,14 +167,10 @@ export class AuthMutationResolver {
    * @returns {@link SuccessPayload} indicating operation status.
    */
   @Mutation(() => SuccessPayload, { name: 'logout' })
-  async logout(@Context() ctx: GqlCtx): Promise<SuccessPayload> {
-    const cookieReq: CookieReq = ctx.req;
-    const value = cookieReq.cookies?.refresh_token;
+  async logout(@Context() ctx: GqlFastifyContext): Promise<SuccessPayload> {
+    const res: FastifyReply = ctx?.reply;
+    const value = res?.cookies?.refresh_token;
     await this.authService.logout(value);
-
-    clearCookieSafe(ctx?.res, 'access_token');
-    clearCookieSafe(ctx?.res, 'refresh_token');
-
     return { ok: true, message: 'Successfully logged out.' };
   }
 
@@ -330,7 +195,6 @@ export class AuthMutationResolver {
   @Mutation(() => TokenPayload)
   async verifyPasswordlessAuthentication(
     @Args('response', { type: () => JsonScalar }) response: unknown,
-    @Context() ctx: GqlCtx,
   ): Promise<TokenPayload> {
     if (!response || typeof response !== 'object') {
       throw new BadRequestException('Invalid WebAuthn response');
@@ -345,28 +209,12 @@ export class AuthMutationResolver {
     }
 
     const token = await this.authService.createPasswordlessSession(userId);
-
-    setCookieSafe(
-      ctx.res,
-      'access_token',
-      token.accessToken,
-      cookieOpts(token.expiresIn * 1000),
-    );
-
-    setCookieSafe(
-      ctx.res,
-      'refresh_token',
-      token.refreshToken,
-      cookieOpts(token.refreshExpiresIn * 1000),
-    );
-
     return token;
   }
 
   @Mutation(() => TokenPayload)
   async verifyWebAuthnAuthentication(
     @Args('response', { type: () => JsonScalar }) response: unknown,
-    @Context() ctx: GqlCtx,
   ): Promise<TokenPayload> {
     if (!response || typeof response !== 'object') {
       throw new BadRequestException('Invalid WebAuthn response');
@@ -381,86 +229,39 @@ export class AuthMutationResolver {
     }
 
     const token = await this.authService.createPasswordlessSession(userId);
-
-    setCookieSafe(
-      ctx.res,
-      'access_token',
-      token.accessToken,
-      cookieOpts(token.expiresIn * 1000),
-    );
-    setCookieSafe(
-      ctx.res,
-      'refresh_token',
-      token.refreshToken,
-      cookieOpts(token.refreshExpiresIn * 1000),
-    );
-
     return token;
   }
 
   @Mutation(() => TokenPayload)
-  async loginTotp(
-    @Args('input') input: LoginTotpInput,
-    @Context() ctx: GqlCtx,
-  ): Promise<TokenPayload> {
+  async loginTotp(@Args('input') input: LoginTotpInput): Promise<TokenPayload> {
     const token = await this.authService.loginWithTotp(
       input.username,
       input.code,
     );
-
-    setCookieSafe(
-      ctx.res,
-      'access_token',
-      token.accessToken,
-      cookieOpts(token.expiresIn * 1000),
-    );
-
-    setCookieSafe(
-      ctx.res,
-      'refresh_token',
-      token.refreshToken,
-      cookieOpts(token.refreshExpiresIn * 1000),
-    );
-
     return token;
   }
 
   @Mutation(() => Boolean)
   async sendMagicLink(
     @Args('email') email: string,
-    @Context() ctx: GqlCtx,
+    @RequestCookies() cookies: Record<string, string>,
+    @Device() device: string,
+    @Location() location: string,
+    @ClientIp() ip: string,
   ): Promise<boolean> {
-    const ip =
-      (ctx.req.headers['x-forwarded-for'] as string | undefined)
-        ?.split(',')[0]
-        ?.trim() ??
-      ctx.req.socket?.remoteAddress ??
-      undefined;
-
-    return this.authService.requestMagicLink(email, { ip });
+    const locale = cookies.locale ?? 'en-US';
+    const context: RequestMeta = {
+      ip,
+      device,
+      locale,
+      location,
+    };
+    return this.authService.requestMagicLink(email, context);
   }
 
   @Mutation(() => TokenPayload)
-  async verifyMagicLink(
-    @Args('token') token: string,
-    @Context() ctx: GqlCtx,
-  ): Promise<TokenPayload> {
+  async verifyMagicLink(@Args('token') token: string): Promise<TokenPayload> {
     const tokenPayload = await this.authService.loginWithMagicLink(token);
-
-    setCookieSafe(
-      ctx.res,
-      'access_token',
-      tokenPayload.accessToken,
-      cookieOpts(tokenPayload.expiresIn * 1000),
-    );
-
-    setCookieSafe(
-      ctx.res,
-      'refresh_token',
-      tokenPayload.refreshToken,
-      cookieOpts(tokenPayload.refreshExpiresIn * 1000),
-    );
-
     return tokenPayload;
   }
 }

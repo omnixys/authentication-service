@@ -17,15 +17,6 @@
  * For more information, visit <https://www.gnu.org/licenses/>.
  */
 
-import {
-  CurrentUser,
-  CurrentUserData,
-} from '../../auth/decorators/current-user.decorator.js';
-import { Public } from '../../auth/decorators/public.decorator.js';
-import { Roles } from '../../auth/decorators/roles.decorator.js';
-import { CookieAuthGuard } from '../../auth/guards/cookie-auth.guard.js';
-import { HeaderAuthGuard } from '../../auth/guards/header-auth.guard.js';
-import { RoleGuard } from '../../auth/guards/role.guard.js';
 import { getLogger } from '../../logger/get-logger.js';
 import { ResponseTimeInterceptor } from '../../logger/response-time.interceptor.js';
 import { KcUser } from '../models/entitys/user.entity.js';
@@ -38,6 +29,16 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { Args, ID, Query, Resolver } from '@nestjs/graphql';
+import {
+  CookieAuthGuard,
+  CurrentUser,
+  CurrentUserData,
+  HeaderAuthGuard,
+  Public,
+  RoleGuard,
+  Roles,
+} from '@omnixys/auth';
+import { RealmRole } from '@omnixys/contracts';
 
 /**
  * @file GraphQL-Resolver für **lesende** Authentication-Abfragen (ME/USERS).
@@ -125,7 +126,7 @@ export class AuthQueryResolver {
 
   @Query(() => KcUser, { name: 'meAuth' })
   @UseGuards(CookieAuthGuard, RoleGuard)
-  @Roles('ADMIN', 'USER')
+  @Roles(RealmRole.ADMIN, RealmRole.USER)
   async me(@CurrentUser() currentUser: CurrentUserData): Promise<KcUser> {
     this.logger.debug('me By Cookie');
 

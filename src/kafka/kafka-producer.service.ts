@@ -23,6 +23,7 @@ import type { KafkaEnvelope } from './decorators/kafka-envelope.type.js';
 import { KafkaHeaderBuilder } from './kafka-header-builder.js';
 import { KafkaTopics } from './kafka-topic.properties.js';
 import { Inject, Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { SendMagicLinkDTO, SendResetLinkDTO } from '@omnixys/contracts';
 import type { Producer, ProducerRecord } from 'kafkajs';
 
 /**
@@ -117,7 +118,7 @@ export class KafkaProducerService implements OnModuleInit, OnModuleDestroy {
   }
 
   async sendRequestReset(
-    payload: { rawToken: string; email: string },
+    payload: SendResetLinkDTO,
     service: string,
     trace?: TraceContext,
   ): Promise<void> {
@@ -132,7 +133,7 @@ export class KafkaProducerService implements OnModuleInit, OnModuleDestroy {
   }
 
   async sendMagicLink(
-    payload: { token: string; email: string },
+    payload: SendMagicLinkDTO,
     service: string,
     trace?: TraceContext,
   ): Promise<void> {

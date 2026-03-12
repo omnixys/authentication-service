@@ -1,17 +1,21 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 
 import { JsonScalar } from '../../core/scalars/json.scalar.js';
 import { LoggerPlusService } from '../../logger/logger-plus.service.js';
+import { RequestMeta } from '../models/dtos/request-meta.dto.js';
 import { MfaPreference } from '../models/dtos/reset-verification-result.dto.js';
-import { ResetService } from '../services/resest.service.js';
+import { ResetService } from '../services/reset.service.js';
 import { BadRequestException } from '@nestjs/common';
-import { Args, Context, Mutation, Resolver } from '@nestjs/graphql';
-import { Field, InputType, ObjectType } from '@nestjs/graphql';
+import {
+  Args,
+  Field,
+  InputType,
+  Mutation,
+  ObjectType,
+  Resolver,
+} from '@nestjs/graphql';
+import { ClientIp, Device, Location, RequestCookies } from '@omnixys/context';
 import { AuthenticationResponseJSON } from '@simplewebauthn/server';
 
 /* =======================================================
@@ -103,26 +107,21 @@ export class ResetMutationResolver {
   @Mutation(() => Boolean)
   async requestPasswordReset(
     @Args('email', { type: () => String }) email: string,
-    @Context() ctx: any,
+    @RequestCookies() cookies: Record<string, string>,
+    @Device() device: string,
+    @Location() location: string,
+    @ClientIp() ip: string,
   ): Promise<boolean> {
-    // Always return true to prevent user enumeration attacks.
-
-    const ip =
-      ctx.req?.headers['x-forwarded-for']?.split(',')[0]?.trim() ??
-      ctx.req?.socket?.remoteAddress ??
-      'unknown';
-
-    const userAgent = ctx.req?.headers['user-agent'] ?? 'unknown';
-
-    // const locale =
-    //   ctx.req?.headers['accept-language']?.split(',')[0] ?? 'de-DE';
+    const locale = cookies.locale ?? 'en-US';
 
     try {
-      await this.resetService.requestReset(email, {
+      const context: RequestMeta = {
         ip,
-        userAgent,
-        // locale,
-      });
+        device,
+        locale,
+        location,
+      };
+      await this.resetService.requestReset(email, context);
     } catch (error) {
       // Intentionally swallow errors to avoid leaking account existence.
       // Log internally for monitoring & auditing.

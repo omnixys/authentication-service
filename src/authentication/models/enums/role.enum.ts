@@ -17,29 +17,11 @@
  */
 
 import { registerEnumType } from '@nestjs/graphql';
+import { RealmRole } from '@omnixys/contracts';
 
 export interface RoleData {
   id: string;
   name: string;
-}
-
-/**
- * Realm roles used by Omnixys services (single effective role).
- * NOTE: We resolve ONE effective role from potentially many Keycloak roles.
- */
-export enum RealmRole {
-  ADMIN = 'ADMIN',
-  SECURITY = 'SECURITY',
-  EVENT_ADMIN = 'EVENT_ADMIN',
-
-  SUPREME = 'SUPREME',
-  ELITE = 'ELITE',
-  BASIC = 'BASIC',
-
-  USER = 'USER',
-  GUEST = 'GUEST',
-
-  ANON = 'ANON',
 }
 
 registerEnumType(RealmRole, { name: 'RealmRole' });
@@ -47,8 +29,6 @@ registerEnumType(RealmRole, { name: 'RealmRole' });
 /** Enum → actual Keycloak role name (keep as defined in Keycloak) */
 export const ENUM_TO_KC: Record<RealmRole, string> = {
   [RealmRole.ADMIN]: 'ADMIN',
-  [RealmRole.SECURITY]: 'SECURITY',
-  [RealmRole.EVENT_ADMIN]: 'EVENT_ADMIN',
 
   [RealmRole.SUPREME]: 'SUPREME',
   [RealmRole.ELITE]: 'ELITE',
@@ -56,8 +36,6 @@ export const ENUM_TO_KC: Record<RealmRole, string> = {
 
   [RealmRole.USER]: 'USER',
   [RealmRole.GUEST]: 'GUEST',
-
-  [RealmRole.ANON]: 'ANON',
 };
 
 /** Keycloak name/string → enum (robust & case-insensitive) */
@@ -65,14 +43,6 @@ export const KC_TO_ENUM: Record<string, RealmRole> = {
   // ADMIN
   admin: RealmRole.ADMIN,
   ADMIN: RealmRole.ADMIN,
-
-  // SECURITY
-  security: RealmRole.SECURITY,
-  SECURITY: RealmRole.SECURITY,
-
-  // EVENT_ADMIN
-  event_admin: RealmRole.EVENT_ADMIN,
-  EVENT_ADMIN: RealmRole.EVENT_ADMIN,
 
   // TIERS
   supreme: RealmRole.SUPREME,
@@ -90,10 +60,6 @@ export const KC_TO_ENUM: Record<string, RealmRole> = {
 
   guest: RealmRole.GUEST,
   GUEST: RealmRole.GUEST,
-
-  // ANON (usually not a KC role, but allow mapping if present)
-  anon: RealmRole.ANON,
-  ANON: RealmRole.ANON,
 };
 
 /** One string → enum (or null if unknown) */
@@ -153,7 +119,7 @@ export function resolveEffectiveRole(
   raw?: string[] | null,
 ): RealmRole {
   if (!isAuthenticated) {
-    return RealmRole.ANON;
+    return RealmRole.GUEST;
   }
 
   const roles = toEnumRoles(raw ?? []);
@@ -161,8 +127,6 @@ export function resolveEffectiveRole(
   // Hard priority list (first match wins)
   const PRIORITY: RealmRole[] = [
     RealmRole.ADMIN,
-    RealmRole.SECURITY,
-    RealmRole.EVENT_ADMIN,
 
     RealmRole.SUPREME,
     RealmRole.ELITE,
@@ -185,8 +149,6 @@ export function resolveEffectiveRole(
 /** Mapping internal role → Keycloak role name (alias for enumToKcName) */
 export const ROLE_NAME_MAP: Record<RealmRole, string> = {
   [RealmRole.ADMIN]: 'ADMIN',
-  [RealmRole.SECURITY]: 'SECURITY',
-  [RealmRole.EVENT_ADMIN]: 'EVENT_ADMIN',
 
   [RealmRole.SUPREME]: 'SUPREME',
   [RealmRole.ELITE]: 'ELITE',
@@ -194,6 +156,4 @@ export const ROLE_NAME_MAP: Record<RealmRole, string> = {
 
   [RealmRole.USER]: 'USER',
   [RealmRole.GUEST]: 'GUEST',
-
-  [RealmRole.ANON]: 'ANON',
 };

@@ -45,8 +45,10 @@ enum SecurityQuestionType {
 }
 
 model AuthUser {
-  id            String        @id @default(uuid())
-  email         String        @unique
+  id       String @id @default(uuid())
+  email    String @unique
+  username String @unique
+
   mfaPreference MfaPreference @default(NONE) @map("mfa_preference")
 
   failedAttempts Int       @default(0) @map("failed_attempts")
@@ -64,6 +66,8 @@ model AuthUser {
   loginHistories    LoginHistory[]
   oauthAccounts     OAuthAccount[]
 
+  @@index([email])
+  @@index([username])
   @@map("auth_user")
   @@schema("authentication")
 }

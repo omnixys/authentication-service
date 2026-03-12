@@ -15,9 +15,9 @@
  * For more information, visit <https://www.gnu.org/licenses/>.
  */
 
-// Zentrales, typsicheres Attribut-Schema für Keycloak-User-Attributes
+import type { RealmRole } from '@omnixys/contracts';
 
-import type { RealmRole } from '../enums/role.enum.js';
+// Zentrales, typsicheres Attribut-Schema für Keycloak-User-Attributes
 
 export const PHONE_RE = /^\+?[0-9 .\-()]{6,20}$/;
 

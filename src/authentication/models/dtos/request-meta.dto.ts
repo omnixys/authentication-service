@@ -1,8 +1,10 @@
 export interface RequestMeta {
   ip: string;
-  userAgent?: string;
+  device: string;
   requestId?: string;
   traceId?: string;
+  location: string;
+  locale: string;
 }
 
 // @Mutation()

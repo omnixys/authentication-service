@@ -77,6 +77,7 @@ async function main() {
     create: {
       id: 'dde8114c-2637-462a-90b9-413924fa3f55',
       email: 'admin@omnixys.com',
+      username: 'admin',
       mfaPreference: MfaPreference.NONE,
     },
   });
@@ -86,11 +87,12 @@ async function main() {
   ===================================================== */
 
   const caleb = await prisma.authUser.upsert({
-    where: { email: 'caleb-script2@outlook.de' },
+    where: { email: 'caleb@@omnixys.com' },
     update: {},
     create: {
       id: '694d2e8e-0932-4c8f-a1c4-e300dc235be4',
-      email: 'caleb-script2@outlook.de',
+      email: 'caleb@@omnixys.com',
+      username: 'caleb',
       mfaPreference: MfaPreference.TOTP,
     },
   });

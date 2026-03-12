@@ -11,6 +11,7 @@ CREATE TYPE "security_question_key" AS ENUM ('FIRST_PET', 'BIRTH_CITY', 'MOTHER_
 CREATE TABLE "auth_user" (
     "id" TEXT NOT NULL,
     "email" TEXT NOT NULL,
+    "username" TEXT NOT NULL,
     "mfa_preference" "mfa_preference" NOT NULL DEFAULT 'NONE',
     "failed_attempts" INTEGER NOT NULL DEFAULT 0,
     "locked_until" TIMESTAMP(3),
@@ -139,6 +140,15 @@ CREATE TABLE "OAuthAccount" (
 
 -- CreateIndex
 CREATE UNIQUE INDEX "auth_user_email_key" ON "auth_user"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "auth_user_username_key" ON "auth_user"("username");
+
+-- CreateIndex
+CREATE INDEX "auth_user_email_idx" ON "auth_user"("email");
+
+-- CreateIndex
+CREATE INDEX "auth_user_username_idx" ON "auth_user"("username");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "totp_credential_user_id_key" ON "totp_credential"("user_id");

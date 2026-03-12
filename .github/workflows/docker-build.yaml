@@ -24,7 +24,7 @@ on:
   #   branches:
   #     - main
   workflow_run:
-    workflows: ['Continuous Integration – Omnixys']
+    workflows: ['Release Service']
     types: [completed]
 
   workflow_dispatch:

@@ -19,13 +19,9 @@ import { getLogger } from '../../logger/get-logger.js';
 import { ResponseTimeInterceptor } from '../../logger/response-time.interceptor.js';
 import { SignUpPayload } from '../models/payloads/sign-in.payload.js';
 import { RegisterService } from '../services/register.service.js';
-import {
-  cookieOpts,
-  GqlCtx,
-  setCookieSafe,
-} from './authentication-mutation.resolver.js';
 import { UseInterceptors } from '@nestjs/common';
 import { Args, Context, Mutation, Resolver } from '@nestjs/graphql';
+import { GqlFastifyContext, gqlSetTokens } from '@omnixys/context';
 
 @Resolver()
 @UseInterceptors(ResponseTimeInterceptor)
@@ -37,23 +33,16 @@ export class RegisterResolver {
   @Mutation(() => SignUpPayload)
   async verifySignUp(
     @Args('token') token: string,
-    @Context() ctx: GqlCtx,
+    @Context() ctx: GqlFastifyContext,
   ): Promise<SignUpPayload> {
     this.logger.debug('Verify Registration');
     const payload = await this.registerService.verifySignup(token);
+    const res = ctx.reply;
 
-    setCookieSafe(
-      ctx.res,
-      'access_token',
+    gqlSetTokens(
+      res,
       payload?.token?.accessToken ?? '',
-      cookieOpts(payload?.token?.expiresIn ?? 0 * 1000),
-    );
-
-    setCookieSafe(
-      ctx.res,
-      'refresh_token',
-      payload?.token?.refreshToken ?? '',
-      cookieOpts(payload?.token?.refreshExpiresIn ?? 0 * 1000),
+      payload?.token?.expiresIn ?? 0 * 1000,
     );
 
     return payload;

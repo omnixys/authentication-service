@@ -15,15 +15,6 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 
-import { BackupCodeService } from '../services/backup-code.service.js';
-import { TotpService } from '../services/totp.service.js';
-import { WebAuthnService } from '../services/web-authn.service.js';
-
-import {
-  CurrentUser,
-  CurrentUserData,
-} from '../../auth/decorators/current-user.decorator.js';
-import { CookieAuthGuard } from '../../auth/guards/cookie-auth.guard.js';
 import { JsonScalar } from '../../core/scalars/json.scalar.js';
 import { ResponseTimeInterceptor } from '../../logger/response-time.interceptor.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
@@ -31,7 +22,11 @@ import { MfaPreference } from '../models/dtos/reset-verification-result.dto.js';
 import { SecurityQuestionMapper } from '../models/mappers/security-question.mapper.js';
 import { TotpSetupPayload } from '../models/payloads/mfa.types.js';
 import { SecurityQuestionPayload } from '../models/payloads/security-question.payload.js';
+import { BackupCodeService } from '../services/backup-code.service.js';
 import { SecurityQuestionService } from '../services/security-question.service.js';
+import { TotpService } from '../services/totp.service.js';
+import { WebAuthnService } from '../services/web-authn.service.js';
+import { CookieAuthGuard, CurrentUser, CurrentUserData } from '@omnixys/auth';
 import {
   AuthenticationResponseJSON,
   RegistrationResponseJSON,

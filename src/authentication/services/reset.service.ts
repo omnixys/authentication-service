@@ -51,17 +51,14 @@ export class ResetService extends AuthenticateBaseService {
 
   async requestReset(email: string, context: RequestMeta): Promise<void> {
     return this.withSpan('reset.request', async (span) => {
-      // 1) IP throttling (optional but recommended)
       await this.lockout.checkIpRateLimit(context.ip);
 
       const user = await this.prisma.authUser.findUnique({ where: { email } });
 
-      // Prevent user enumeration
       if (!user) {
         return;
       }
 
-      // 2) user lockout
       await this.lockout.ensureUserNotLocked(user.id);
 
       // 3) optionally invalidate previous tokens to reduce attack surface
@@ -98,7 +95,15 @@ export class ResetService extends AuthenticateBaseService {
       const sc = span.spanContext();
 
       void this.kafkaProducer.sendRequestReset(
-        { rawToken, email: user.email },
+        {
+          token: rawToken,
+          email: user.email,
+          username: user.username,
+          locale: context.locale ?? 'de-DE',
+          device: context.device ?? 'Unkown Device',
+          ip: context.ip,
+          location: context.location ?? 'Germany',
+        },
         'resendService.requestReset',
         {
           traceId: sc.traceId,

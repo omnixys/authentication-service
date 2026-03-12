@@ -22,7 +22,6 @@ import { TraceContextProvider } from '../../trace/trace-context.provider.js';
 import { KeycloakUser, KeycloakUserPatch } from '../models/dtos/kc-user.dto.js';
 import { GuestSignUpDTO } from '../models/dtos/sign-up.dto.js';
 import { updatePasswortDTO } from '../models/dtos/update-password.dto.js';
-import { RealmRole } from '../models/enums/role.enum.js';
 import { UserSignUpInput } from '../models/inputs/sign-up.input.js';
 import { UpdateMyProfileInput } from '../models/inputs/user-update.input.js';
 import { toUsers } from '../models/mappers/user.mapper.js';
@@ -34,6 +33,7 @@ import { AuthenticateBaseService } from './keycloak-base.service.js';
 import { AuthenticateReadService } from './read.service.js';
 import { HttpService } from '@nestjs/axios';
 import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { RealmRole } from '@omnixys/contracts';
 
 /**
  * @file Mutierende Operationen gegen Keycloak (Authentication-Flows & User-Mutationen).

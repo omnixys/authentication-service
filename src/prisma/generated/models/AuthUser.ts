@@ -37,6 +37,7 @@ export type AuthUserSumAggregateOutputType = {
 export type AuthUserMinAggregateOutputType = {
   id: string | null;
   email: string | null;
+  username: string | null;
   mfaPreference: $Enums.MfaPreference | null;
   failedAttempts: number | null;
   lockedUntil: Date | null;
@@ -47,6 +48,7 @@ export type AuthUserMinAggregateOutputType = {
 export type AuthUserMaxAggregateOutputType = {
   id: string | null;
   email: string | null;
+  username: string | null;
   mfaPreference: $Enums.MfaPreference | null;
   failedAttempts: number | null;
   lockedUntil: Date | null;
@@ -57,6 +59,7 @@ export type AuthUserMaxAggregateOutputType = {
 export type AuthUserCountAggregateOutputType = {
   id: number;
   email: number;
+  username: number;
   mfaPreference: number;
   failedAttempts: number;
   lockedUntil: number;
@@ -76,6 +79,7 @@ export type AuthUserSumAggregateInputType = {
 export type AuthUserMinAggregateInputType = {
   id?: true;
   email?: true;
+  username?: true;
   mfaPreference?: true;
   failedAttempts?: true;
   lockedUntil?: true;
@@ -86,6 +90,7 @@ export type AuthUserMinAggregateInputType = {
 export type AuthUserMaxAggregateInputType = {
   id?: true;
   email?: true;
+  username?: true;
   mfaPreference?: true;
   failedAttempts?: true;
   lockedUntil?: true;
@@ -96,6 +101,7 @@ export type AuthUserMaxAggregateInputType = {
 export type AuthUserCountAggregateInputType = {
   id?: true;
   email?: true;
+  username?: true;
   mfaPreference?: true;
   failedAttempts?: true;
   lockedUntil?: true;
@@ -200,6 +206,7 @@ export type AuthUserGroupByArgs<
 export type AuthUserGroupByOutputType = {
   id: string;
   email: string;
+  username: string;
   mfaPreference: $Enums.MfaPreference;
   failedAttempts: number;
   lockedUntil: Date | null;
@@ -231,6 +238,7 @@ export type AuthUserWhereInput = {
   NOT?: Prisma.AuthUserWhereInput | Prisma.AuthUserWhereInput[];
   id?: Prisma.StringFilter<'AuthUser'> | string;
   email?: Prisma.StringFilter<'AuthUser'> | string;
+  username?: Prisma.StringFilter<'AuthUser'> | string;
   mfaPreference?:
     | Prisma.EnumMfaPreferenceFilter<'AuthUser'>
     | $Enums.MfaPreference;
@@ -258,6 +266,7 @@ export type AuthUserWhereInput = {
 export type AuthUserOrderByWithRelationInput = {
   id?: Prisma.SortOrder;
   email?: Prisma.SortOrder;
+  username?: Prisma.SortOrder;
   mfaPreference?: Prisma.SortOrder;
   failedAttempts?: Prisma.SortOrder;
   lockedUntil?: Prisma.SortOrderInput | Prisma.SortOrder;
@@ -277,6 +286,7 @@ export type AuthUserWhereUniqueInput = Prisma.AtLeast<
   {
     id?: string;
     email?: string;
+    username?: string;
     AND?: Prisma.AuthUserWhereInput | Prisma.AuthUserWhereInput[];
     OR?: Prisma.AuthUserWhereInput[];
     NOT?: Prisma.AuthUserWhereInput | Prisma.AuthUserWhereInput[];
@@ -303,12 +313,13 @@ export type AuthUserWhereUniqueInput = Prisma.AtLeast<
     loginHistories?: Prisma.LoginHistoryListRelationFilter;
     oauthAccounts?: Prisma.OAuthAccountListRelationFilter;
   },
-  'id' | 'email'
+  'id' | 'email' | 'username'
 >;
 
 export type AuthUserOrderByWithAggregationInput = {
   id?: Prisma.SortOrder;
   email?: Prisma.SortOrder;
+  username?: Prisma.SortOrder;
   mfaPreference?: Prisma.SortOrder;
   failedAttempts?: Prisma.SortOrder;
   lockedUntil?: Prisma.SortOrderInput | Prisma.SortOrder;
@@ -331,6 +342,7 @@ export type AuthUserScalarWhereWithAggregatesInput = {
     | Prisma.AuthUserScalarWhereWithAggregatesInput[];
   id?: Prisma.StringWithAggregatesFilter<'AuthUser'> | string;
   email?: Prisma.StringWithAggregatesFilter<'AuthUser'> | string;
+  username?: Prisma.StringWithAggregatesFilter<'AuthUser'> | string;
   mfaPreference?:
     | Prisma.EnumMfaPreferenceWithAggregatesFilter<'AuthUser'>
     | $Enums.MfaPreference;
@@ -347,6 +359,7 @@ export type AuthUserScalarWhereWithAggregatesInput = {
 export type AuthUserCreateInput = {
   id?: string;
   email: string;
+  username: string;
   mfaPreference?: $Enums.MfaPreference;
   failedAttempts?: number;
   lockedUntil?: Date | string | null;
@@ -365,6 +378,7 @@ export type AuthUserCreateInput = {
 export type AuthUserUncheckedCreateInput = {
   id?: string;
   email: string;
+  username: string;
   mfaPreference?: $Enums.MfaPreference;
   failedAttempts?: number;
   lockedUntil?: Date | string | null;
@@ -383,6 +397,7 @@ export type AuthUserUncheckedCreateInput = {
 export type AuthUserUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string;
   email?: Prisma.StringFieldUpdateOperationsInput | string;
+  username?: Prisma.StringFieldUpdateOperationsInput | string;
   mfaPreference?:
     | Prisma.EnumMfaPreferenceFieldUpdateOperationsInput
     | $Enums.MfaPreference;
@@ -407,6 +422,7 @@ export type AuthUserUpdateInput = {
 export type AuthUserUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string;
   email?: Prisma.StringFieldUpdateOperationsInput | string;
+  username?: Prisma.StringFieldUpdateOperationsInput | string;
   mfaPreference?:
     | Prisma.EnumMfaPreferenceFieldUpdateOperationsInput
     | $Enums.MfaPreference;
@@ -431,6 +447,7 @@ export type AuthUserUncheckedUpdateInput = {
 export type AuthUserCreateManyInput = {
   id?: string;
   email: string;
+  username: string;
   mfaPreference?: $Enums.MfaPreference;
   failedAttempts?: number;
   lockedUntil?: Date | string | null;
@@ -441,6 +458,7 @@ export type AuthUserCreateManyInput = {
 export type AuthUserUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string;
   email?: Prisma.StringFieldUpdateOperationsInput | string;
+  username?: Prisma.StringFieldUpdateOperationsInput | string;
   mfaPreference?:
     | Prisma.EnumMfaPreferenceFieldUpdateOperationsInput
     | $Enums.MfaPreference;
@@ -457,6 +475,7 @@ export type AuthUserUpdateManyMutationInput = {
 export type AuthUserUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string;
   email?: Prisma.StringFieldUpdateOperationsInput | string;
+  username?: Prisma.StringFieldUpdateOperationsInput | string;
   mfaPreference?:
     | Prisma.EnumMfaPreferenceFieldUpdateOperationsInput
     | $Enums.MfaPreference;
@@ -473,6 +492,7 @@ export type AuthUserUncheckedUpdateManyInput = {
 export type AuthUserCountOrderByAggregateInput = {
   id?: Prisma.SortOrder;
   email?: Prisma.SortOrder;
+  username?: Prisma.SortOrder;
   mfaPreference?: Prisma.SortOrder;
   failedAttempts?: Prisma.SortOrder;
   lockedUntil?: Prisma.SortOrder;
@@ -487,6 +507,7 @@ export type AuthUserAvgOrderByAggregateInput = {
 export type AuthUserMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder;
   email?: Prisma.SortOrder;
+  username?: Prisma.SortOrder;
   mfaPreference?: Prisma.SortOrder;
   failedAttempts?: Prisma.SortOrder;
   lockedUntil?: Prisma.SortOrder;
@@ -497,6 +518,7 @@ export type AuthUserMaxOrderByAggregateInput = {
 export type AuthUserMinOrderByAggregateInput = {
   id?: Prisma.SortOrder;
   email?: Prisma.SortOrder;
+  username?: Prisma.SortOrder;
   mfaPreference?: Prisma.SortOrder;
   failedAttempts?: Prisma.SortOrder;
   lockedUntil?: Prisma.SortOrder;
@@ -748,6 +770,7 @@ export type AuthUserUpdateOneRequiredWithoutOauthAccountsNestedInput = {
 export type AuthUserCreateWithoutTotpInput = {
   id?: string;
   email: string;
+  username: string;
   mfaPreference?: $Enums.MfaPreference;
   failedAttempts?: number;
   lockedUntil?: Date | string | null;
@@ -765,6 +788,7 @@ export type AuthUserCreateWithoutTotpInput = {
 export type AuthUserUncheckedCreateWithoutTotpInput = {
   id?: string;
   email: string;
+  username: string;
   mfaPreference?: $Enums.MfaPreference;
   failedAttempts?: number;
   lockedUntil?: Date | string | null;
@@ -810,6 +834,7 @@ export type AuthUserUpdateToOneWithWhereWithoutTotpInput = {
 export type AuthUserUpdateWithoutTotpInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string;
   email?: Prisma.StringFieldUpdateOperationsInput | string;
+  username?: Prisma.StringFieldUpdateOperationsInput | string;
   mfaPreference?:
     | Prisma.EnumMfaPreferenceFieldUpdateOperationsInput
     | $Enums.MfaPreference;
@@ -833,6 +858,7 @@ export type AuthUserUpdateWithoutTotpInput = {
 export type AuthUserUncheckedUpdateWithoutTotpInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string;
   email?: Prisma.StringFieldUpdateOperationsInput | string;
+  username?: Prisma.StringFieldUpdateOperationsInput | string;
   mfaPreference?:
     | Prisma.EnumMfaPreferenceFieldUpdateOperationsInput
     | $Enums.MfaPreference;
@@ -856,6 +882,7 @@ export type AuthUserUncheckedUpdateWithoutTotpInput = {
 export type AuthUserCreateWithoutWebAuthnInput = {
   id?: string;
   email: string;
+  username: string;
   mfaPreference?: $Enums.MfaPreference;
   failedAttempts?: number;
   lockedUntil?: Date | string | null;
@@ -873,6 +900,7 @@ export type AuthUserCreateWithoutWebAuthnInput = {
 export type AuthUserUncheckedCreateWithoutWebAuthnInput = {
   id?: string;
   email: string;
+  username: string;
   mfaPreference?: $Enums.MfaPreference;
   failedAttempts?: number;
   lockedUntil?: Date | string | null;
@@ -918,6 +946,7 @@ export type AuthUserUpdateToOneWithWhereWithoutWebAuthnInput = {
 export type AuthUserUpdateWithoutWebAuthnInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string;
   email?: Prisma.StringFieldUpdateOperationsInput | string;
+  username?: Prisma.StringFieldUpdateOperationsInput | string;
   mfaPreference?:
     | Prisma.EnumMfaPreferenceFieldUpdateOperationsInput
     | $Enums.MfaPreference;
@@ -941,6 +970,7 @@ export type AuthUserUpdateWithoutWebAuthnInput = {
 export type AuthUserUncheckedUpdateWithoutWebAuthnInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string;
   email?: Prisma.StringFieldUpdateOperationsInput | string;
+  username?: Prisma.StringFieldUpdateOperationsInput | string;
   mfaPreference?:
     | Prisma.EnumMfaPreferenceFieldUpdateOperationsInput
     | $Enums.MfaPreference;
@@ -964,6 +994,7 @@ export type AuthUserUncheckedUpdateWithoutWebAuthnInput = {
 export type AuthUserCreateWithoutBackupCodesInput = {
   id?: string;
   email: string;
+  username: string;
   mfaPreference?: $Enums.MfaPreference;
   failedAttempts?: number;
   lockedUntil?: Date | string | null;
@@ -981,6 +1012,7 @@ export type AuthUserCreateWithoutBackupCodesInput = {
 export type AuthUserUncheckedCreateWithoutBackupCodesInput = {
   id?: string;
   email: string;
+  username: string;
   mfaPreference?: $Enums.MfaPreference;
   failedAttempts?: number;
   lockedUntil?: Date | string | null;
@@ -1026,6 +1058,7 @@ export type AuthUserUpdateToOneWithWhereWithoutBackupCodesInput = {
 export type AuthUserUpdateWithoutBackupCodesInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string;
   email?: Prisma.StringFieldUpdateOperationsInput | string;
+  username?: Prisma.StringFieldUpdateOperationsInput | string;
   mfaPreference?:
     | Prisma.EnumMfaPreferenceFieldUpdateOperationsInput
     | $Enums.MfaPreference;
@@ -1049,6 +1082,7 @@ export type AuthUserUpdateWithoutBackupCodesInput = {
 export type AuthUserUncheckedUpdateWithoutBackupCodesInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string;
   email?: Prisma.StringFieldUpdateOperationsInput | string;
+  username?: Prisma.StringFieldUpdateOperationsInput | string;
   mfaPreference?:
     | Prisma.EnumMfaPreferenceFieldUpdateOperationsInput
     | $Enums.MfaPreference;
@@ -1072,6 +1106,7 @@ export type AuthUserUncheckedUpdateWithoutBackupCodesInput = {
 export type AuthUserCreateWithoutSecurityQuestionsInput = {
   id?: string;
   email: string;
+  username: string;
   mfaPreference?: $Enums.MfaPreference;
   failedAttempts?: number;
   lockedUntil?: Date | string | null;
@@ -1089,6 +1124,7 @@ export type AuthUserCreateWithoutSecurityQuestionsInput = {
 export type AuthUserUncheckedCreateWithoutSecurityQuestionsInput = {
   id?: string;
   email: string;
+  username: string;
   mfaPreference?: $Enums.MfaPreference;
   failedAttempts?: number;
   lockedUntil?: Date | string | null;
@@ -1134,6 +1170,7 @@ export type AuthUserUpdateToOneWithWhereWithoutSecurityQuestionsInput = {
 export type AuthUserUpdateWithoutSecurityQuestionsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string;
   email?: Prisma.StringFieldUpdateOperationsInput | string;
+  username?: Prisma.StringFieldUpdateOperationsInput | string;
   mfaPreference?:
     | Prisma.EnumMfaPreferenceFieldUpdateOperationsInput
     | $Enums.MfaPreference;
@@ -1157,6 +1194,7 @@ export type AuthUserUpdateWithoutSecurityQuestionsInput = {
 export type AuthUserUncheckedUpdateWithoutSecurityQuestionsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string;
   email?: Prisma.StringFieldUpdateOperationsInput | string;
+  username?: Prisma.StringFieldUpdateOperationsInput | string;
   mfaPreference?:
     | Prisma.EnumMfaPreferenceFieldUpdateOperationsInput
     | $Enums.MfaPreference;
@@ -1180,6 +1218,7 @@ export type AuthUserUncheckedUpdateWithoutSecurityQuestionsInput = {
 export type AuthUserCreateWithoutResetTokensInput = {
   id?: string;
   email: string;
+  username: string;
   mfaPreference?: $Enums.MfaPreference;
   failedAttempts?: number;
   lockedUntil?: Date | string | null;
@@ -1197,6 +1236,7 @@ export type AuthUserCreateWithoutResetTokensInput = {
 export type AuthUserUncheckedCreateWithoutResetTokensInput = {
   id?: string;
   email: string;
+  username: string;
   mfaPreference?: $Enums.MfaPreference;
   failedAttempts?: number;
   lockedUntil?: Date | string | null;
@@ -1242,6 +1282,7 @@ export type AuthUserUpdateToOneWithWhereWithoutResetTokensInput = {
 export type AuthUserUpdateWithoutResetTokensInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string;
   email?: Prisma.StringFieldUpdateOperationsInput | string;
+  username?: Prisma.StringFieldUpdateOperationsInput | string;
   mfaPreference?:
     | Prisma.EnumMfaPreferenceFieldUpdateOperationsInput
     | $Enums.MfaPreference;
@@ -1265,6 +1306,7 @@ export type AuthUserUpdateWithoutResetTokensInput = {
 export type AuthUserUncheckedUpdateWithoutResetTokensInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string;
   email?: Prisma.StringFieldUpdateOperationsInput | string;
+  username?: Prisma.StringFieldUpdateOperationsInput | string;
   mfaPreference?:
     | Prisma.EnumMfaPreferenceFieldUpdateOperationsInput
     | $Enums.MfaPreference;
@@ -1288,6 +1330,7 @@ export type AuthUserUncheckedUpdateWithoutResetTokensInput = {
 export type AuthUserCreateWithoutKnownDevicesInput = {
   id?: string;
   email: string;
+  username: string;
   mfaPreference?: $Enums.MfaPreference;
   failedAttempts?: number;
   lockedUntil?: Date | string | null;
@@ -1305,6 +1348,7 @@ export type AuthUserCreateWithoutKnownDevicesInput = {
 export type AuthUserUncheckedCreateWithoutKnownDevicesInput = {
   id?: string;
   email: string;
+  username: string;
   mfaPreference?: $Enums.MfaPreference;
   failedAttempts?: number;
   lockedUntil?: Date | string | null;
@@ -1350,6 +1394,7 @@ export type AuthUserUpdateToOneWithWhereWithoutKnownDevicesInput = {
 export type AuthUserUpdateWithoutKnownDevicesInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string;
   email?: Prisma.StringFieldUpdateOperationsInput | string;
+  username?: Prisma.StringFieldUpdateOperationsInput | string;
   mfaPreference?:
     | Prisma.EnumMfaPreferenceFieldUpdateOperationsInput
     | $Enums.MfaPreference;
@@ -1373,6 +1418,7 @@ export type AuthUserUpdateWithoutKnownDevicesInput = {
 export type AuthUserUncheckedUpdateWithoutKnownDevicesInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string;
   email?: Prisma.StringFieldUpdateOperationsInput | string;
+  username?: Prisma.StringFieldUpdateOperationsInput | string;
   mfaPreference?:
     | Prisma.EnumMfaPreferenceFieldUpdateOperationsInput
     | $Enums.MfaPreference;
@@ -1396,6 +1442,7 @@ export type AuthUserUncheckedUpdateWithoutKnownDevicesInput = {
 export type AuthUserCreateWithoutLoginHistoriesInput = {
   id?: string;
   email: string;
+  username: string;
   mfaPreference?: $Enums.MfaPreference;
   failedAttempts?: number;
   lockedUntil?: Date | string | null;
@@ -1413,6 +1460,7 @@ export type AuthUserCreateWithoutLoginHistoriesInput = {
 export type AuthUserUncheckedCreateWithoutLoginHistoriesInput = {
   id?: string;
   email: string;
+  username: string;
   mfaPreference?: $Enums.MfaPreference;
   failedAttempts?: number;
   lockedUntil?: Date | string | null;
@@ -1458,6 +1506,7 @@ export type AuthUserUpdateToOneWithWhereWithoutLoginHistoriesInput = {
 export type AuthUserUpdateWithoutLoginHistoriesInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string;
   email?: Prisma.StringFieldUpdateOperationsInput | string;
+  username?: Prisma.StringFieldUpdateOperationsInput | string;
   mfaPreference?:
     | Prisma.EnumMfaPreferenceFieldUpdateOperationsInput
     | $Enums.MfaPreference;
@@ -1481,6 +1530,7 @@ export type AuthUserUpdateWithoutLoginHistoriesInput = {
 export type AuthUserUncheckedUpdateWithoutLoginHistoriesInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string;
   email?: Prisma.StringFieldUpdateOperationsInput | string;
+  username?: Prisma.StringFieldUpdateOperationsInput | string;
   mfaPreference?:
     | Prisma.EnumMfaPreferenceFieldUpdateOperationsInput
     | $Enums.MfaPreference;
@@ -1504,6 +1554,7 @@ export type AuthUserUncheckedUpdateWithoutLoginHistoriesInput = {
 export type AuthUserCreateWithoutOauthAccountsInput = {
   id?: string;
   email: string;
+  username: string;
   mfaPreference?: $Enums.MfaPreference;
   failedAttempts?: number;
   lockedUntil?: Date | string | null;
@@ -1521,6 +1572,7 @@ export type AuthUserCreateWithoutOauthAccountsInput = {
 export type AuthUserUncheckedCreateWithoutOauthAccountsInput = {
   id?: string;
   email: string;
+  username: string;
   mfaPreference?: $Enums.MfaPreference;
   failedAttempts?: number;
   lockedUntil?: Date | string | null;
@@ -1566,6 +1618,7 @@ export type AuthUserUpdateToOneWithWhereWithoutOauthAccountsInput = {
 export type AuthUserUpdateWithoutOauthAccountsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string;
   email?: Prisma.StringFieldUpdateOperationsInput | string;
+  username?: Prisma.StringFieldUpdateOperationsInput | string;
   mfaPreference?:
     | Prisma.EnumMfaPreferenceFieldUpdateOperationsInput
     | $Enums.MfaPreference;
@@ -1589,6 +1642,7 @@ export type AuthUserUpdateWithoutOauthAccountsInput = {
 export type AuthUserUncheckedUpdateWithoutOauthAccountsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string;
   email?: Prisma.StringFieldUpdateOperationsInput | string;
+  username?: Prisma.StringFieldUpdateOperationsInput | string;
   mfaPreference?:
     | Prisma.EnumMfaPreferenceFieldUpdateOperationsInput
     | $Enums.MfaPreference;
@@ -1728,6 +1782,7 @@ export type AuthUserSelect<
   {
     id?: boolean;
     email?: boolean;
+    username?: boolean;
     mfaPreference?: boolean;
     failedAttempts?: boolean;
     lockedUntil?: boolean;
@@ -1755,6 +1810,7 @@ export type AuthUserSelectCreateManyAndReturn<
   {
     id?: boolean;
     email?: boolean;
+    username?: boolean;
     mfaPreference?: boolean;
     failedAttempts?: boolean;
     lockedUntil?: boolean;
@@ -1771,6 +1827,7 @@ export type AuthUserSelectUpdateManyAndReturn<
   {
     id?: boolean;
     email?: boolean;
+    username?: boolean;
     mfaPreference?: boolean;
     failedAttempts?: boolean;
     lockedUntil?: boolean;
@@ -1783,6 +1840,7 @@ export type AuthUserSelectUpdateManyAndReturn<
 export type AuthUserSelectScalar = {
   id?: boolean;
   email?: boolean;
+  username?: boolean;
   mfaPreference?: boolean;
   failedAttempts?: boolean;
   lockedUntil?: boolean;
@@ -1796,6 +1854,7 @@ export type AuthUserOmit<
 > = runtime.Types.Extensions.GetOmit<
   | 'id'
   | 'email'
+  | 'username'
   | 'mfaPreference'
   | 'failedAttempts'
   | 'lockedUntil'
@@ -1845,6 +1904,7 @@ export type $AuthUserPayload<
     {
       id: string;
       email: string;
+      username: string;
       mfaPreference: $Enums.MfaPreference;
       failedAttempts: number;
       lockedUntil: Date | null;
@@ -2536,6 +2596,7 @@ export interface Prisma__AuthUserClient<
 export interface AuthUserFieldRefs {
   readonly id: Prisma.FieldRef<'AuthUser', 'String'>;
   readonly email: Prisma.FieldRef<'AuthUser', 'String'>;
+  readonly username: Prisma.FieldRef<'AuthUser', 'String'>;
   readonly mfaPreference: Prisma.FieldRef<'AuthUser', 'MfaPreference'>;
   readonly failedAttempts: Prisma.FieldRef<'AuthUser', 'Int'>;
   readonly lockedUntil: Prisma.FieldRef<'AuthUser', 'DateTime'>;

@@ -21,7 +21,6 @@ import { Args, Context, ID, Mutation, Resolver } from '@nestjs/graphql';
 import { getLogger } from '../../logger/get-logger.js';
 import { ResponseTimeInterceptor } from '../../logger/response-time.interceptor.js';
 
-import { RealmRole } from '../models/enums/role.enum.js';
 import { AdminSignUpInput } from '../models/inputs/sign-up.input.js';
 import {
   UpdateKcUserInput,
@@ -29,11 +28,8 @@ import {
 } from '../models/inputs/update-user.input.js';
 import { TokenPayload } from '../models/payloads/token.payload.js';
 import { AdminWriteService } from '../services/admin-write.service.js';
-import {
-  cookieOpts,
-  GqlCtx,
-  setCookieSafe,
-} from './authentication-mutation.resolver.js';
+import { GqlFastifyContext, gqlSetTokens } from '@omnixys/context';
+import { RealmRole } from '@omnixys/contracts';
 
 /**
  * @fileoverview
@@ -172,23 +168,12 @@ export class AdminMutationResolver {
   @Mutation(() => TokenPayload, { name: 'adminSignUp' })
   async adminSignIn(
     @Args('input', { type: () => AdminSignUpInput }) input: AdminSignUpInput,
-    @Context() ctx: GqlCtx,
+    @Context() ctx: GqlFastifyContext,
   ): Promise<TokenPayload> {
     this.logger.debug('signIn: input=%o', input);
     const result = await this.adminService.adminSignUp(input);
-
-    setCookieSafe(
-      ctx?.res,
-      'access_token',
-      result.accessToken,
-      cookieOpts(result.expiresIn * 1000),
-    );
-    setCookieSafe(
-      ctx?.res,
-      'refresh_token',
-      result.refreshToken,
-      cookieOpts(result.refreshExpiresIn * 1000),
-    );
+    const res = ctx.reply;
+    gqlSetTokens(res, result.accessToken, result.expiresIn * 1000);
     return result;
   }
 }
