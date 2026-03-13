@@ -20,7 +20,6 @@
 import { getLogger } from '../../logger/get-logger.js';
 import { ResponseTimeInterceptor } from '../../logger/response-time.interceptor.js';
 import { KcUser } from '../models/entitys/user.entity.js';
-import { toEnumRoles } from '../models/enums/role.enum.js';
 import { AuthenticateReadService } from '../services/read.service.js';
 import {
   BadRequestException,
@@ -38,7 +37,7 @@ import {
   RoleGuard,
   Roles,
 } from '@omnixys/auth';
-import { RealmRole } from '@omnixys/contracts';
+import { RealmRoleType, toEnumRoles } from '@omnixys/contracts';
 
 /**
  * @file GraphQL-Resolver für **lesende** Authentication-Abfragen (ME/USERS).
@@ -126,7 +125,7 @@ export class AuthQueryResolver {
 
   @Query(() => KcUser, { name: 'meAuth' })
   @UseGuards(CookieAuthGuard, RoleGuard)
-  @Roles(RealmRole.ADMIN, RealmRole.USER)
+  @Roles(RealmRoleType.ADMIN, RealmRoleType.USER)
   async me(@CurrentUser() currentUser: CurrentUserData): Promise<KcUser> {
     this.logger.debug('me By Cookie');
 

@@ -15,7 +15,7 @@ import { AuthWriteService } from './authentication-write.service.js';
 import { AuthenticateBaseService } from './keycloak-base.service.js';
 import { HttpService } from '@nestjs/axios';
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { RealmRole } from '@omnixys/contracts';
+import { RealmRoleType } from '@omnixys/contracts';
 import * as argon2 from 'argon2';
 
 @Injectable()
@@ -88,7 +88,7 @@ export class RegisterService extends AuthenticateBaseService {
       }
 
       // Rolle zuweisen
-      await this.adminService.assignRealmRoleToUser(userId, RealmRole.USER);
+      await this.adminService.assignRealmRoleToUser(userId, RealmRoleType.USER);
 
       const sc = span.spanContext();
 

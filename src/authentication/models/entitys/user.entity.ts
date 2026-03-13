@@ -16,7 +16,7 @@
  */
 
 import { Field, ID, ObjectType } from '@nestjs/graphql';
-import { RealmRole } from '@omnixys/contracts';
+import { RealmRoleType } from '@omnixys/contracts';
 
 @ObjectType()
 export class KcUser {
@@ -35,6 +35,6 @@ export class KcUser {
   @Field(() => String)
   email!: string;
 
-  @Field(() => [RealmRole], { nullable: true })
-  roles?: RealmRole[];
+  @Field(() => [RealmRoleType], { nullable: true })
+  roles?: RealmRoleType[];
 }

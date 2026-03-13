@@ -23,11 +23,10 @@ import { keycloakConfig, paths } from '../../config/keycloak.js';
 import type { LoggerPlus } from '../../logger/logger-plus.js';
 import type { LoggerPlusService } from '../../logger/logger-plus.service.js';
 import type { TraceContextProvider } from '../../trace/trace-context.provider.js';
-import type { RoleData } from '../models/enums/role.enum.js';
-import { ROLE_NAME_MAP } from '../models/enums/role.enum.js';
 import type { HttpService } from '@nestjs/axios';
 import { BadRequestException, NotFoundException, UnauthorizedException } from '@nestjs/common';
-import type { RealmRole } from '@omnixys/contracts';
+import type { RoleData } from '@omnixys/contracts';
+import { ENUM_TO_KC, type RealmRoleType } from '@omnixys/contracts';
 import type { Span, Tracer } from '@opentelemetry/api';
 import { context as otelContext, trace } from '@opentelemetry/api';
 import * as jose from 'jose';
@@ -261,7 +260,7 @@ export abstract class AuthenticateBaseService {
    * @returns The corresponding Keycloak role data.
    * @throws {NotFoundException} If the role does not exist.
    */
-  protected async getRealmRole(roleName: RealmRole | string): Promise<RoleData> {
+  protected async getRealmRole(roleName: RealmRoleType | string): Promise<RoleData> {
     const effective = this.mapRoleInput(roleName);
     try {
       const role = await this.kcRequest<RoleData>(
@@ -309,9 +308,9 @@ export abstract class AuthenticateBaseService {
    * @param input - The role enum or string.
    * @returns The mapped role name.
    */
-  protected mapRoleInput(input: RealmRole | string): string {
-    const key = String(input).toUpperCase() as RealmRole;
-    return ROLE_NAME_MAP[key] ?? String(input);
+  protected mapRoleInput(input: RealmRoleType | string): string {
+    const key = String(input).toUpperCase() as RealmRoleType;
+    return ENUM_TO_KC[key] ?? String(input);
   }
 
   /**

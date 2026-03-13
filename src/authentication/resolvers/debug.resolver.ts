@@ -23,11 +23,11 @@ import { UseGuards, UseInterceptors } from '@nestjs/common';
 import { Args, Context, Mutation, Resolver } from '@nestjs/graphql';
 import { CookieAuthGuard, Roles } from '@omnixys/auth';
 import { GqlFastifyContext, gqlSetTokens } from '@omnixys/context';
-import { RealmRole } from '@omnixys/contracts';
+import { RealmRoleType } from '@omnixys/contracts';
 
 @Resolver()
 @UseGuards(CookieAuthGuard)
-@Roles(RealmRole.ADMIN)
+@Roles(RealmRoleType.ADMIN)
 @UseInterceptors(ResponseTimeInterceptor)
 export class DebugResolver {
   private readonly logger = getLogger(this.constructor.name);

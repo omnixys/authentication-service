@@ -15,7 +15,7 @@
  * For more information, visit <https://www.gnu.org/licenses/>.
  */
 
-import type { RealmRole } from '@omnixys/contracts';
+import type { RealmRoleType } from '@omnixys/contracts';
 
 // Zentrales, typsicheres Attribut-Schema für Keycloak-User-Attributes
 
@@ -48,7 +48,7 @@ export type KcAttributeInput = Partial<
   {
     [K in SingleValuedKey]: string | null | undefined;
   } & {
-    [K in MultiValuedKey]: string | string[] | null | undefined | RealmRole;
+    [K in MultiValuedKey]: string | string[] | null | undefined | RealmRoleType;
   }
 >;
 

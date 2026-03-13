@@ -29,7 +29,7 @@ import {
 import { TokenPayload } from '../models/payloads/token.payload.js';
 import { AdminWriteService } from '../services/admin-write.service.js';
 import { GqlFastifyContext, gqlSetTokens } from '@omnixys/context';
-import { RealmRole } from '@omnixys/contracts';
+import { RealmRoleType } from '@omnixys/contracts';
 
 /**
  * @fileoverview
@@ -132,13 +132,13 @@ export class AdminMutationResolver {
    * @protected
    *
    * @param id - The unique Keycloak user ID.
-   * @param roleName - The {@link RealmRole} enum representing the role to assign.
+   * @param roleName - The {@link RealmRoleType} enum representing the role to assign.
    * @returns A boolean value indicating whether the role was successfully assigned.
    */
   @Mutation(() => Boolean, { name: 'assignRealmRole' })
   async assignRealmRole(
     @Args('id', { type: () => ID }) id: string,
-    @Args('roleName', { type: () => RealmRole }) roleName: RealmRole,
+    @Args('roleName', { type: () => RealmRoleType }) roleName: RealmRoleType,
   ): Promise<boolean> {
     this.logger.debug('assignRealmRole: userId=%s, role=%s', id, roleName);
     await this.adminService.assignRealmRoleToUser(id, roleName);
@@ -152,13 +152,13 @@ export class AdminMutationResolver {
    * @protected
    *
    * @param id - The unique Keycloak user ID.
-   * @param roleName - The {@link RealmRole} enum representing the role to remove.
+   * @param roleName - The {@link RealmRoleType} enum representing the role to remove.
    * @returns A boolean value indicating whether the role was successfully removed.
    */
   @Mutation(() => Boolean, { name: 'removeRealmRole' })
   async removeRealmRole(
     @Args('id', { type: () => ID }) id: string,
-    @Args('roleName', { type: () => RealmRole }) roleName: RealmRole,
+    @Args('roleName', { type: () => RealmRoleType }) roleName: RealmRoleType,
   ): Promise<boolean> {
     this.logger.debug('removeRealmRole: userId=%s, role=%s', id, roleName);
     await this.adminService.removeRealmRoleFromUser(id, roleName);

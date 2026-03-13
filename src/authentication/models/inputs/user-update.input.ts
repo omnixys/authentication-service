@@ -16,7 +16,7 @@
  */
 
 import { Field, ID, InputType } from '@nestjs/graphql';
-import { RealmRole } from '@omnixys/contracts';
+import { RealmRoleType } from '@omnixys/contracts';
 
 @InputType()
 export class UpdateMyProfileInput {
@@ -38,6 +38,6 @@ export class AdminUpdateUserInput extends UpdateMyProfileInput {
   @Field(() => ID)
   userId!: string;
 
-  @Field(() => RealmRole)
+  @Field(() => RealmRoleType)
   role?: string;
 }

@@ -18,7 +18,6 @@
  * For more information, visit <https://www.gnu.org/licenses/>.
  */
 import { GuestSignUpDTO } from '../authentication/models/dtos/sign-up.dto.js';
-import { PhoneNumberType } from '../authentication/models/enums/phone-number-type.enum.js';
 import { PendingContactService } from '../authentication/services/pending-contact.service.js';
 import { UserWriteService } from '../authentication/services/user-write.service.js';
 import {
@@ -32,6 +31,7 @@ import {
 import { getTopic, getTopics } from '../kafka/kafka-topic.properties.js';
 import { LoggerPlusService } from '../logger/logger-plus.service.js';
 import { Injectable } from '@nestjs/common';
+import { PhoneNumberType } from '@omnixys/contracts';
 import { PhoneNumberInput } from '@omnixys/graphql';
 
 /**

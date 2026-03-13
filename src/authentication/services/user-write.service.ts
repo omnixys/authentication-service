@@ -33,7 +33,7 @@ import { AuthenticateBaseService } from './keycloak-base.service.js';
 import { AuthenticateReadService } from './read.service.js';
 import { HttpService } from '@nestjs/axios';
 import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
-import { RealmRole } from '@omnixys/contracts';
+import { RealmRoleType } from '@omnixys/contracts';
 
 /**
  * @file Mutierende Operationen gegen Keycloak (Authentication-Flows & User-Mutationen).
@@ -101,7 +101,7 @@ export class UserWriteService extends AuthenticateBaseService {
       }
 
       // Rolle zuweisen
-      await this.adminService.assignRealmRoleToUser(userId, RealmRole.USER);
+      await this.adminService.assignRealmRoleToUser(userId, RealmRoleType.USER);
 
       const sc = span.spanContext();
       void this.kafka.createUser(
@@ -191,7 +191,7 @@ export class UserWriteService extends AuthenticateBaseService {
       }
 
       // Rolle zuweisen
-      await this.adminService.assignRealmRoleToUser(userId, RealmRole.USER);
+      await this.adminService.assignRealmRoleToUser(userId, RealmRoleType.USER);
 
       const sc = span.spanContext();
 
@@ -246,7 +246,7 @@ export class UserWriteService extends AuthenticateBaseService {
       }
 
       // Rolle zuweisen
-      await this.adminService.assignRealmRoleToUser(userId, RealmRole.USER);
+      await this.adminService.assignRealmRoleToUser(userId, RealmRoleType.USER);
 
       const sc = span.spanContext();
 
@@ -293,7 +293,7 @@ export class UserWriteService extends AuthenticateBaseService {
   /**
    * Realm-Rolle von User entfernen.
    */
-  async removeRealmRoleFromUser(userId: string, roleName: RealmRole | string): Promise<void> {
+  async removeRealmRoleFromUser(userId: string, roleName: RealmRoleType | string): Promise<void> {
     const role = await this.getRealmRole(roleName);
     await this.kcRequest(
       'delete',
