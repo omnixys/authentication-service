@@ -16,7 +16,6 @@
 import { CreateTicketDTO } from '../authentication/models/dtos/create-ticket.dto.js';
 import { UserIdDTO } from '../authentication/models/dtos/kc-sign-up.dto.js';
 import { UserDTO, UserUpdateDTO } from '../authentication/models/dtos/user.dto.js';
-import { KafkaCircuitBreaker } from '../config/kafka-circuit-breaker.js';
 import { setGlobalKafkaProducer } from '../logger/logger-plus.service.js';
 import type { TraceContext } from '../trace/trace-context.util.js';
 import type { KafkaEnvelope } from './decorators/kafka-envelope.type.js';
@@ -34,7 +33,6 @@ import type { Producer, ProducerRecord } from 'kafkajs';
 export class KafkaProducerService implements OnModuleInit, OnModuleDestroy {
   private isReady = false;
   private isShuttingDown = false;
-  private readonly circuit = new KafkaCircuitBreaker(5, 10000);
 
   constructor(@Inject('KAFKA_PRODUCER') private readonly producer: Producer) {}
 
@@ -64,11 +62,6 @@ export class KafkaProducerService implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
-    if (!this.circuit.canExecute()) {
-      console.warn('Kafka circuit OPEN – dropping message for topic %s', topic);
-      return;
-    }
-
     const headers = KafkaHeaderBuilder.buildStandardHeaders(
       topic,
       message.event,
@@ -87,18 +80,8 @@ export class KafkaProducerService implements OnModuleInit, OnModuleDestroy {
         acks: -1,
         timeout: 5000,
       });
-
-      this.circuit.recordSuccess();
     } catch (err) {
       console.error('Kafka send failed for topic %s → %o', topic, err);
-
-      const previousState = this.circuit.getState();
-      this.circuit.recordFailure();
-      const newState = this.circuit.getState();
-
-      if (previousState !== newState) {
-        console.warn('Kafka circuit state changed: %s → %s', previousState, newState);
-      }
     }
   }
 

@@ -51,15 +51,20 @@ export class ResetService extends AuthenticateBaseService {
 
   async requestReset(email: string, context: RequestMeta): Promise<void> {
     return this.withSpan('reset.request', async (span) => {
+      this.logger.debug('Request Reset password Token');
+
+      this.logger.debug('Check IP Rate Limit');
       await this.lockout.checkIpRateLimit(context?.ip, 'reset-password');
 
       const user = await this.prisma.authUser.findUnique({ where: { email } });
 
       if (!user) {
+        this.logger.warn('User does not Exist!');
         return;
       }
 
       await this.lockout.ensureUserNotLocked(user.id);
+      this.logger.debug('User Not Locked');
 
       // 3) optionally invalidate previous tokens to reduce attack surface
       await this.prisma.passwordResetToken.updateMany({
@@ -93,6 +98,16 @@ export class ResetService extends AuthenticateBaseService {
       console.debug({ rawToken });
 
       const sc = span.spanContext();
+
+      this.logger.debug('Send Kafka Message: requestReset: %o', {
+        token: rawToken,
+        email: user.email,
+        username: user.username,
+        locale: context.locale ?? 'de-DE',
+        device: context.device ?? 'Unkown Device',
+        ip: context.ip ?? 'Unkown IP Address',
+        location: context.location ?? 'Germany',
+      });
 
       void this.kafkaProducer.sendRequestReset(
         {

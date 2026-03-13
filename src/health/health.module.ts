@@ -17,7 +17,6 @@
 
 import { PrismaModule } from '../prisma/prisma.module.js';
 import { HealthController } from './health.controller.js';
-import { KafkaIndicator } from './kafka.indicator.js';
 import { PrismaIndicator } from './prisma.indicator.js';
 import { HttpModule } from '@nestjs/axios';
 import { Module } from '@nestjs/common';
@@ -35,6 +34,6 @@ import { TerminusModule } from '@nestjs/terminus';
     PrismaModule,
   ],
   controllers: [HealthController],
-  providers: [KafkaIndicator, PrismaIndicator],
+  providers: [PrismaIndicator],
 })
 export class HealthModule {}

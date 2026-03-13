@@ -3,7 +3,6 @@
  */
 
 import { env } from '../config/env.js';
-import { KafkaIndicator } from './kafka.indicator.js';
 import { PrismaIndicator } from './prisma.indicator.js';
 import { Controller, Get } from '@nestjs/common';
 import {
@@ -18,7 +17,6 @@ export class HealthController {
   constructor(
     private readonly health: HealthCheckService,
     private readonly http: HttpHealthIndicator,
-    private readonly kafka: KafkaIndicator,
     private readonly prisma: PrismaIndicator,
   ) {}
 
@@ -34,7 +32,6 @@ export class HealthController {
     return this.health.check([
       async () => ({ app: { status: 'up' } }),
       () => this.prisma.isHealthy(),
-      () => this.kafka.isHealthy(),
       () => this.http.pingCheck('keycloak', env.KEYCLOAK_HEALTH_URL),
       () => this.http.pingCheck('tempo', env.TEMPO_HEALTH_URL),
       () => this.http.pingCheck('prometheus', env.PROMETHEUS_HEALTH_URL),
