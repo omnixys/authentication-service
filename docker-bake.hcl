@@ -78,7 +78,6 @@ target "build" {
   }
 
   tags = [
-    "omnixys/${APP_NAME}-service:latest",
     "omnixys/${APP_NAME}-service:${APP_VERSION}"
   ]
 

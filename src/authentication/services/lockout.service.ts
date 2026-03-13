@@ -1,12 +1,12 @@
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { TooManyRequestsException } from '@omnixys/contracts';
 import { addHours, addMinutes, isAfter } from 'date-fns';
 
 @Injectable()
 export class LockoutService {
-  private readonly USER_MAX_ATTEMPTS_PER_HOUR = 10;
-  private readonly USER_LOCK_DURATION_HOURS = 1;
-
+  private readonly USER_MAX_ATTEMPTS_PER_HOUR = 3;
+  private readonly USER_LOCK_DURATION_HOURS = 10;
   private readonly TOKEN_MAX_ATTEMPTS = 5;
 
   constructor(private readonly prisma: PrismaService) {}
@@ -26,7 +26,7 @@ export class LockoutService {
     }
 
     if (user.lockedUntil && isAfter(user.lockedUntil, new Date())) {
-      throw new UnauthorizedException('Account temporarily locked');
+      throw new UnauthorizedException({ message: 'Account temporarily locked' });
     }
   }
 
@@ -81,8 +81,12 @@ export class LockoutService {
   /* IP RATE LIMIT (Optional DB-Based)                 */
   /* -------------------------------------------------- */
 
-  async checkIpRateLimit(ip: string): Promise<void> {
-    const key = `reset:${ip}`;
+  async checkIpRateLimit(ip: string | undefined, type: string): Promise<void> {
+    if (!ip) {
+      return;
+    }
+
+    const key = `${type}:${ip}`;
     const now = new Date();
 
     const bucket = await this.prisma.rateLimitBucket.findUnique({
@@ -114,7 +118,7 @@ export class LockoutService {
     }
 
     if (bucket.count >= this.USER_MAX_ATTEMPTS_PER_HOUR) {
-      throw new UnauthorizedException('Too many attempts from this IP');
+      throw new TooManyRequestsException({ message: 'Too many attempts from this IP' });
     }
 
     await this.prisma.rateLimitBucket.update({

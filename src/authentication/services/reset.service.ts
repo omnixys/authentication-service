@@ -51,7 +51,7 @@ export class ResetService extends AuthenticateBaseService {
 
   async requestReset(email: string, context: RequestMeta): Promise<void> {
     return this.withSpan('reset.request', async (span) => {
-      await this.lockout.checkIpRateLimit(context.ip);
+      await this.lockout.checkIpRateLimit(context?.ip, 'reset-password');
 
       const user = await this.prisma.authUser.findUnique({ where: { email } });
 
@@ -101,7 +101,7 @@ export class ResetService extends AuthenticateBaseService {
           username: user.username,
           locale: context.locale ?? 'de-DE',
           device: context.device ?? 'Unkown Device',
-          ip: context.ip,
+          ip: context.ip ?? 'Unkown IP Address',
           location: context.location ?? 'Germany',
         },
         'resendService.requestReset',

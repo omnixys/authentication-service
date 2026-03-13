@@ -32,6 +32,7 @@ import { toToken } from '../models/mappers/token.mapper.js';
 import type { TokenPayload } from '../models/payloads/token.payload.js';
 import { DeviceService } from './device.service.js';
 import { AuthenticateBaseService } from './keycloak-base.service.js';
+import { LockoutService } from './lockout.service.js';
 import { RiskEngineService } from './risk-engine.service.js';
 import { TotpService } from './totp.service.js';
 import { HttpService } from '@nestjs/axios';
@@ -57,6 +58,7 @@ export class AuthWriteService extends AuthenticateBaseService {
     private readonly valkey: ValkeyService,
     private readonly kafka: KafkaProducerService,
     private readonly totpService: TotpService,
+    private readonly lockout: LockoutService,
   ) {
     super(logger, trace, http);
   }
@@ -258,6 +260,9 @@ export class AuthWriteService extends AuthenticateBaseService {
   async requestMagicLink(email: string, context: RequestMeta): Promise<boolean> {
     return this.withSpan('authentication.login.totp', async (span) => {
       this.logger.debug('requesting magic link for email %s', email);
+
+      await this.lockout.checkIpRateLimit(context?.ip, 'magic-link');
+
       const user = await this.prisma.authUser.findUnique({
         where: { email },
       });
@@ -288,7 +293,7 @@ export class AuthWriteService extends AuthenticateBaseService {
           token,
           locale: context.locale,
           device: context.device,
-          ip: context.ip,
+          ip: context.ip ?? 'Unkown IP Address',
           location: context.location,
           username: user.username,
         },

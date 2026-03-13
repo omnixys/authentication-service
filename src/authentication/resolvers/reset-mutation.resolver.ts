@@ -15,7 +15,8 @@ import {
   ObjectType,
   Resolver,
 } from '@nestjs/graphql';
-import { ClientIp, Device, Location, RequestCookies } from '@omnixys/context';
+import { ClientInfo } from '@omnixys/context';
+import { ClientInfo as ClientInfoType } from '@omnixys/contracts';
 import { AuthenticationResponseJSON } from '@simplewebauthn/server';
 
 /* =======================================================
@@ -107,19 +108,14 @@ export class ResetMutationResolver {
   @Mutation(() => Boolean)
   async requestPasswordReset(
     @Args('email', { type: () => String }) email: string,
-    @RequestCookies() cookies: Record<string, string>,
-    @Device() device: string,
-    @Location() location: string,
-    @ClientIp() ip: string,
+    @ClientInfo() client: ClientInfoType,
   ): Promise<boolean> {
-    const locale = cookies.locale ?? 'en-US';
-
     try {
       const context: RequestMeta = {
-        ip,
-        device,
-        locale,
-        location,
+        ip: client.ip,
+        device: client.device,
+        locale: client.locale,
+        location: client.location,
       };
       await this.resetService.requestReset(email, context);
     } catch (error) {
@@ -127,7 +123,7 @@ export class ResetMutationResolver {
       // Log internally for monitoring & auditing.
       this.logger.warn('Password reset request failed silently', {
         email,
-        ip,
+        ip: client.ip,
         error: error instanceof Error ? error.message : 'unknown',
       });
     }

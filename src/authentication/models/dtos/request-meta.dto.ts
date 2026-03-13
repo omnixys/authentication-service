@@ -1,5 +1,5 @@
 export interface RequestMeta {
-  ip: string;
+  ip?: string;
   device: string;
   requestId?: string;
   traceId?: string;

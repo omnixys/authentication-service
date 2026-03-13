@@ -35,13 +35,8 @@ import {
 } from '@nestjs/common';
 import { Args, Context, Mutation, Resolver } from '@nestjs/graphql';
 import { CookieAuthGuard, CurrentUser, CurrentUserData } from '@omnixys/auth';
-import {
-  ClientIp,
-  Device,
-  GqlFastifyContext,
-  Location,
-  RequestCookies,
-} from '@omnixys/context';
+import { GqlFastifyContext, ClientInfo } from '@omnixys/context';
+import { ClientInfo as ClientInfoType } from '@omnixys/contracts';
 import { AuthenticationResponseJSON } from '@simplewebauthn/server';
 import { FastifyReply } from 'fastify';
 
@@ -244,19 +239,28 @@ export class AuthMutationResolver {
   @Mutation(() => Boolean)
   async sendMagicLink(
     @Args('email') email: string,
-    @RequestCookies() cookies: Record<string, string>,
-    @Device() device: string,
-    @Location() location: string,
-    @ClientIp() ip: string,
+    @ClientInfo() client: ClientInfoType,
   ): Promise<boolean> {
-    const locale = cookies.locale ?? 'en-US';
-    const context: RequestMeta = {
-      ip,
-      device,
-      locale,
-      location,
-    };
-    return this.authService.requestMagicLink(email, context);
+    try {
+      const context: RequestMeta = {
+        ip: client.ip,
+        device: client.device,
+        locale: client.locale,
+        location: client.location,
+      };
+
+      void this.authService.requestMagicLink(email, context);
+    } catch (error) {
+      // Intentionally swallow errors to avoid leaking account existence.
+      // Log internally for monitoring & auditing.
+      this.logger.warn('Magic Link request failed silently', {
+        email,
+        ip: client.ip,
+        error: error instanceof Error ? error.message : 'unknown',
+      });
+    }
+
+    return true;
   }
 
   @Mutation(() => TokenPayload)
