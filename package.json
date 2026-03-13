@@ -1,6 +1,6 @@
 {
   "name": "authentication-service",
-  "version": "3.1.1",
+  "version": "3.1.2",
   "description": "Omnixys Authentication Service – zentrale Authentifizierungs- und Autorisierungskomponente (Keycloak, JWT, SSO).",
   "author": {
     "name": "Caleb Gyamfi",

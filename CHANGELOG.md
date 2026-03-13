@@ -2,6 +2,11 @@
 
 All notable changes in this project will be documented in this file.
 
+## <small>3.1.2 (2026-03-13)</small>
+
+- Merge branch 'main' of https://github.com/omnixys/authentication-service ([d78caafae79181b9d5818b3c6f91e9999f205b10](https://github.com/omnixys/authentication-service/commit/d78caafae79181b9d5818b3c6f91e9999f205b10))
+- fix(service): major Service update ([81c8e00f62bc696415f4b36a0f3fe84d4f9e738a](https://github.com/omnixys/authentication-service/commit/81c8e00f62bc696415f4b36a0f3fe84d4f9e738a))
+
 ## <small>3.1.1 (2026-03-13)</small>
 
 - fix(service): major Service update ([70647e7527a1525c4349f2eb55224d2029dd655f](https://github.com/omnixys/authentication-service/commit/70647e7527a1525c4349f2eb55224d2029dd655f))
