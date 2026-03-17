@@ -87,11 +87,11 @@ async function main() {
   ===================================================== */
 
   const caleb = await prisma.authUser.upsert({
-    where: { email: 'caleb@@omnixys.com' },
+    where: { email: 'caleb_g@outlook.de' },
     update: {},
     create: {
       id: '694d2e8e-0932-4c8f-a1c4-e300dc235be4',
-      email: 'caleb@@omnixys.com',
+      email: 'caleb_g@outlook.de',
       username: 'caleb',
       mfaPreference: MfaPreference.TOTP,
     },

@@ -16,7 +16,7 @@
  */
 
 import { Field, ID, InputType } from '@nestjs/graphql';
-import { RealmRoleType } from '@omnixys/contracts';
+import { RealmRoleType } from '@omnixys/shared';
 
 @InputType()
 export class UpdateMyProfileInput {

@@ -16,7 +16,7 @@ import {
   Resolver,
 } from '@nestjs/graphql';
 import { ClientInfo } from '@omnixys/context';
-import { ClientInfo as ClientInfoType } from '@omnixys/contracts';
+import { ClientInfo as ClientInfoType } from '@omnixys/shared';
 import { AuthenticationResponseJSON } from '@simplewebauthn/server';
 
 /* =======================================================

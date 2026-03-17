@@ -15,9 +15,9 @@
  * For more information, visit <https://www.gnu.org/licenses/>.
  */
 
-import type { KafkaProducerService } from '../kafka/kafka-producer.service.js'; // ✅ nur Typ, kein Runtime-Import
 import { LoggerPlus } from './logger-plus.js';
 import { Injectable } from '@nestjs/common';
+import { KafkaProducerService } from '@omnixys/kafka';
 
 /**
  * Globaler Schlüsselname für die Producer-Singleton-Instanz.

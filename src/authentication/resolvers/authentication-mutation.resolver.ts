@@ -35,8 +35,8 @@ import {
 } from '@nestjs/common';
 import { Args, Context, Mutation, Resolver } from '@nestjs/graphql';
 import { CookieAuthGuard, CurrentUser, CurrentUserData } from '@omnixys/auth';
-import { GqlFastifyContext, ClientInfo } from '@omnixys/context';
-import { ClientInfo as ClientInfoType } from '@omnixys/contracts';
+import { ClientInfo, GqlFastifyContext } from '@omnixys/context';
+import { ClientInfo as ClientInfoType } from '@omnixys/shared';
 import { AuthenticationResponseJSON } from '@simplewebauthn/server';
 import { FastifyReply } from 'fastify';
 

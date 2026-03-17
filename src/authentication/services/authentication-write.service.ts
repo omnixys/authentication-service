@@ -18,7 +18,6 @@
  */
 
 import { keycloakConfig, paths } from '../../config/keycloak.js';
-import { KafkaProducerService } from '../../kafka/kafka-producer.service.js';
 import { LoggerPlusService } from '../../logger/logger-plus.service.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { TraceContextProvider } from '../../trace/trace-context.provider.js';
@@ -37,6 +36,7 @@ import { RiskEngineService } from './risk-engine.service.js';
 import { TotpService } from './totp.service.js';
 import { HttpService } from '@nestjs/axios';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { KafkaProducerService, KafkaTopics } from '@omnixys/kafka';
 import { randomBytes } from 'crypto';
 
 /**
@@ -287,7 +287,8 @@ export class AuthWriteService extends AuthenticateBaseService {
       });
 
       const sc = span.spanContext();
-      void this.kafka.sendMagicLink(
+      void this.kafka.send<typeof KafkaTopics.notification.sendMagicLink>(
+        KafkaTopics.notification.sendMagicLink,
         {
           email: user.email,
           token,
@@ -297,7 +298,7 @@ export class AuthWriteService extends AuthenticateBaseService {
           location: context.location,
           username: user.username,
         },
-        'authentication.requestMagicLink',
+        'authentication-service',
         { traceId: sc.traceId, spanId: sc.spanId },
       );
 

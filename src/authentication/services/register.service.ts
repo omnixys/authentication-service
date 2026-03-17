@@ -2,7 +2,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { paths } from '../../config/keycloak.js';
-import { KafkaProducerService } from '../../kafka/kafka-producer.service.js';
 import { LoggerPlusService } from '../../logger/logger-plus.service.js';
 import { MfaPreference } from '../../prisma/generated/enums.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
@@ -15,7 +14,8 @@ import { AuthWriteService } from './authentication-write.service.js';
 import { AuthenticateBaseService } from './keycloak-base.service.js';
 import { HttpService } from '@nestjs/axios';
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { RealmRoleType } from '@omnixys/contracts';
+import { KafkaProducerService, KafkaTopics } from '@omnixys/kafka';
+import { RealmRoleType } from '@omnixys/shared';
 import * as argon2 from 'argon2';
 
 @Injectable()
@@ -127,18 +127,20 @@ export class RegisterService extends AuthenticateBaseService {
           });
         }
 
-        void this.kafka.addUserId(
+        void this.kafka.send<typeof KafkaTopics.user.addId>(
+          KafkaTopics.user.addId,
           { newId: userId, oldId: input.id, token: valkeyToken },
-          'authentication.userSignUp',
+          'authentication-service',
           {
             traceId: sc.traceId,
             spanId: sc.spanId,
           },
         );
 
-        void this.kafka.createUserAddresses(
+        void this.kafka.send<typeof KafkaTopics.address.createUserAddresses>(
+          KafkaTopics.address.createUserAddresses,
           { userId, token: valkeyToken },
-          'authentication.userSignUp',
+          'authentication-service',
           {
             traceId: sc.traceId,
             spanId: sc.spanId,

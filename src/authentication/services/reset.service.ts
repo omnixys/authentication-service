@@ -2,7 +2,6 @@
 
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
 
-import { KafkaProducerService } from '../../kafka/kafka-producer.service.js';
 import { LoggerPlusService } from '../../logger/logger-plus.service.js';
 import { ResetTokenState } from '../../prisma/generated/client.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
@@ -25,6 +24,7 @@ import { TotpService } from './totp.service.js';
 import { WebAuthnService } from './web-authn.service.js';
 import { HttpService } from '@nestjs/axios';
 import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { KafkaProducerService, KafkaTopics } from '@omnixys/kafka';
 import { AuthenticationResponseJSON } from '@simplewebauthn/server';
 import { randomBytes } from 'crypto';
 import { addMinutes } from 'date-fns';
@@ -109,7 +109,8 @@ export class ResetService extends AuthenticateBaseService {
         location: context.location ?? 'Germany',
       });
 
-      void this.kafkaProducer.sendRequestReset(
+      void this.kafkaProducer.send<typeof KafkaTopics.notification.sendRequestReset>(
+        KafkaTopics.notification.sendRequestReset,
         {
           token: rawToken,
           email: user.email,
@@ -119,7 +120,7 @@ export class ResetService extends AuthenticateBaseService {
           ip: context.ip ?? 'Unkown IP Address',
           location: context.location ?? 'Germany',
         },
-        'resendService.requestReset',
+        'authentication-service',
         {
           traceId: sc.traceId,
           spanId: sc.spanId,

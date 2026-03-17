@@ -16,7 +16,6 @@
  */
 
 import { paths } from '../../config/keycloak.js';
-import { KafkaProducerService } from '../../kafka/kafka-producer.service.js';
 import { LoggerPlusService } from '../../logger/logger-plus.service.js';
 import { TraceContextProvider } from '../../trace/trace-context.provider.js';
 import { KeycloakUser, KeycloakUserPatch } from '../models/dtos/kc-user.dto.js';
@@ -33,7 +32,8 @@ import { AuthenticateBaseService } from './keycloak-base.service.js';
 import { AuthenticateReadService } from './read.service.js';
 import { HttpService } from '@nestjs/axios';
 import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
-import { RealmRoleType } from '@omnixys/contracts';
+// import { KafkaProducerService } from '@omnixys/kafka';
+import { RealmRoleType } from '@omnixys/shared';
 
 /**
  * @file Mutierende Operationen gegen Keycloak (Authentication-Flows & User-Mutationen).
@@ -48,7 +48,7 @@ export class UserWriteService extends AuthenticateBaseService {
     logger: LoggerPlusService,
     trace: TraceContextProvider,
     http: HttpService,
-    private readonly kafka: KafkaProducerService,
+    // private readonly kafka: KafkaProducerService,
     private authService: AuthWriteService,
     private adminService: AdminWriteService,
     private authenticateReadService: AuthenticateReadService,
@@ -63,8 +63,7 @@ export class UserWriteService extends AuthenticateBaseService {
     return this.withSpan('authentication.signUp', async (span) => {
       void this.logger.debug('signUp: input=%o', input);
 
-      const { firstName, lastName, email, invitationId, phoneNumbers, eventId, seatId, actorId } =
-        input;
+      const { firstName, lastName, email, seatId, actorId } = input;
 
       const {
         username,
@@ -103,56 +102,56 @@ export class UserWriteService extends AuthenticateBaseService {
       // Rolle zuweisen
       await this.adminService.assignRealmRoleToUser(userId, RealmRoleType.USER);
 
-      const sc = span.spanContext();
-      void this.kafka.createUser(
-        {
-          id: userId,
-          username,
-          firstName,
-          lastName,
-          email: finalEmail,
-          phoneNumbers,
-          invitationId,
-        },
-        'authentication.guestSignUp',
-        { traceId: sc.traceId, spanId: sc.spanId },
-      );
+      span.spanContext();
+      // void this.kafka.createUser(
+      //   {
+      //     id: userId,
+      //     username,
+      //     firstName,
+      //     lastName,
+      //     email: finalEmail,
+      //     phoneNumbers,
+      //     invitationId,
+      //   },
+      //   'authentication.guestSignUp',
+      //   { traceId: sc.traceId, spanId: sc.spanId },
+      // );
 
-      void this.kafka.notifyUser(
-        {
-          userId,
-          username,
-          password,
-          invitationId,
-          firstName,
-          lastName,
-        },
-        'authentication.notifyUser',
-        { traceId: sc.traceId, spanId: sc.spanId },
-      );
+      // void this.kafka.notifyUser(
+      //   {
+      //     userId,
+      //     username,
+      //     password,
+      //     invitationId,
+      //     firstName,
+      //     lastName,
+      //   },
+      //   'authentication.notifyUser',
+      //   { traceId: sc.traceId, spanId: sc.spanId },
+      // );
 
-      void this.kafka.addEventRole(
-        {
-          userId,
-          eventId,
-          actorId: actorId ?? '0',
-        },
-        'authentication.addEventRole',
-        { traceId: sc.traceId, spanId: sc.spanId },
-      );
+      // void this.kafka.addEventRole(
+      //   {
+      //     userId,
+      //     eventId,
+      //     actorId: actorId ?? '0',
+      //   },
+      //   'authentication.addEventRole',
+      //   { traceId: sc.traceId, spanId: sc.spanId },
+      // );
 
       if (seatId && actorId) {
-        void this.kafka.createTicket(
-          {
-            eventId,
-            invitationId,
-            guestProfileId: userId,
-            seatId,
-            actorId,
-          },
-          'authentication.createTicket',
-          { traceId: sc.traceId, spanId: sc.spanId },
-        );
+        // void this.kafka.createTicket(
+        //   {
+        //     eventId,
+        //     invitationId,
+        //     guestProfileId: userId,
+        //     seatId,
+        //     actorId,
+        //   },
+        //   'authentication.createTicket',
+        //   { traceId: sc.traceId, spanId: sc.spanId },
+        // );
       }
 
       console.debug({ userId, username, password });
@@ -164,7 +163,7 @@ export class UserWriteService extends AuthenticateBaseService {
     return this.withSpan('authentication.signUp', async (span) => {
       void this.logger.debug('signUp: input=%o', input);
 
-      const { firstName, lastName, email, username, password, phoneNumbers } = input;
+      const { firstName, lastName, email, username, password } = input;
 
       const credentials: Array<Record<string, string | undefined | boolean>> = [
         { type: 'password', value: password, temporary: false },
@@ -193,13 +192,13 @@ export class UserWriteService extends AuthenticateBaseService {
       // Rolle zuweisen
       await this.adminService.assignRealmRoleToUser(userId, RealmRoleType.USER);
 
-      const sc = span.spanContext();
+      span.spanContext();
 
-      void this.kafka.createUser(
-        { id: userId, username, firstName, lastName, email, phoneNumbers },
-        'authentication.userSignUp',
-        { traceId: sc.traceId, spanId: sc.spanId },
-      );
+      // void this.kafka.createUser(
+      //   { id: userId, username, firstName, lastName, email, phoneNumbers },
+      //   'authentication.userSignUp',
+      //   { traceId: sc.traceId, spanId: sc.spanId },
+      // );
       // TODO kafka nachrichten implementieren
 
       const token = await this.authService.login({ username, password });
@@ -248,19 +247,19 @@ export class UserWriteService extends AuthenticateBaseService {
       // Rolle zuweisen
       await this.adminService.assignRealmRoleToUser(userId, RealmRoleType.USER);
 
-      const sc = span.spanContext();
+      span.spanContext();
 
-      void this.kafka.createUser(
-        {
-          id: userId,
-          username: data.name ?? `${data.provider}_${data.providerId}`,
-          firstName: data.name ?? 'GitHub',
-          lastName: 'User',
-          email: data.email,
-        },
-        'authentication.userSignUp',
-        { traceId: sc.traceId, spanId: sc.spanId },
-      );
+      // void this.kafka.createUser(
+      //   {
+      //     id: userId,
+      //     username: data.name ?? `${data.provider}_${data.providerId}`,
+      //     firstName: data.name ?? 'GitHub',
+      //     lastName: 'User',
+      //     email: data.email,
+      //   },
+      //   'authentication.userSignUp',
+      //   { traceId: sc.traceId, spanId: sc.spanId },
+      // );
 
       if (!userId) {
         throw new UnauthorizedException('Keycloak user creation failed');
@@ -384,12 +383,12 @@ export class UserWriteService extends AuthenticateBaseService {
         headers: await this.adminJsonHeaders(),
       });
 
-      const sc = span.spanContext();
-      void this.kafka.updateUser(
-        { id, firstName: patch.firstName, lastName: patch.lastName, email: patch.email },
-        'authentication.userSignUp',
-        { traceId: sc.traceId, spanId: sc.spanId },
-      );
+      span.spanContext();
+      // void this.kafka.updateUser(
+      //   { id, firstName: patch.firstName, lastName: patch.lastName, email: patch.email },
+      //   'authentication-service',
+      //   { traceId: sc.traceId, spanId: sc.spanId },
+      // );
     });
   }
 }

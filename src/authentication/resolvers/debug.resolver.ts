@@ -23,7 +23,7 @@ import { UseGuards, UseInterceptors } from '@nestjs/common';
 import { Args, Context, Mutation, Resolver } from '@nestjs/graphql';
 import { CookieAuthGuard, Roles } from '@omnixys/auth';
 import { GqlFastifyContext, gqlSetTokens } from '@omnixys/context';
-import { RealmRoleType } from '@omnixys/contracts';
+import { RealmRoleType } from '@omnixys/shared';
 
 @Resolver()
 @UseGuards(CookieAuthGuard)

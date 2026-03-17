@@ -29,7 +29,7 @@ import {
 import { TokenPayload } from '../models/payloads/token.payload.js';
 import { AdminWriteService } from '../services/admin-write.service.js';
 import { GqlFastifyContext, gqlSetTokens } from '@omnixys/context';
-import { RealmRoleType } from '@omnixys/contracts';
+import { RealmRoleType } from '@omnixys/shared';
 
 /**
  * @fileoverview

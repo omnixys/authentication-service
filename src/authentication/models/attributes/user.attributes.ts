@@ -15,7 +15,7 @@
  * For more information, visit <https://www.gnu.org/licenses/>.
  */
 
-import type { RealmRoleType } from '@omnixys/contracts';
+import type { RealmRoleType } from '@omnixys/shared';
 
 // Zentrales, typsicheres Attribut-Schema für Keycloak-User-Attributes
 

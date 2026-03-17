@@ -16,7 +16,6 @@
  */
 
 import { paths } from '../../config/keycloak.js';
-import { KafkaProducerService } from '../../kafka/kafka-producer.service.js';
 import { LoggerPlusService } from '../../logger/logger-plus.service.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { TraceContextProvider } from '../../trace/trace-context.provider.js';
@@ -29,7 +28,8 @@ import { AuthenticateBaseService } from './keycloak-base.service.js';
 import { AuthenticateReadService } from './read.service.js';
 import { HttpService } from '@nestjs/axios';
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { RealmRoleType } from '@omnixys/contracts';
+import { KafkaProducerService, KafkaTopics } from '@omnixys/kafka';
+import { RealmRoleType } from '@omnixys/shared';
 
 /**
  * @file Mutierende Operationen gegen Keycloak (Authentication-Flows & User-Mutationen).
@@ -101,15 +101,25 @@ export class AdminWriteService extends AuthenticateBaseService {
 
       const sc = span.spanContext();
 
-      void this.kafka.deleteUser({ id }, 'authentication.deleteUser', {
-        traceId: sc.traceId,
-        spanId: sc.spanId,
-      });
+      void this.kafka.send<typeof KafkaTopics.user.deleteUser>(
+        KafkaTopics.user.deleteUser,
+        { userId: id },
+        'authentication.service',
+        {
+          traceId: sc.traceId,
+          spanId: sc.spanId,
+        },
+      );
 
-      void this.kafka.deleteAddresses({ id }, 'authentication.deleteUser', {
-        traceId: sc.traceId,
-        spanId: sc.spanId,
-      });
+      void this.kafka.send<typeof KafkaTopics.address.deleteUserAddresses>(
+        KafkaTopics.address.deleteUserAddresses,
+        { userId: id },
+        'authentication-service',
+        {
+          traceId: sc.traceId,
+          spanId: sc.spanId,
+        },
+      );
     });
   }
 

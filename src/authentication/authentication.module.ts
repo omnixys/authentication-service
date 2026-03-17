@@ -16,7 +16,6 @@
  */
 
 import { CoreHttpModule } from '../http.module.js';
-import { KafkaModule } from '../kafka/kafka.module.js';
 import { LoggerModule } from '../logger/logger.module.js';
 import { PrismaModule } from '../prisma/prisma.module.js';
 import { TraceModule } from '../trace/trace.module.js';
@@ -53,15 +52,7 @@ import { Module } from '@nestjs/common';
 import { AuthModule } from '@omnixys/auth';
 
 @Module({
-  imports: [
-    KafkaModule,
-    LoggerModule,
-    TraceModule,
-    CoreHttpModule,
-    AuthModule,
-    ValkeyModule,
-    PrismaModule,
-  ],
+  imports: [LoggerModule, TraceModule, CoreHttpModule, AuthModule, ValkeyModule, PrismaModule],
   controllers: [OAuthController],
   providers: [
     AuthQueryResolver,

@@ -37,7 +37,7 @@ import {
   RoleGuard,
   Roles,
 } from '@omnixys/auth';
-import { RealmRoleType, toEnumRoles } from '@omnixys/contracts';
+import { RealmRoleType, toEnumRoles } from '@omnixys/shared';
 
 /**
  * @file GraphQL-Resolver für **lesende** Authentication-Abfragen (ME/USERS).

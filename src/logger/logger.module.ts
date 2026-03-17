@@ -15,7 +15,6 @@
  * For more information, visit <https://www.gnu.org/licenses/>.
  */
 
-import { KafkaModule } from '../kafka/kafka.module.js';
 import { BannerService } from './banner.service.js';
 import { LoggerPlusService } from './logger-plus.service.js';
 import { ResponseTimeInterceptor } from './response-time.interceptor.js';
@@ -31,7 +30,7 @@ import { Global, Module } from '@nestjs/common';
  */
 @Global()
 @Module({
-  imports: [KafkaModule],
+  imports: [],
   providers: [BannerService, ResponseTimeInterceptor, LoggerPlusService],
   exports: [BannerService, ResponseTimeInterceptor, LoggerPlusService],
 })
