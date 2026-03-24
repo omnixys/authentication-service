@@ -16,9 +16,7 @@
  */
 
 import { CoreHttpModule } from '../http.module.js';
-import { LoggerModule } from '../logger/logger.module.js';
 import { PrismaModule } from '../prisma/prisma.module.js';
-import { TraceModule } from '../trace/trace.module.js';
 import { ValkeyModule } from '../valkey/valkey.module.js';
 import { OAuthController } from './controllers/o-auth.controller.js';
 import { AdminMutationResolver } from './resolvers/admin-mutation.resolver.js';
@@ -52,7 +50,7 @@ import { Module } from '@nestjs/common';
 import { AuthModule } from '@omnixys/auth';
 
 @Module({
-  imports: [LoggerModule, TraceModule, CoreHttpModule, AuthModule, ValkeyModule, PrismaModule],
+  imports: [CoreHttpModule, AuthModule, ValkeyModule, PrismaModule],
   controllers: [OAuthController],
   providers: [
     AuthQueryResolver,

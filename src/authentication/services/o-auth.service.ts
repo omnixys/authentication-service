@@ -1,15 +1,14 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
 
-import { LoggerPlusService } from '../../logger/logger-plus.service.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
-import { TraceContextProvider } from '../../trace/trace-context.provider.js';
 import { ValkeyService } from '../../valkey/valkey.service.js';
 import { AuthWriteService } from './authentication-write.service.js';
 import { AuthenticateBaseService } from './keycloak-base.service.js';
 import { UserWriteService } from './user-write.service.js';
 import { HttpService } from '@nestjs/axios';
 import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import { OmnixysLogger } from '@omnixys/logger';
 
 /* =========================================================
    TYPE DEFINITIONS
@@ -50,15 +49,14 @@ interface GoogleUser {
 @Injectable()
 export class OAuthService extends AuthenticateBaseService {
   constructor(
-    logger: LoggerPlusService,
-    trace: TraceContextProvider,
+    logger: OmnixysLogger,
     http: HttpService,
     private readonly prisma: PrismaService,
     private readonly authService: AuthWriteService,
     private readonly valkey: ValkeyService,
     private readonly userWriteService: UserWriteService,
   ) {
-    super(logger, trace, http);
+    super(logger, http);
   }
 
   /* =====================================================

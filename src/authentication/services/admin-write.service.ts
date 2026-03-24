@@ -16,9 +16,7 @@
  */
 
 import { paths } from '../../config/keycloak.js';
-import { LoggerPlusService } from '../../logger/logger-plus.service.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
-import { TraceContextProvider } from '../../trace/trace-context.provider.js';
 import { KeycloakUserPatch } from '../models/dtos/kc-user.dto.js';
 import type { AdminSignUpInput } from '../models/inputs/sign-up.input.js';
 import { UpdateMyProfileInput } from '../models/inputs/user-update.input.js';
@@ -29,6 +27,7 @@ import { AuthenticateReadService } from './read.service.js';
 import { HttpService } from '@nestjs/axios';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { KafkaProducerService, KafkaTopics } from '@omnixys/kafka';
+import { OmnixysLogger } from '@omnixys/logger';
 import { RealmRoleType } from '@omnixys/shared';
 
 /**
@@ -41,85 +40,78 @@ import { RealmRoleType } from '@omnixys/shared';
 @Injectable()
 export class AdminWriteService extends AuthenticateBaseService {
   constructor(
-    logger: LoggerPlusService,
-    trace: TraceContextProvider,
+    logger: OmnixysLogger,
     private authService: AuthWriteService,
     private readonly readService: AuthenticateReadService,
     http: HttpService,
     private readonly kafka: KafkaProducerService,
     private readonly prisma: PrismaService,
   ) {
-    super(logger, trace, http);
+    super(logger, http);
   }
 
   async adminSignUp(input: AdminSignUpInput): Promise<TokenPayload> {
-    return this.withSpan('authentication.signUp', async (_span) => {
-      const { firstName, lastName, email, username, password } = input;
-      void this.logger.debug('signUp: input=%o', input);
+    const { firstName, lastName, email, username, password } = input;
+    void this.logger.debug('signUp: input=%o', input);
 
-      const credentials: Array<Record<string, string | undefined | boolean>> = [
-        { type: 'password', value: password, temporary: false },
-      ];
+    const credentials: Array<Record<string, string | undefined | boolean>> = [
+      { type: 'password', value: password, temporary: false },
+    ];
 
-      const body = {
-        username,
-        enabled: true,
-        firstName,
-        lastName,
-        email,
-        credentials,
-        emailVerified: true,
-        requiredActions: [],
-      };
+    const body = {
+      username,
+      enabled: true,
+      firstName,
+      lastName,
+      email,
+      credentials,
+      emailVerified: true,
+      requiredActions: [],
+    };
 
-      await this.kcRequest('post', paths.users, {
-        data: body,
-        headers: await this.adminJsonHeaders(),
-      });
-      // id ermitteln
-      const userId = await this.findUserIdByUsername(username);
-      if (!userId) {
-        throw new NotFoundException('User id could not be resolved after signUp');
-      }
-
-      // Rolle zuweisen
-      await this.assignRealmRoleToUser(userId, RealmRoleType.ADMIN);
-
-      const token = await this.authService.login({ username, password });
-      return token;
+    await this.kcRequest('post', paths.users, {
+      data: body,
+      headers: await this.adminJsonHeaders(),
     });
+    // id ermitteln
+    const userId = await this.findUserIdByUsername(username);
+    if (!userId) {
+      throw new NotFoundException('User id could not be resolved after signUp');
+    }
+
+    // Rolle zuweisen
+    await this.assignRealmRoleToUser(userId, RealmRoleType.ADMIN);
+
+    const token = await this.authService.login({ username, password });
+    return token;
   }
 
   /**
    * Benutzer löschen.
    */
   async deleteUser(id: string): Promise<void> {
-    return this.withSpan('authentication.signUp', async (span) => {
-      await this.kcRequest('delete', `${paths.users}/${encodeURIComponent(id)}`);
+    await this.kcRequest('delete', `${paths.users}/${encodeURIComponent(id)}`);
 
-      await this.prisma.authUser.delete({ where: { id } });
+    await this.prisma.authUser.delete({ where: { id } });
 
-      const sc = span.spanContext();
+    void this.kafka.send({
+      topic: KafkaTopics.user.deleteUser,
+      payload: { userId: id },
+      meta: {
+        operation: 'Deleting User from user-service',
+        service: 'authentication.service',
+        version: '1',
+      },
+    });
 
-      void this.kafka.send<typeof KafkaTopics.user.deleteUser>(
-        KafkaTopics.user.deleteUser,
-        { userId: id },
-        'authentication.service',
-        {
-          traceId: sc.traceId,
-          spanId: sc.spanId,
-        },
-      );
-
-      void this.kafka.send<typeof KafkaTopics.address.deleteUserAddresses>(
-        KafkaTopics.address.deleteUserAddresses,
-        { userId: id },
-        'authentication-service',
-        {
-          traceId: sc.traceId,
-          spanId: sc.spanId,
-        },
-      );
+    void this.kafka.send({
+      topic: KafkaTopics.address.deleteUserAddresses,
+      payload: { userId: id },
+      meta: {
+        operation: 'Deleting User Addresses from address-service',
+        service: 'authentication.service',
+        version: '1',
+      },
     });
   }
 

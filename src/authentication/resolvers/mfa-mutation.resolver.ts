@@ -16,7 +16,6 @@ import {
 } from '@nestjs/common';
 
 import { JsonScalar } from '../../core/scalars/json.scalar.js';
-import { ResponseTimeInterceptor } from '../../logger/response-time.interceptor.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { MfaPreference } from '../models/dtos/reset-verification-result.dto.js';
 import { SecurityQuestionMapper } from '../models/mappers/security-question.mapper.js';
@@ -27,6 +26,7 @@ import { SecurityQuestionService } from '../services/security-question.service.j
 import { TotpService } from '../services/totp.service.js';
 import { WebAuthnService } from '../services/web-authn.service.js';
 import { CookieAuthGuard, CurrentUser, CurrentUserData } from '@omnixys/auth';
+import { LoggingInterceptor } from '@omnixys/logger';
 import {
   AuthenticationResponseJSON,
   RegistrationResponseJSON,
@@ -57,7 +57,7 @@ export class WebAuthnDevicePayload {
 }
 
 @Resolver()
-@UseInterceptors(ResponseTimeInterceptor)
+@UseInterceptors(LoggingInterceptor)
 export class MfaMutationResolver {
   constructor(
     private readonly totpService: TotpService,

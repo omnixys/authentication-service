@@ -16,8 +16,6 @@
  */
 
 import { keycloakConfig, paths } from '../../config/keycloak.js';
-import { LoggerPlusService } from '../../logger/logger-plus.service.js';
-import { TraceContextProvider } from '../../trace/trace-context.provider.js';
 import type { KeycloakTokenPayload } from '../models/dtos/kc-token.dto.js';
 import type { KeycloakUser } from '../models/dtos/kc-user.dto.js';
 import type { KcUser } from '../models/entitys/user.entity.js';
@@ -25,6 +23,7 @@ import { toUser, toUsers } from '../models/mappers/user.mapper.js';
 import { AuthenticateBaseService } from './keycloak-base.service.js';
 import { HttpService } from '@nestjs/axios';
 import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { OmnixysLogger } from '@omnixys/logger';
 import * as jose from 'jose';
 
 /**
@@ -34,8 +33,8 @@ import * as jose from 'jose';
  */
 @Injectable()
 export class AuthenticateReadService extends AuthenticateBaseService {
-  constructor(logger: LoggerPlusService, trace: TraceContextProvider, http: HttpService) {
-    super(logger, trace, http);
+  constructor(logger: OmnixysLogger, http: HttpService) {
+    super(logger, http);
   }
 
   createKeycloakConnectOptions(): typeof keycloakConfig {

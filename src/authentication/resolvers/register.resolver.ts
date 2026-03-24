@@ -15,35 +15,37 @@
  * For more information, visit <https://www.gnu.org/licenses/>.
  */
 
-import { getLogger } from '../../logger/get-logger.js';
-import { ResponseTimeInterceptor } from '../../logger/response-time.interceptor.js';
 import { SignUpPayload } from '../models/payloads/sign-in.payload.js';
 import { RegisterService } from '../services/register.service.js';
-import { UseInterceptors } from '@nestjs/common';
-import { Args, Context, Mutation, Resolver } from '@nestjs/graphql';
-import { GqlFastifyContext, gqlSetTokens } from '@omnixys/context';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { OmnixysLogger } from '@omnixys/logger';
 
 @Resolver()
-@UseInterceptors(ResponseTimeInterceptor)
+// @UseInterceptors(ResponseTimeInterceptor)
 export class RegisterResolver {
-  private readonly logger = getLogger(RegisterResolver.name);
+  private readonly logger;
 
-  constructor(private readonly registerService: RegisterService) {}
+  constructor(
+    private readonly registerService: RegisterService,
+    omnixysLogger: OmnixysLogger,
+  ) {
+    this.logger = omnixysLogger.log(this.constructor.name);
+  }
 
   @Mutation(() => SignUpPayload)
   async verifySignUp(
     @Args('token') token: string,
-    @Context() ctx: GqlFastifyContext,
+    // @Context() ctx: GqlFastifyContext,
   ): Promise<SignUpPayload> {
     this.logger.debug('Verify Registration');
     const payload = await this.registerService.verifySignup(token);
-    const res = ctx.reply;
+    // const res = ctx.reply;
 
-    gqlSetTokens(
-      res,
-      payload?.token?.accessToken ?? '',
-      payload?.token?.expiresIn ?? 0 * 1000,
-    );
+    // gqlSetTokens(
+    //   res,
+    //   payload?.token?.accessToken ?? '',
+    //   payload?.token?.expiresIn ?? 0 * 1000,
+    // );
 
     return payload;
   }

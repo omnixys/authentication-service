@@ -20,15 +20,11 @@
 
 import { env } from '../../config/env.js';
 import { keycloakConfig, paths } from '../../config/keycloak.js';
-import type { LoggerPlus } from '../../logger/logger-plus.js';
-import type { LoggerPlusService } from '../../logger/logger-plus.service.js';
-import type { TraceContextProvider } from '../../trace/trace-context.provider.js';
 import type { HttpService } from '@nestjs/axios';
 import { BadRequestException, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import type { OmnixysLogger } from '@omnixys/logger';
 import type { RoleData } from '@omnixys/shared';
 import { ENUM_TO_KC, type RealmRoleType } from '@omnixys/shared';
-import type { Span, Tracer } from '@opentelemetry/api';
-import { context as otelContext, trace } from '@opentelemetry/api';
 import * as jose from 'jose';
 import { firstValueFrom } from 'rxjs';
 
@@ -52,17 +48,7 @@ export abstract class AuthenticateBaseService {
   /** Basic authentication headers for token/logout requests. */
   protected readonly loginHeaders: Record<string, string>;
 
-  /** OpenTelemetry tracer instance. */
-  protected readonly tracer: Tracer;
-
-  /** Logger service wrapper. */
-  protected readonly loggerService: LoggerPlusService;
-
-  /** Local logger instance. */
-  protected readonly logger: LoggerPlus | Console;
-
-  /** Trace context provider for distributed tracing. */
-  protected readonly traceContext: TraceContextProvider;
+  protected readonly logger;
 
   /** Cached JSON Web Key Sets per issuer. */
   #jwksCache = new Map<string, ReturnType<typeof jose.createRemoteJWKSet>>();
@@ -74,12 +60,10 @@ export abstract class AuthenticateBaseService {
    * Initializes a new instance of the KeycloakBaseService.
    *
    * @param loggerService - The centralized logger service.
-   * @param traceContextProvider - The trace context provider for OpenTelemetry.
    * @param http - The injected NestJS HttpService.
    */
   protected constructor(
-    loggerService: LoggerPlusService,
-    traceContextProvider: TraceContextProvider,
+    omnixysLogger: OmnixysLogger,
     protected readonly http: HttpService,
   ) {
     const { clientId, clientSecret } = keycloakConfig;
@@ -89,10 +73,7 @@ export abstract class AuthenticateBaseService {
       'Content-Type': 'application/x-www-form-urlencoded',
     };
 
-    this.tracer = trace.getTracer(this.constructor.name);
-    this.loggerService = loggerService;
-    this.logger = loggerService ? loggerService.getLogger(this.constructor.name) : console;
-    this.traceContext = traceContextProvider;
+    this.logger = omnixysLogger.log(this.constructor.name);
   }
 
   /**
@@ -311,26 +292,6 @@ export abstract class AuthenticateBaseService {
   protected mapRoleInput(input: RealmRoleType | string): string {
     const key = String(input).toUpperCase() as RealmRoleType;
     return ENUM_TO_KC[key] ?? String(input);
-  }
-
-  /**
-   * Executes an async function inside an OpenTelemetry span.
-   *
-   * @param name - The span name.
-   * @param fn - The async function to execute.
-   * @returns The result of the async function.
-   */
-  protected async withSpan<T>(name: string, fn: (span: Span) => Promise<T>): Promise<T> {
-    const span = this.tracer.startSpan(name);
-
-    try {
-      return await otelContext.with(
-        trace.setSpan(otelContext.active(), span),
-        () => fn(span), // <-- typesicher
-      );
-    } finally {
-      span.end();
-    }
   }
 
   /**

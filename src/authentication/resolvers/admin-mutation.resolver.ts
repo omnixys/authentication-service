@@ -15,12 +15,6 @@
  * For more information, visit <https://www.gnu.org/licenses/>.
  */
 
-import { UseInterceptors } from '@nestjs/common';
-import { Args, Context, ID, Mutation, Resolver } from '@nestjs/graphql';
-
-import { getLogger } from '../../logger/get-logger.js';
-import { ResponseTimeInterceptor } from '../../logger/response-time.interceptor.js';
-
 import { AdminSignUpInput } from '../models/inputs/sign-up.input.js';
 import {
   UpdateKcUserInput,
@@ -28,8 +22,11 @@ import {
 } from '../models/inputs/update-user.input.js';
 import { TokenPayload } from '../models/payloads/token.payload.js';
 import { AdminWriteService } from '../services/admin-write.service.js';
+import { UseInterceptors } from '@nestjs/common';
+import { Args, Context, ID, Mutation, Resolver } from '@nestjs/graphql';
 import { GqlFastifyContext, gqlSetTokens } from '@omnixys/context';
-import { RealmRoleType } from '@omnixys/shared';
+import { RealmRoleType } from '@omnixys/graphql';
+import { getLogger, LoggingInterceptor } from '@omnixys/logger';
 
 /**
  * @fileoverview
@@ -46,7 +43,7 @@ import { RealmRoleType } from '@omnixys/shared';
  * realm roles (`ADMIN`) in production environments.
  */
 @Resolver()
-@UseInterceptors(ResponseTimeInterceptor)
+@UseInterceptors(LoggingInterceptor)
 export class AdminMutationResolver {
   /** Internal logger instance used for diagnostic output. */
   private readonly logger = getLogger(AdminMutationResolver.name);

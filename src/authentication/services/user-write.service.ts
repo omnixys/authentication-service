@@ -16,8 +16,6 @@
  */
 
 import { paths } from '../../config/keycloak.js';
-import { LoggerPlusService } from '../../logger/logger-plus.service.js';
-import { TraceContextProvider } from '../../trace/trace-context.provider.js';
 import { KeycloakUser, KeycloakUserPatch } from '../models/dtos/kc-user.dto.js';
 import { GuestSignUpDTO } from '../models/dtos/sign-up.dto.js';
 import { updatePasswortDTO } from '../models/dtos/update-password.dto.js';
@@ -32,8 +30,9 @@ import { AuthenticateBaseService } from './keycloak-base.service.js';
 import { AuthenticateReadService } from './read.service.js';
 import { HttpService } from '@nestjs/axios';
 import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { RealmRoleType } from '@omnixys/graphql';
 // import { KafkaProducerService } from '@omnixys/kafka';
-import { RealmRoleType } from '@omnixys/shared';
+import { OmnixysLogger } from '@omnixys/logger';
 
 /**
  * @file Mutierende Operationen gegen Keycloak (Authentication-Flows & User-Mutationen).
@@ -45,167 +44,159 @@ import { RealmRoleType } from '@omnixys/shared';
 @Injectable()
 export class UserWriteService extends AuthenticateBaseService {
   constructor(
-    logger: LoggerPlusService,
-    trace: TraceContextProvider,
+    omnixysLogger: OmnixysLogger,
     http: HttpService,
     // private readonly kafka: KafkaProducerService,
     private authService: AuthWriteService,
     private adminService: AdminWriteService,
     private authenticateReadService: AuthenticateReadService,
   ) {
-    super(logger, trace, http);
+    super(omnixysLogger, http);
   }
 
   /**
    * User anlegen (mit invitationId/phoneNumber Attributen) + Rolle + Kafka-Events.
    */
   async guestSignUp(input: GuestSignUpDTO): Promise<SignUpPayload> {
-    return this.withSpan('authentication.signUp', async (span) => {
-      void this.logger.debug('signUp: input=%o', input);
+    void this.logger.debug('signUp: input=%o', input);
 
-      const { firstName, lastName, email, seatId, actorId } = input;
+    const { firstName, lastName, email, seatId, actorId } = input;
 
-      const {
-        username,
-        email: finalEmail,
-        password,
-      } = await this.createUsernameAndEmailAndPassword({
-        firstName,
-        lastName,
-        email,
-      });
-
-      const credentials: Array<Record<string, string | undefined | boolean>> = [
-        { type: 'password', value: password, temporary: false },
-      ];
-
-      const body = {
-        username,
-        enabled: true,
-        firstName,
-        lastName,
-        email: finalEmail,
-        credentials,
-      };
-
-      await this.kcRequest('post', paths.users, {
-        data: body,
-        headers: await this.adminJsonHeaders(),
-      });
-
-      // id ermitteln
-      const userId = await this.findUserIdByUsername(username);
-      if (!userId) {
-        throw new NotFoundException('User id could not be resolved after signUp');
-      }
-
-      // Rolle zuweisen
-      await this.adminService.assignRealmRoleToUser(userId, RealmRoleType.USER);
-
-      span.spanContext();
-      // void this.kafka.createUser(
-      //   {
-      //     id: userId,
-      //     username,
-      //     firstName,
-      //     lastName,
-      //     email: finalEmail,
-      //     phoneNumbers,
-      //     invitationId,
-      //   },
-      //   'authentication.guestSignUp',
-      //   { traceId: sc.traceId, spanId: sc.spanId },
-      // );
-
-      // void this.kafka.notifyUser(
-      //   {
-      //     userId,
-      //     username,
-      //     password,
-      //     invitationId,
-      //     firstName,
-      //     lastName,
-      //   },
-      //   'authentication.notifyUser',
-      //   { traceId: sc.traceId, spanId: sc.spanId },
-      // );
-
-      // void this.kafka.addEventRole(
-      //   {
-      //     userId,
-      //     eventId,
-      //     actorId: actorId ?? '0',
-      //   },
-      //   'authentication.addEventRole',
-      //   { traceId: sc.traceId, spanId: sc.spanId },
-      // );
-
-      if (seatId && actorId) {
-        // void this.kafka.createTicket(
-        //   {
-        //     eventId,
-        //     invitationId,
-        //     guestProfileId: userId,
-        //     seatId,
-        //     actorId,
-        //   },
-        //   'authentication.createTicket',
-        //   { traceId: sc.traceId, spanId: sc.spanId },
-        // );
-      }
-
-      console.debug({ userId, username, password });
-      return { userId, username, password };
+    const {
+      username,
+      email: finalEmail,
+      password,
+    } = await this.createUsernameAndEmailAndPassword({
+      firstName,
+      lastName,
+      email,
     });
+
+    const credentials: Array<Record<string, string | undefined | boolean>> = [
+      { type: 'password', value: password, temporary: false },
+    ];
+
+    const body = {
+      username,
+      enabled: true,
+      firstName,
+      lastName,
+      email: finalEmail,
+      credentials,
+    };
+
+    await this.kcRequest('post', paths.users, {
+      data: body,
+      headers: await this.adminJsonHeaders(),
+    });
+
+    // id ermitteln
+    const userId = await this.findUserIdByUsername(username);
+    if (!userId) {
+      throw new NotFoundException('User id could not be resolved after signUp');
+    }
+
+    // Rolle zuweisen
+    await this.adminService.assignRealmRoleToUser(userId, RealmRoleType.USER);
+
+    // void this.kafka.createUser(
+    //   {
+    //     id: userId,
+    //     username,
+    //     firstName,
+    //     lastName,
+    //     email: finalEmail,
+    //     phoneNumbers,
+    //     invitationId,
+    //   },
+    //   'authentication.guestSignUp',
+    //   { traceId: sc.traceId, spanId: sc.spanId },
+    // );
+
+    // void this.kafka.notifyUser(
+    //   {
+    //     userId,
+    //     username,
+    //     password,
+    //     invitationId,
+    //     firstName,
+    //     lastName,
+    //   },
+    //   'authentication.notifyUser',
+    //   { traceId: sc.traceId, spanId: sc.spanId },
+    // );
+
+    // void this.kafka.addEventRole(
+    //   {
+    //     userId,
+    //     eventId,
+    //     actorId: actorId ?? '0',
+    //   },
+    //   'authentication.addEventRole',
+    //   { traceId: sc.traceId, spanId: sc.spanId },
+    // );
+
+    if (seatId && actorId) {
+      // void this.kafka.createTicket(
+      //   {
+      //     eventId,
+      //     invitationId,
+      //     guestProfileId: userId,
+      //     seatId,
+      //     actorId,
+      //   },
+      //   'authentication.createTicket',
+      //   { traceId: sc.traceId, spanId: sc.spanId },
+      // );
+    }
+
+    console.debug({ userId, username, password });
+    return { userId, username, password };
   }
 
   async userSignUp(input: UserSignUpInput): Promise<TokenPayload> {
-    return this.withSpan('authentication.signUp', async (span) => {
-      void this.logger.debug('signUp: input=%o', input);
+    void this.logger.debug('signUp: input=%o', input);
 
-      const { firstName, lastName, email, username, password } = input;
+    const { firstName, lastName, email, username, password } = input;
 
-      const credentials: Array<Record<string, string | undefined | boolean>> = [
-        { type: 'password', value: password, temporary: false },
-      ];
+    const credentials: Array<Record<string, string | undefined | boolean>> = [
+      { type: 'password', value: password, temporary: false },
+    ];
 
-      const body = {
-        username,
-        enabled: true,
-        firstName,
-        lastName,
-        email,
-        credentials,
-      };
+    const body = {
+      username,
+      enabled: true,
+      firstName,
+      lastName,
+      email,
+      credentials,
+    };
 
-      await this.kcRequest('post', paths.users, {
-        data: body,
-        headers: await this.adminJsonHeaders(),
-      });
-
-      // id ermitteln
-      const userId = await this.findUserIdByUsername(username);
-      if (!userId) {
-        throw new NotFoundException('User id could not be resolved after signUp');
-      }
-
-      // Rolle zuweisen
-      await this.adminService.assignRealmRoleToUser(userId, RealmRoleType.USER);
-
-      span.spanContext();
-
-      // void this.kafka.createUser(
-      //   { id: userId, username, firstName, lastName, email, phoneNumbers },
-      //   'authentication.userSignUp',
-      //   { traceId: sc.traceId, spanId: sc.spanId },
-      // );
-      // TODO kafka nachrichten implementieren
-
-      const token = await this.authService.login({ username, password });
-      return token;
-
-      // return { userId, username, password };
+    await this.kcRequest('post', paths.users, {
+      data: body,
+      headers: await this.adminJsonHeaders(),
     });
+
+    // id ermitteln
+    const userId = await this.findUserIdByUsername(username);
+    if (!userId) {
+      throw new NotFoundException('User id could not be resolved after signUp');
+    }
+
+    // Rolle zuweisen
+    await this.adminService.assignRealmRoleToUser(userId, RealmRoleType.USER);
+
+    // void this.kafka.createUser(
+    //   { id: userId, username, firstName, lastName, email, phoneNumbers },
+    //   'authentication.userSignUp',
+    //   { traceId: sc.traceId, spanId: sc.spanId },
+    // );
+    // TODO kafka nachrichten implementieren
+
+    const token = await this.authService.login({ username, password });
+    return token;
+
+    // return { userId, username, password };
   }
 
   async createKeycloakUser(data: {
@@ -214,59 +205,55 @@ export class UserWriteService extends AuthenticateBaseService {
     email: string;
     name?: string;
   }): Promise<string> {
-    return this.withSpan('authentication.signUp', async (span) => {
-      void this.logger.debug('createKeycloakUser: data=%o', data);
+    void this.logger.debug('createKeycloakUser: data=%o', data);
 
-      const body = {
-        username: data.name ?? `${data.provider}_${data.providerId}`,
-        email: data.email,
-        enabled: true,
-        emailVerified: true,
-        firstName: data.provider,
-        lastName: 'User',
-        requiredActions: [],
-        attributes: {
-          provider: data.provider,
-          providerId: data.providerId,
-        },
-      };
+    const body = {
+      username: data.name ?? `${data.provider}_${data.providerId}`,
+      email: data.email,
+      enabled: true,
+      emailVerified: true,
+      firstName: data.provider,
+      lastName: 'User',
+      requiredActions: [],
+      attributes: {
+        provider: data.provider,
+        providerId: data.providerId,
+      },
+    };
 
-      await this.kcRequest('post', paths.users, {
-        data: body,
-        headers: await this.adminJsonHeaders(),
-      });
-
-      // id ermitteln
-      const userId = await this.findUserIdByUsername(
-        data.name ?? `${data.provider}_${data.providerId}`,
-      );
-      if (!userId) {
-        throw new NotFoundException('User id could not be resolved after signUp');
-      }
-
-      // Rolle zuweisen
-      await this.adminService.assignRealmRoleToUser(userId, RealmRoleType.USER);
-
-      span.spanContext();
-
-      // void this.kafka.createUser(
-      //   {
-      //     id: userId,
-      //     username: data.name ?? `${data.provider}_${data.providerId}`,
-      //     firstName: data.name ?? 'GitHub',
-      //     lastName: 'User',
-      //     email: data.email,
-      //   },
-      //   'authentication.userSignUp',
-      //   { traceId: sc.traceId, spanId: sc.spanId },
-      // );
-
-      if (!userId) {
-        throw new UnauthorizedException('Keycloak user creation failed');
-      }
-
-      return userId;
+    await this.kcRequest('post', paths.users, {
+      data: body,
+      headers: await this.adminJsonHeaders(),
     });
+
+    // id ermitteln
+    const userId = await this.findUserIdByUsername(
+      data.name ?? `${data.provider}_${data.providerId}`,
+    );
+    if (!userId) {
+      throw new NotFoundException('User id could not be resolved after signUp');
+    }
+
+    // Rolle zuweisen
+    await this.adminService.assignRealmRoleToUser(userId, RealmRoleType.USER);
+
+    // void this.kafka.createUser(
+    //   {
+    //     id: userId,
+    //     username: data.name ?? `${data.provider}_${data.providerId}`,
+    //     firstName: data.name ?? 'GitHub',
+    //     lastName: 'User',
+    //     email: data.email,
+    //   },
+    //   'authentication.userSignUp',
+    //   { traceId: sc.traceId, spanId: sc.spanId },
+    // );
+
+    if (!userId) {
+      throw new UnauthorizedException('Keycloak user creation failed');
+    }
+
+    return userId;
   }
 
   async changePassword({
@@ -366,29 +353,26 @@ export class UserWriteService extends AuthenticateBaseService {
   }
 
   async update(id: string, input: UpdateMyProfileInput): Promise<void> {
-    return this.withSpan('authentication.userUpdate', async (span) => {
-      const { firstName, lastName, email } = input;
-      // 1) Bestehenden User laden (für Merge)
-      const kcUser = await this.authenticateReadService.findById(id);
+    const { firstName, lastName, email } = input;
+    // 1) Bestehenden User laden (für Merge)
+    const kcUser = await this.authenticateReadService.findById(id);
 
-      // 6) KC-User Patch – nur attributes setzen, wenn wir wirklich was schreiben wollen
-      const patch: KeycloakUserPatch = {
-        firstName: firstName ?? kcUser.firstName,
-        lastName: lastName ?? kcUser.lastName,
-        email: email ?? kcUser.email,
-      };
+    // 6) KC-User Patch – nur attributes setzen, wenn wir wirklich was schreiben wollen
+    const patch: KeycloakUserPatch = {
+      firstName: firstName ?? kcUser.firstName,
+      lastName: lastName ?? kcUser.lastName,
+      email: email ?? kcUser.email,
+    };
 
-      await this.kcRequest('put', `${paths.users}/${encodeURIComponent(id)}`, {
-        data: patch,
-        headers: await this.adminJsonHeaders(),
-      });
-
-      span.spanContext();
-      // void this.kafka.updateUser(
-      //   { id, firstName: patch.firstName, lastName: patch.lastName, email: patch.email },
-      //   'authentication-service',
-      //   { traceId: sc.traceId, spanId: sc.spanId },
-      // );
+    await this.kcRequest('put', `${paths.users}/${encodeURIComponent(id)}`, {
+      data: patch,
+      headers: await this.adminJsonHeaders(),
     });
+
+    // void this.kafka.updateUser(
+    //   { id, firstName: patch.firstName, lastName: patch.lastName, email: patch.email },
+    //   'authentication-service',
+    //   { traceId: sc.traceId, spanId: sc.spanId },
+    // );
   }
 }

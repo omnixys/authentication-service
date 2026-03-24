@@ -17,19 +17,20 @@
 
 import { AdminModule } from './admin/admin.module.js';
 import { AuthenticationModule } from './authentication/authentication.module.js';
+import { BannerService } from './banner.service.js';
 import { env } from './config/env.js';
 import { ScalarsModule } from './core/scalars/scalar.module.js';
 import { HealthModule } from './health/health.module.js';
-import { LoggerModule } from './logger/logger.module.js';
-import { RequestLoggerMiddleware } from './logger/request-logger.middleware.js';
 import { ApolloFederationDriver, ApolloFederationDriverConfig } from '@nestjs/apollo';
-import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { GraphQLModule } from '@nestjs/graphql';
 import { GqlFastifyContext } from '@omnixys/context';
 import { KafkaModule } from '@omnixys/kafka';
+import { LoggerModule } from '@omnixys/logger';
+import { ObservabilityModule } from '@omnixys/observability';
 
-const { SCHEMA_TARGET, SERVICE, KAFKA_BROKER } = env;
+const { SCHEMA_TARGET, SERVICE, KAFKA_BROKER, TEMPO_URI } = env;
 
 @Module({
   imports: [
@@ -38,10 +39,39 @@ const { SCHEMA_TARGET, SERVICE, KAFKA_BROKER } = env;
       brokers: [KAFKA_BROKER],
       groupId: `${SERVICE}-consumer`,
     }),
+
+    ObservabilityModule.forRoot({
+      serviceName: SERVICE,
+
+      otel: {
+        endpoint: TEMPO_URI,
+        transport: 'http',
+        samplingRatio: 1,
+      },
+
+      metrics: {
+        port: 9464,
+        enabled: true,
+      },
+    }),
+
+    LoggerModule.forRoot({
+      serviceName: SERVICE,
+
+      kafka: {
+        enabled: true,
+        topic: 'logstream.logs',
+      },
+      batch: {
+        enabled: true,
+        maxSize: 50,
+        flushInterval: 2000,
+      },
+    }),
+
     AdminModule,
     HealthModule,
     AuthenticationModule,
-    LoggerModule,
     ScalarsModule,
     // GraphQLModule.forRoot<ApolloDriverConfig>(graphQlModuleOptions),
     ConfigModule.forRoot({ isGlobal: true }),
@@ -70,10 +100,11 @@ const { SCHEMA_TARGET, SERVICE, KAFKA_BROKER } = env;
     }),
   ],
   controllers: [],
-  providers: [],
+  providers: [BannerService],
 })
-export class AppModule implements NestModule {
-  configure(consumer: MiddlewareConsumer): void {
-    consumer.apply(RequestLoggerMiddleware).forRoutes('*');
-  }
+// implements NestModule
+export class AppModule {
+  // configure(consumer: MiddlewareConsumer): void {
+  //   consumer.apply(RequestLoggerMiddleware).forRoutes('*');
+  // }
 }

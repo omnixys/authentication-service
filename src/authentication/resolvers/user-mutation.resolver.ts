@@ -14,8 +14,6 @@
  *
  * For more information, visit <https://www.gnu.org/licenses/>.
  */
-import { getLogger } from '../../logger/get-logger.js';
-import { ResponseTimeInterceptor } from '../../logger/response-time.interceptor.js';
 import { UserSignUpInput } from '../models/inputs/sign-up.input.js';
 import { ChangeMyPasswordInput } from '../models/inputs/update-password.input.js';
 import { UpdateMyProfileInput } from '../models/inputs/user-update.input.js';
@@ -30,13 +28,19 @@ import {
 import { Args, Context, Mutation, Resolver } from '@nestjs/graphql';
 import { CookieAuthGuard, CurrentUser, CurrentUserData } from '@omnixys/auth';
 import { GqlFastifyContext, gqlSetTokens } from '@omnixys/context';
+import { OmnixysLogger, LoggingInterceptor } from '@omnixys/logger';
 
 @Resolver()
-@UseInterceptors(ResponseTimeInterceptor)
+@UseInterceptors(LoggingInterceptor)
 export class UserMutationResolver {
-  private readonly logger = getLogger(UserMutationResolver.name);
+  private readonly log;
 
-  constructor(private readonly userService: UserWriteService) {}
+  constructor(
+    private readonly userService: UserWriteService,
+    omnixysLogger: OmnixysLogger,
+  ) {
+    this.log = omnixysLogger.log(this.constructor.name);
+  }
 
   @Mutation(() => SuccessPayload)
   @UseGuards(CookieAuthGuard)
@@ -50,7 +54,7 @@ export class UserMutationResolver {
     }
 
     const username = user?.username ?? user?.username;
-    this.logger.debug('changeMyPassword: id=%s', user?.id);
+    this.log.debug('changeMyPassword: id=%s', user?.id);
 
     // this.logger.debug('changeMyPassword: user=%o', user);
 
@@ -84,7 +88,7 @@ export class UserMutationResolver {
     @Args('input', { type: () => UserSignUpInput }) input: UserSignUpInput,
     @Context() ctx: GqlFastifyContext,
   ): Promise<TokenPayload> {
-    this.logger.debug('signIn: input=%o', input);
+    this.log.debug('signIn: input=%o', input);
     const result = await this.userService.userSignUp(input);
     const res = ctx?.reply;
 

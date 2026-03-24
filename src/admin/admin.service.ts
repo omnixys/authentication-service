@@ -16,15 +16,15 @@
  */
 
 /* eslint-disable no-process-exit */
-import { LoggerPlusService } from '../logger/logger-plus.service.js';
 import { Injectable } from '@nestjs/common';
+import { OmnixysLogger } from '@omnixys/logger';
 
 @Injectable()
 export class AdminService {
   private readonly logger;
 
-  constructor(private readonly loggerService: LoggerPlusService) {
-    this.logger = this.loggerService.getLogger(AdminService.name);
+  constructor(private readonly omnixysLogger: OmnixysLogger) {
+    this.logger = this.omnixysLogger.log(AdminService.name);
   }
 
   /**

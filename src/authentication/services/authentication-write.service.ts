@@ -18,9 +18,7 @@
  */
 
 import { keycloakConfig, paths } from '../../config/keycloak.js';
-import { LoggerPlusService } from '../../logger/logger-plus.service.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
-import { TraceContextProvider } from '../../trace/trace-context.provider.js';
 import { ValkeyKey } from '../../valkey/valkey.keys.js';
 import { ValkeyService } from '../../valkey/valkey.service.js';
 import type { KeycloakToken } from '../models/dtos/kc-token.dto.js';
@@ -37,6 +35,7 @@ import { TotpService } from './totp.service.js';
 import { HttpService } from '@nestjs/axios';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { KafkaProducerService, KafkaTopics } from '@omnixys/kafka';
+import { OmnixysLogger } from '@omnixys/logger';
 import { randomBytes } from 'crypto';
 
 /**
@@ -49,8 +48,7 @@ import { randomBytes } from 'crypto';
 @Injectable()
 export class AuthWriteService extends AuthenticateBaseService {
   constructor(
-    logger: LoggerPlusService,
-    trace: TraceContextProvider,
+    logger: OmnixysLogger,
     http: HttpService,
     private readonly risk: RiskEngineService,
     private readonly deviceService: DeviceService,
@@ -60,7 +58,7 @@ export class AuthWriteService extends AuthenticateBaseService {
     private readonly totpService: TotpService,
     private readonly lockout: LockoutService,
   ) {
-    super(logger, trace, http);
+    super(logger, http);
   }
 
   /**
@@ -68,72 +66,66 @@ export class AuthWriteService extends AuthenticateBaseService {
    * @returns TokenPayload oder null (bei invalid_grant)
    */
   async login({ username, password }: LogInInput): Promise<TokenPayload> {
-    return this.withSpan('authentication.login', async (_span) => {
-      if (!username || !password) {
-        throw new UnauthorizedException('username oder passwort fehlt!');
-      }
-      const body = new URLSearchParams({
-        grant_type: 'password',
-        username,
-        password,
-        scope: 'openid',
-      });
-      const data = await this.kcRequest<KeycloakToken>(
-        'post',
-        paths.accessToken,
-        { data: body.toString(), headers: this.loginHeaders, adminAuth: false },
-        { mapTo: 'null-on-401' },
-      );
-      if (!data) {
-        throw new UnauthorizedException('username oder passwort falsch!');
-      }
-      return toToken(data);
+    if (!username || !password) {
+      throw new UnauthorizedException('username oder passwort fehlt!');
+    }
+    const body = new URLSearchParams({
+      grant_type: 'password',
+      username,
+      password,
+      scope: 'openid',
     });
+    const data = await this.kcRequest<KeycloakToken>(
+      'post',
+      paths.accessToken,
+      { data: body.toString(), headers: this.loginHeaders, adminAuth: false },
+      { mapTo: 'null-on-401' },
+    );
+    if (!data) {
+      throw new UnauthorizedException('username oder passwort falsch!');
+    }
+    return toToken(data);
   }
 
   /**
    * Refresh-Flow.
    */
   async refresh(refresh_token: string | undefined): Promise<TokenPayload | null> {
-    return this.withSpan('authentication.refresh', async (_span) => {
-      if (!refresh_token) {
-        return null;
-      }
+    if (!refresh_token) {
+      return null;
+    }
 
-      const body = new URLSearchParams({
-        grant_type: 'refresh_token',
-        refresh_token,
-      });
-      const data = await this.kcRequest<KeycloakToken>(
-        'post',
-        paths.accessToken,
-        { data: body.toString(), headers: this.loginHeaders, adminAuth: false },
-        { mapTo: 'null-on-401' },
-      );
-      if (!data) {
-        return null;
-      }
-      return toToken(data);
+    const body = new URLSearchParams({
+      grant_type: 'refresh_token',
+      refresh_token,
     });
+    const data = await this.kcRequest<KeycloakToken>(
+      'post',
+      paths.accessToken,
+      { data: body.toString(), headers: this.loginHeaders, adminAuth: false },
+      { mapTo: 'null-on-401' },
+    );
+    if (!data) {
+      return null;
+    }
+    return toToken(data);
   }
 
   /**
    * Logout (Refresh-Token invalidieren).
    */
   async logout(refreshToken: string | undefined): Promise<void> {
-    return this.withSpan('authentication.logout', async (_span) => {
-      if (!refreshToken) {
-        return;
-      }
-      const body = new URLSearchParams({
-        client_id: keycloakConfig.clientId ?? '',
-        refresh_token: refreshToken,
-      });
-      await this.kcRequest('post', paths.logout, {
-        data: body.toString(),
-        headers: this.loginHeaders,
-        adminAuth: false,
-      });
+    if (!refreshToken) {
+      return;
+    }
+    const body = new URLSearchParams({
+      client_id: keycloakConfig.clientId ?? '',
+      refresh_token: refreshToken,
+    });
+    await this.kcRequest('post', paths.logout, {
+      data: body.toString(),
+      headers: this.loginHeaders,
+      adminAuth: false,
     });
   }
 
@@ -233,77 +225,75 @@ export class AuthWriteService extends AuthenticateBaseService {
   }
 
   async loginWithTotp(username: string, code: string): Promise<TokenPayload> {
-    return this.withSpan('authentication.login.totp', async () => {
-      if (!username || !code) {
-        throw new UnauthorizedException('Missing credentials');
-      }
+    if (!username || !code) {
+      throw new UnauthorizedException('Missing credentials');
+    }
 
-      const user = await this.prisma.authUser.findUnique({
-        where: { email: username },
-      });
-
-      if (!user) {
-        throw new UnauthorizedException('Invalid credentials');
-      }
-
-      const valid = await this.totpService.verifyForUser(user.id, code);
-
-      if (!valid) {
-        throw new UnauthorizedException('Invalid TOTP code');
-      }
-
-      // create session via token exchange
-      return this.createPasswordlessSession(user.id);
+    const user = await this.prisma.authUser.findUnique({
+      where: { email: username },
     });
+
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const valid = await this.totpService.verifyForUser(user.id, code);
+
+    if (!valid) {
+      throw new UnauthorizedException('Invalid TOTP code');
+    }
+
+    // create session via token exchange
+    return this.createPasswordlessSession(user.id);
   }
 
   async requestMagicLink(email: string, context: RequestMeta): Promise<boolean> {
-    return this.withSpan('authentication.login.totp', async (span) => {
-      this.logger.debug('requesting magic link for email %s', email);
+    this.logger.debug('requesting magic link for email %s', email);
 
-      await this.lockout.checkIpRateLimit(context?.ip, 'magic-link');
+    await this.lockout.checkIpRateLimit(context?.ip, 'magic-link');
 
-      const user = await this.prisma.authUser.findUnique({
-        where: { email },
-      });
-
-      // Prevent user enumeration
-      if (!user) {
-        return true;
-      }
-
-      // 32 bytes → 64 hex chars
-      const token = randomBytes(32).toString('hex');
-
-      const payload = {
-        userId: user.id,
-        email,
-        createdAt: new Date().toISOString(),
-        ip: context.ip,
-      };
-
-      await this.valkey.client.set(ValkeyKey.magicLinkToken(token), JSON.stringify(payload), {
-        PX: 15 * 60 * 1000,
-      });
-
-      const sc = span.spanContext();
-      void this.kafka.send<typeof KafkaTopics.notification.sendMagicLink>(
-        KafkaTopics.notification.sendMagicLink,
-        {
-          email: user.email,
-          token,
-          locale: context.locale,
-          device: context.device,
-          ip: context.ip ?? 'Unkown IP Address',
-          location: context.location,
-          username: user.username,
-        },
-        'authentication-service',
-        { traceId: sc.traceId, spanId: sc.spanId },
-      );
-
-      return true;
+    const user = await this.prisma.authUser.findUnique({
+      where: { email },
     });
+
+    // Prevent user enumeration
+    if (!user) {
+      return true;
+    }
+
+    // 32 bytes → 64 hex chars
+    const token = randomBytes(32).toString('hex');
+
+    const payload = {
+      userId: user.id,
+      email,
+      createdAt: new Date().toISOString(),
+      ip: context.ip,
+    };
+
+    await this.valkey.client.set(ValkeyKey.magicLinkToken(token), JSON.stringify(payload), {
+      PX: 15 * 60 * 1000,
+    });
+
+    void this.kafka.send({
+      topic: KafkaTopics.notification.sendMagicLink,
+      payload: {
+        email: user.email,
+        token,
+        locale: context.locale,
+        device: context.device,
+        ip: context.ip ?? 'Unkown IP Address',
+        location: context.location,
+        username: user.username,
+      },
+      meta: {
+        service: 'authentication-service',
+        operation: ' sending Magic Link Email Request tu User',
+        version: '1',
+      },
+    });
+
+    return true;
   }
 
   async loginWithMagicLink(token: string): Promise<TokenPayload> {

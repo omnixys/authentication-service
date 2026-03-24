@@ -17,8 +17,6 @@
  */
 
 import { JsonScalar } from '../../core/scalars/json.scalar.js';
-import { LoggerPlusService } from '../../logger/logger-plus.service.js';
-import { ResponseTimeInterceptor } from '../../logger/response-time.interceptor.js';
 import { RequestMeta } from '../models/dtos/request-meta.dto.js';
 import { LogInInput } from '../models/inputs/log-in.input.js';
 import { LoginTotpInput } from '../models/inputs/login-totp.input.js';
@@ -36,6 +34,7 @@ import {
 import { Args, Context, Mutation, Resolver } from '@nestjs/graphql';
 import { CookieAuthGuard, CurrentUser, CurrentUserData } from '@omnixys/auth';
 import { ClientInfo, GqlFastifyContext } from '@omnixys/context';
+import { OmnixysLogger, LoggingInterceptor } from '@omnixys/logger';
 import { ClientInfo as ClientInfoType } from '@omnixys/shared';
 import { AuthenticationResponseJSON } from '@simplewebauthn/server';
 import { FastifyReply } from 'fastify';
@@ -46,7 +45,7 @@ import { FastifyReply } from 'fastify';
  * @public
  */
 @Resolver()
-@UseInterceptors(ResponseTimeInterceptor)
+@UseInterceptors(LoggingInterceptor)
 export class AuthMutationResolver {
   private readonly logger;
 
@@ -58,11 +57,11 @@ export class AuthMutationResolver {
    * @param adminService - Handles administrative user management.
    */
   constructor(
-    private readonly loggerService: LoggerPlusService,
+    private readonly omnixysLogger: OmnixysLogger,
     private readonly authService: AuthWriteService,
     private readonly webAuthnService: WebAuthnService,
   ) {
-    this.logger = this.loggerService.getLogger(AuthMutationResolver.name);
+    this.logger = this.omnixysLogger.log(AuthMutationResolver.name);
   }
 
   // @Mutation(() => TokenPayload, { name: 'login' })

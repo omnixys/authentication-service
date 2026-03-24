@@ -2,7 +2,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 
 import { JsonScalar } from '../../core/scalars/json.scalar.js';
-import { LoggerPlusService } from '../../logger/logger-plus.service.js';
 import { RequestMeta } from '../models/dtos/request-meta.dto.js';
 import { MfaPreference } from '../models/dtos/reset-verification-result.dto.js';
 import { ResetService } from '../services/reset.service.js';
@@ -16,6 +15,7 @@ import {
   Resolver,
 } from '@nestjs/graphql';
 import { ClientInfo } from '@omnixys/context';
+import { OmnixysLogger } from '@omnixys/logger';
 import { ClientInfo as ClientInfoType } from '@omnixys/shared';
 import { AuthenticationResponseJSON } from '@simplewebauthn/server';
 
@@ -94,9 +94,9 @@ export class ResetMutationResolver {
 
   constructor(
     private readonly resetService: ResetService,
-    private readonly loggerService: LoggerPlusService,
+    private readonly omnixysLogger: OmnixysLogger,
   ) {
-    this.logger = this.loggerService.getLogger(this.constructor.name);
+    this.logger = this.omnixysLogger.log(this.constructor.name);
   }
 
   /**

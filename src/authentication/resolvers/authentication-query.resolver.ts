@@ -17,8 +17,6 @@
  * For more information, visit <https://www.gnu.org/licenses/>.
  */
 
-import { getLogger } from '../../logger/get-logger.js';
-import { ResponseTimeInterceptor } from '../../logger/response-time.interceptor.js';
 import { KcUser } from '../models/entitys/user.entity.js';
 import { AuthenticateReadService } from '../services/read.service.js';
 import {
@@ -37,6 +35,7 @@ import {
   RoleGuard,
   Roles,
 } from '@omnixys/auth';
+import { getLogger, LoggingInterceptor } from '@omnixys/logger';
 import { RealmRoleType, toEnumRoles } from '@omnixys/shared';
 
 /**
@@ -53,7 +52,7 @@ import { RealmRoleType, toEnumRoles } from '@omnixys/shared';
  */
 
 @Resolver()
-@UseInterceptors(ResponseTimeInterceptor)
+@UseInterceptors(LoggingInterceptor)
 /**
  * Stellt Queries rund um Benutzerinformationen bereit:
  * - `users`: Liste aller Realm-User
