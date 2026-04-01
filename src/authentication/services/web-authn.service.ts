@@ -7,9 +7,8 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 
 import { PrismaService } from '../../prisma/prisma.service.js';
-import { ValkeyKey } from '../../valkey/valkey.keys.js';
-import { ValkeyService } from '../../valkey/valkey.service.js';
 import { Injectable } from '@nestjs/common';
+import { ValkeyKey, ValkeyService } from '@omnixys/cache';
 
 import {
   verifyAuthenticationResponse,
@@ -28,7 +27,7 @@ import {
 export class WebAuthnService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly valkey: ValkeyService,
+    private readonly cache: ValkeyService,
   ) {}
 
   /* =====================================================
@@ -130,10 +129,12 @@ export class WebAuthnService {
     });
 
     // Challenge global speichern
-    await this.valkey.client.set(
-      ValkeyKey.webauthnGlobalAuthChallenge(options.challenge),
-      options.challenge,
-      { PX: 5 * 60 * 1000 },
+    await this.cache.set(
+      ValkeyKey.webauthnGlobalAuthChallenge,
+      {
+        challenge: options.challenge,
+      },
+      5 * 60,
     );
 
     return options;
@@ -155,8 +156,9 @@ export class WebAuthnService {
       return null;
     }
 
-    const expectedChallenge = await this.valkey.client.get(
-      ValkeyKey.webauthnGlobalAuthChallenge(challenge),
+    const expectedChallenge = await this.cache.get(
+      ValkeyKey.webauthnGlobalAuthChallenge,
+      challenge,
     );
 
     if (!expectedChallenge) {
@@ -198,7 +200,7 @@ export class WebAuthnService {
       },
     });
 
-    await this.valkey.client.del(ValkeyKey.webauthnGlobalAuthChallenge(challenge));
+    await this.cache.delete(ValkeyKey.webauthnGlobalAuthChallenge, challenge);
 
     return credentialRecord.userId;
   }
@@ -335,7 +337,7 @@ export class WebAuthnService {
       },
     });
 
-    await this.valkey.client.del(ValkeyKey.webauthnRegChallenge(userId));
+    await this.cache.delete(ValkeyKey.webauthnRegChallenge, userId);
 
     return true;
   }
@@ -365,27 +367,23 @@ export class WebAuthnService {
   /* =======================================================
      CHALLENGE STORE (VALKEY)
   ======================================================= */
-  async storeRegistrationChallenge(userId: string, challenge: string): Promise<void> {
-    await this.valkey.client.set(ValkeyKey.webauthnRegChallenge(userId), challenge, {
-      PX: 5 * 60 * 1000,
-    });
+  async storeRegistrationChallenge(userId: string, challenge: string): Promise<string> {
+    return this.cache.set(ValkeyKey.webauthnRegChallenge, { userId, challenge }, 5 * 60);
   }
 
   async getRegistrationChallenge(userId: string): Promise<string | null> {
-    return this.valkey.client.get(ValkeyKey.webauthnRegChallenge(userId));
+    return this.cache.get(ValkeyKey.webauthnRegChallenge, userId);
   }
 
-  async storeAuthenticationChallenge(userId: string, challenge: string): Promise<void> {
-    await this.valkey.client.set(ValkeyKey.webauthnAuthChallenge(userId), challenge, {
-      PX: 5 * 60 * 1000,
-    });
+  async storeAuthenticationChallenge(userId: string, challenge: string): Promise<string> {
+    return this.cache.set(ValkeyKey.webauthnAuthChallenge, { challenge, userId }, 5 * 60);
   }
 
   async getAuthenticationChallenge(userId: string): Promise<string | null> {
-    return this.valkey.client.get(ValkeyKey.webauthnAuthChallenge(userId));
+    return this.cache.get(ValkeyKey.webauthnAuthChallenge, userId);
   }
 
   async consumeAuthenticationChallenge(userId: string): Promise<void> {
-    await this.valkey.client.del(ValkeyKey.webauthnAuthChallenge(userId));
+    await this.cache.delete(ValkeyKey.webauthnAuthChallenge, userId);
   }
 }

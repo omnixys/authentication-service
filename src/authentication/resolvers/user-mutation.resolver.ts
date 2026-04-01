@@ -26,9 +26,13 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { Args, Context, Mutation, Resolver } from '@nestjs/graphql';
-import { CookieAuthGuard, CurrentUser, CurrentUserData } from '@omnixys/auth';
 import { GqlFastifyContext, gqlSetTokens } from '@omnixys/context';
-import { OmnixysLogger, LoggingInterceptor } from '@omnixys/logger';
+import { LoggingInterceptor, OmnixysLogger } from '@omnixys/logger';
+import {
+  CookieAuthGuard,
+  CurrentUser,
+  CurrentUserData,
+} from '@omnixys/security';
 
 @Resolver()
 @UseInterceptors(LoggingInterceptor)

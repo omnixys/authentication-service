@@ -2,12 +2,12 @@
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
 
 import { PrismaService } from '../../prisma/prisma.service.js';
-import { ValkeyService } from '../../valkey/valkey.service.js';
 import { AuthWriteService } from './authentication-write.service.js';
 import { AuthenticateBaseService } from './keycloak-base.service.js';
 import { UserWriteService } from './user-write.service.js';
 import { HttpService } from '@nestjs/axios';
 import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import { ValkeyKey, ValkeyService } from '@omnixys/cache';
 import { OmnixysLogger } from '@omnixys/logger';
 
 /* =========================================================
@@ -53,7 +53,7 @@ export class OAuthService extends AuthenticateBaseService {
     http: HttpService,
     private readonly prisma: PrismaService,
     private readonly authService: AuthWriteService,
-    private readonly valkey: ValkeyService,
+    private readonly cache: ValkeyService,
     private readonly userWriteService: UserWriteService,
   ) {
     super(logger, http);
@@ -64,12 +64,10 @@ export class OAuthService extends AuthenticateBaseService {
   ===================================================== */
 
   async getAuthUrl(provider: string): Promise<{ url: string }> {
-    const state = crypto.randomUUID();
-
-    await this.valkey.client.set(
-      `oauth:state:${state}`,
+    const state = await this.cache.set(
+      ValkeyKey.oauthState,
       provider,
-      { PX: 5 * 60 * 1000 }, // 5 min TTL
+      5 * 60, // 5 min TTL
     );
 
     if (provider === 'github') {
@@ -92,13 +90,13 @@ export class OAuthService extends AuthenticateBaseService {
   ===================================================== */
 
   async handleCallback(provider: string, code: string, state: string) {
-    const stored = await this.valkey.client.get(`oauth:state:${state}`);
+    const stored = await this.cache.client.get(`oauth:state:${state}`);
 
     if (!stored || stored !== provider) {
       throw new UnauthorizedException('Invalid OAuth state');
     }
 
-    await this.valkey.client.del(`oauth:state:${state}`);
+    await this.cache.client.del(`oauth:state:${state}`);
 
     if (provider === 'github') {
       return this.handleGithub(code);

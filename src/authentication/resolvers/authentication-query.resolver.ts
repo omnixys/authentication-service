@@ -26,6 +26,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { Args, ID, Query, Resolver } from '@nestjs/graphql';
+import { getLogger, LoggingInterceptor } from '@omnixys/logger';
 import {
   CookieAuthGuard,
   CurrentUser,
@@ -34,8 +35,7 @@ import {
   Public,
   RoleGuard,
   Roles,
-} from '@omnixys/auth';
-import { getLogger, LoggingInterceptor } from '@omnixys/logger';
+} from '@omnixys/security';
 import { RealmRoleType, toEnumRoles } from '@omnixys/shared';
 
 /**

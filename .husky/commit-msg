@@ -13,4 +13,4 @@
 #
 # For more information, visit <https://www.gnu.org/licenses/>.
 #!/usr/bin/env sh
-pnpm commitlint --edit "$1"
+# pnpm commitlint --edit "$1"

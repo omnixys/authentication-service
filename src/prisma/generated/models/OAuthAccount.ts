@@ -158,7 +158,7 @@ export type OAuthAccountGroupByOutputType = {
   _max: OAuthAccountMaxAggregateOutputType | null;
 };
 
-type GetOAuthAccountGroupByPayload<T extends OAuthAccountGroupByArgs> =
+export type GetOAuthAccountGroupByPayload<T extends OAuthAccountGroupByArgs> =
   Prisma.PrismaPromise<
     Array<
       Prisma.PickEnumerable<OAuthAccountGroupByOutputType, T['by']> & {
@@ -1447,6 +1447,11 @@ export type OAuthAccountFindManyArgs<
    * Skip the first `n` OAuthAccounts.
    */
   skip?: number;
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+   *
+   * Filter by unique combinations of OAuthAccounts.
+   */
   distinct?:
     | Prisma.OAuthAccountScalarFieldEnum
     | Prisma.OAuthAccountScalarFieldEnum[];

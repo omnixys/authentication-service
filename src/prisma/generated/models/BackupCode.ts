@@ -157,7 +157,7 @@ export type BackupCodeGroupByOutputType = {
   _max: BackupCodeMaxAggregateOutputType | null;
 };
 
-type GetBackupCodeGroupByPayload<T extends BackupCodeGroupByArgs> =
+export type GetBackupCodeGroupByPayload<T extends BackupCodeGroupByArgs> =
   Prisma.PrismaPromise<
     Array<
       Prisma.PickEnumerable<BackupCodeGroupByOutputType, T['by']> & {
@@ -1458,6 +1458,11 @@ export type BackupCodeFindManyArgs<
    * Skip the first `n` BackupCodes.
    */
   skip?: number;
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+   *
+   * Filter by unique combinations of BackupCodes.
+   */
   distinct?:
     | Prisma.BackupCodeScalarFieldEnum
     | Prisma.BackupCodeScalarFieldEnum[];

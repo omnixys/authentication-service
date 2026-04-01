@@ -1,17 +1,16 @@
 // TODO resolve eslint
 
 import { env } from '../../config/env.js';
-import { ValkeyKey } from '../../valkey/valkey.keys.js';
-import { ValkeyService } from '../../valkey/valkey.service.js';
 import { PendingContact } from '../models/dtos/pending-contact.dto.js';
 import { Injectable } from '@nestjs/common';
+import { ValkeyKey, ValkeyService } from '@omnixys/cache';
 import { randomUUID } from 'crypto';
 import * as jose from 'jose';
 
 const { PC_JWE_KEY, PC_TTL_SEC } = env;
 @Injectable()
 export class PendingContactService {
-  constructor(private readonly valkey: ValkeyService) {}
+  constructor(private readonly cache: ValkeyService) {}
 
   /**
    * Returns the encryption key used for JWE.
@@ -57,9 +56,14 @@ export class PendingContactService {
       .encrypt(key);
 
     // Save encrypted data in Valkey
-    await this.valkey.client.set(ValkeyKey.pendingContact(id), jwe, {
-      EX: ttlSec,
-    });
+    await this.cache.set(
+      ValkeyKey.pendingContact,
+      {
+        jwe,
+        id,
+      },
+      ttlSec,
+    );
 
     return id;
   }
@@ -68,7 +72,7 @@ export class PendingContactService {
    * Retrieves and decrypts the pending contact record.
    */
   async get(id: string): Promise<PendingContact | null> {
-    const jwe = await this.valkey.client.get(ValkeyKey.pendingContact(id));
+    const jwe = await this.cache.get(ValkeyKey.pendingContact, id);
     if (!jwe) {
       return null;
     }
@@ -83,6 +87,6 @@ export class PendingContactService {
    * Deletes the pending contact record.
    */
   async delete(id: string): Promise<void> {
-    await this.valkey.client.del(ValkeyKey.pendingContact(id));
+    await this.cache.delete(ValkeyKey.pendingContact, id);
   }
 }

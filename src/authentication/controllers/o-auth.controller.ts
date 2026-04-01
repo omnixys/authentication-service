@@ -20,8 +20,6 @@ export class OAuthController {
 
     const { url } = await this.oauthService.getAuthUrl(provider);
 
-    console.debug({ url });
-
     reply.status(302).redirect(url);
   }
 

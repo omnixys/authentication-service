@@ -19,26 +19,37 @@ import { SignUpPayload } from '../models/payloads/sign-in.payload.js';
 import { RegisterService } from '../services/register.service.js';
 import { UseGuards, UseInterceptors } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { CookieAuthGuard, Roles } from '@omnixys/auth';
 // import { GqlFastifyContext, gqlSetTokens } from '@omnixys/context';
 import { getLogger, LoggingInterceptor } from '@omnixys/logger';
+import { CookieAuthGuard, JweService, RoleGuard, Roles } from '@omnixys/security';
 import { RealmRoleType } from '@omnixys/shared';
 
 @Resolver()
-@UseGuards(CookieAuthGuard)
+@UseGuards(CookieAuthGuard, RoleGuard)
 @Roles(RealmRoleType.ADMIN)
 @UseInterceptors(LoggingInterceptor)
 export class DebugResolver {
-  private readonly logger = getLogger(this.constructor.name);
+  private readonly log = getLogger(this.constructor.name);
 
-  constructor(private readonly registerService: RegisterService) {}
+  constructor(
+    private readonly registerService: RegisterService,
+    private jweService: JweService,
+  ) {}
 
   @Mutation(() => SignUpPayload, { name: 'DEBUG_verifySignUp' })
   async verifySignUp(
     @Args('token') token: string,
     // @Context() ctx: GqlFastifyContext,
   ): Promise<SignUpPayload> {
-    this.logger.debug('Verify Registration');
+    const hallo = 'hallo';
+
+    this.log.info('message: %s', hallo);
+    const tokenDebug = await this.jweService.encrypt(hallo);
+    this.log.info('message: %s', tokenDebug);
+    const message = await this.jweService.decrypt(tokenDebug);
+    this.log.info('message: %s', message);
+
+    this.log.debug('Verify Registration');
     const payload = await this.registerService.verifySignup(token);
     // const res = ctx.reply;
 

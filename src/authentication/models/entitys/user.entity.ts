@@ -16,7 +16,7 @@
  */
 
 import { Field, ID, ObjectType } from '@nestjs/graphql';
-import { RealmRoleType } from '@omnixys/graphql';
+import { RealmRoleType } from '@omnixys/shared';
 
 @ObjectType()
 export class KcUser {

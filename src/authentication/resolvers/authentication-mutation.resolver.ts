@@ -31,13 +31,18 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { Args, Context, Mutation, Resolver } from '@nestjs/graphql';
-import { CookieAuthGuard, CurrentUser, CurrentUserData } from '@omnixys/auth';
-import { ClientInfo, GqlFastifyContext } from '@omnixys/context';
-import { OmnixysLogger, LoggingInterceptor } from '@omnixys/logger';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { ClientInfo } from '@omnixys/context';
+import { LoggingInterceptor, OmnixysLogger } from '@omnixys/logger';
+import { TraceRunner } from '@omnixys/observability';
+import {
+  CookieAuthGuard,
+  CurrentUser,
+  CurrentUserData,
+  Public,
+} from '@omnixys/security';
 import { ClientInfo as ClientInfoType } from '@omnixys/shared';
 import { AuthenticationResponseJSON } from '@simplewebauthn/server';
-import { FastifyReply } from 'fastify';
 
 /**
  * GraphQL resolver providing mutation endpoints for user authentication.
@@ -64,34 +69,6 @@ export class AuthMutationResolver {
     this.logger = this.omnixysLogger.log(AuthMutationResolver.name);
   }
 
-  // @Mutation(() => TokenPayload, { name: 'login' })
-  // async login2(
-  //   @Args('input', { type: () => LogInInput }) input: LogInInput,
-  //   @Context() ctx: GqlCtx,
-  // ): Promise<TokenPayload> {
-  //   const ip =
-  //     (ctx.req.headers['x-forwarded-for'] as string | undefined)
-  //       ?.split(',')[0]
-  //       ?.trim() ??
-  //     ctx.req.socket?.remoteAddress ??
-  //     undefined;
-
-  //   const userAgent = ctx.req.headers['user-agent'] ?? undefined;
-  //   const acceptLanguage = ctx.req.headers['accept-language'] ?? undefined;
-
-  //   // English comment tailored for VS:
-  //   // Provide a stable client-generated ID via header for stronger device fingerprinting.
-  //   const clientDeviceId =
-  //     (ctx.req.headers['x-device-id'] as string | undefined) ?? undefined;
-
-  //   return this.authService.loginWithRisk(input.username, input.password, {
-  //     ip,
-  //     userAgent,
-  //     acceptLanguage,
-  //     clientDeviceId,
-  //   });
-  // }
-
   /**
    * Performs a password-based login (ROPC flow).
    *
@@ -105,21 +82,28 @@ export class AuthMutationResolver {
    * @throws {@link BadUserInputError} If credentials are invalid.
    */
   @Mutation(() => TokenPayload)
+  @Public()
   async credentialsLogin(
     @Args('input', { type: () => LogInInput }) input: LogInInput,
+    @ClientInfo() client: ClientInfoType,
   ): Promise<TokenPayload> {
-    // const res = ctx?.reply;
-    this.logger.debug('login: input=%o', input);
+    return TraceRunner.run('Credentials Login Resolver', async () => {
+      // const res = ctx?.reply;
+      this.logger.debug('login: input=%o', input);
 
-    const { username, password } = input;
+      const ip = client.ip;
+      const userAgent = client.userAgent;
+      const acceptLanguage = client.locale;
+      const clientDeviceId = client.device;
 
-    const result = await this.authService.login({ username, password });
-    if (!result) {
-      throw new BadUserInputException('Invalid username or password.');
-    }
-
-    // gqlSetTokens(res, result.accessToken ?? '', result.expiresIn * 1000);
-    return result;
+      return this.authService.login({
+        ...input,
+        ip,
+        userAgent,
+        acceptLanguage,
+        clientDeviceId,
+      });
+    });
   }
 
   /**
@@ -137,20 +121,24 @@ export class AuthMutationResolver {
   @Mutation(() => TokenPayload, { name: 'refresh' })
   @UseGuards(CookieAuthGuard)
   async refresh(@CurrentUser() user: CurrentUserData): Promise<TokenPayload> {
-    this.logger.debug(
-      '[authentication-mutation.resolver.ts] Refresh %s accessToken...',
-      user.username,
-    );
+    return TraceRunner.run('Refresh Resolver', async () => {
+      this.logger.debug(
+        '[authentication-mutation.resolver.ts] Refresh %s accessToken...',
+        user.username,
+      );
 
-    const refreshToken = user.refresh_token;
+      const refreshToken = user.refresh_token;
 
-    const result = await this.authService.refresh(refreshToken);
-    if (!result) {
-      throw new BadUserInputException('Invalid or expired refresh token.');
-    }
+      const result = await this.authService.refresh(refreshToken);
+      if (!result) {
+        throw new BadUserInputException('Invalid or expired refresh token.');
+      }
 
-    this.logger.info('[authentication-mutation.resolver.ts] Refresh Success!');
-    return result;
+      this.logger.info(
+        '[authentication-mutation.resolver.ts] Refresh Success!',
+      );
+      return result;
+    });
   }
 
   /**
@@ -160,12 +148,14 @@ export class AuthMutationResolver {
    * @param ctx - GraphQL context containing the HTTP response.
    * @returns {@link SuccessPayload} indicating operation status.
    */
+  @UseGuards(CookieAuthGuard)
   @Mutation(() => SuccessPayload, { name: 'logout' })
-  async logout(@Context() ctx: GqlFastifyContext): Promise<SuccessPayload> {
-    const res: FastifyReply = ctx?.reply;
-    const value = res?.cookies?.refresh_token;
-    await this.authService.logout(value);
-    return { ok: true, message: 'Successfully logged out.' };
+  async logout(@CurrentUser() user: CurrentUserData): Promise<SuccessPayload> {
+    return TraceRunner.run('Logout Resolver', async () => {
+      const value = user.refresh_token;
+      await this.authService.logout(value);
+      return { ok: true, message: 'Successfully logged out.' };
+    });
   }
 
   /* =====================================================
@@ -174,12 +164,16 @@ export class AuthMutationResolver {
 
   @Mutation(() => JsonScalar)
   async generatePasswordlessOptions(@Args('email') email: string) {
-    return this.webAuthnService.generatePasswordlessOptions(email);
+    return TraceRunner.run('generate Passwordless Token Resolver', async () => {
+      return this.webAuthnService.generatePasswordlessOptions(email);
+    });
   }
 
   @Mutation(() => JsonScalar)
   async generateWebAuthnAuthOptions() {
-    return this.webAuthnService.generateDiscoverableAuthOptions();
+    return TraceRunner.run('Generate WebAuthn Token Resolver', async () => {
+      return this.webAuthnService.generateDiscoverableAuthOptions();
+    });
   }
 
   /* =====================================================
@@ -190,49 +184,57 @@ export class AuthMutationResolver {
   async verifyPasswordlessAuthentication(
     @Args('response', { type: () => JsonScalar }) response: unknown,
   ): Promise<TokenPayload> {
-    if (!response || typeof response !== 'object') {
-      throw new BadRequestException('Invalid WebAuthn response');
-    }
+    return TraceRunner.run('Verify Passwordless Auth Resolver', async () => {
+      if (!response || typeof response !== 'object') {
+        throw new BadRequestException('Invalid WebAuthn response');
+      }
 
-    const userId = await this.webAuthnService.verifyPasswordlessAuthentication(
-      response as AuthenticationResponseJSON,
-    );
+      const userId =
+        await this.webAuthnService.verifyPasswordlessAuthentication(
+          response as AuthenticationResponseJSON,
+        );
 
-    if (!userId) {
-      throw new UnauthorizedException('Authentication failed');
-    }
+      if (!userId) {
+        throw new UnauthorizedException('Authentication failed');
+      }
 
-    const token = await this.authService.createPasswordlessSession(userId);
-    return token;
+      const token = await this.authService.createPasswordlessSession(userId);
+      return token;
+    });
   }
 
   @Mutation(() => TokenPayload)
   async verifyWebAuthnAuthentication(
     @Args('response', { type: () => JsonScalar }) response: unknown,
   ): Promise<TokenPayload> {
-    if (!response || typeof response !== 'object') {
-      throw new BadRequestException('Invalid WebAuthn response');
-    }
+    return TraceRunner.run('Verify WebAuthn Resolver', async () => {
+      if (!response || typeof response !== 'object') {
+        throw new BadRequestException('Invalid WebAuthn response');
+      }
 
-    const userId = await this.webAuthnService.verifyDiscoverableAuthentication(
-      response as AuthenticationResponseJSON,
-    );
+      const userId =
+        await this.webAuthnService.verifyDiscoverableAuthentication(
+          response as AuthenticationResponseJSON,
+        );
 
-    if (!userId) {
-      throw new UnauthorizedException('Authentication failed');
-    }
+      if (!userId) {
+        throw new UnauthorizedException('Authentication failed');
+      }
 
-    const token = await this.authService.createPasswordlessSession(userId);
-    return token;
+      const token = await this.authService.createPasswordlessSession(userId);
+      return token;
+    });
   }
 
   @Mutation(() => TokenPayload)
   async loginTotp(@Args('input') input: LoginTotpInput): Promise<TokenPayload> {
-    const token = await this.authService.loginWithTotp(
-      input.username,
-      input.code,
-    );
-    return token;
+    return TraceRunner.run('Login TOTP Resolver', async () => {
+      const token = await this.authService.loginWithTotp(
+        input.username,
+        input.code,
+      );
+      return token;
+    });
   }
 
   @Mutation(() => Boolean)
@@ -240,31 +242,35 @@ export class AuthMutationResolver {
     @Args('email') email: string,
     @ClientInfo() client: ClientInfoType,
   ): Promise<boolean> {
-    try {
-      const context: RequestMeta = {
-        ip: client.ip,
-        device: client.device,
-        locale: client.locale,
-        location: client.location,
-      };
+    return TraceRunner.run('Send Magic Link Resolver', async () => {
+      try {
+        const context: RequestMeta = {
+          ip: client.ip,
+          device: client.device,
+          locale: client.locale,
+          location: client.location,
+        };
 
-      void this.authService.requestMagicLink(email, context);
-    } catch (error) {
-      // Intentionally swallow errors to avoid leaking account existence.
-      // Log internally for monitoring & auditing.
-      this.logger.warn('Magic Link request failed silently', {
-        email,
-        ip: client.ip,
-        error: error instanceof Error ? error.message : 'unknown',
-      });
-    }
+        void this.authService.requestMagicLink(email, context);
+      } catch (error) {
+        // Intentionally swallow errors to avoid leaking account existence.
+        // Log internally for monitoring & auditing.
+        this.logger.warn('Magic Link request failed silently', {
+          email,
+          ip: client.ip,
+          error: error instanceof Error ? error.message : 'unknown',
+        });
+      }
 
-    return true;
+      return true;
+    });
   }
 
   @Mutation(() => TokenPayload)
   async verifyMagicLink(@Args('token') token: string): Promise<TokenPayload> {
-    const tokenPayload = await this.authService.loginWithMagicLink(token);
-    return tokenPayload;
+    return TraceRunner.run('Verify Magic Link Resolver', async () => {
+      const tokenPayload = await this.authService.loginWithMagicLink(token);
+      return tokenPayload;
+    });
   }
 }

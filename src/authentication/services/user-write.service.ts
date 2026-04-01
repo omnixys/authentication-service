@@ -30,9 +30,9 @@ import { AuthenticateBaseService } from './keycloak-base.service.js';
 import { AuthenticateReadService } from './read.service.js';
 import { HttpService } from '@nestjs/axios';
 import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
-import { RealmRoleType } from '@omnixys/graphql';
 // import { KafkaProducerService } from '@omnixys/kafka';
 import { OmnixysLogger } from '@omnixys/logger';
+import { RealmRoleType } from '@omnixys/shared';
 
 /**
  * @file Mutierende Operationen gegen Keycloak (Authentication-Flows & User-Mutationen).

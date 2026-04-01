@@ -101,6 +101,7 @@ export class AdminWriteService extends AuthenticateBaseService {
         operation: 'Deleting User from user-service',
         service: 'authentication.service',
         version: '1',
+        type: 'EVENT',
       },
     });
 
@@ -111,6 +112,7 @@ export class AdminWriteService extends AuthenticateBaseService {
         operation: 'Deleting User Addresses from address-service',
         service: 'authentication.service',
         version: '1',
+        type: 'EVENT',
       },
     });
   }

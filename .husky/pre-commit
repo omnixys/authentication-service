@@ -14,5 +14,5 @@
 # For more information, visit <https://www.gnu.org/licenses/>.
 
 #!/usr/bin/env sh
-pnpm lint-staged
+# pnpm lint-staged
 

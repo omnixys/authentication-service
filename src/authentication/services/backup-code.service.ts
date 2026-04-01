@@ -1,13 +1,13 @@
 import { PrismaService } from '../../prisma/prisma.service.js';
-import { Argon2Service } from './argon2.service.js';
 import { Injectable } from '@nestjs/common';
+import { HashService } from '@omnixys/security';
 import { randomBytes } from 'crypto';
 
 @Injectable()
 export class BackupCodeService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly argon: Argon2Service,
+    private readonly argon: HashService,
   ) {}
 
   async generate(userId: string): Promise<string[]> {

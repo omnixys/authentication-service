@@ -161,19 +161,19 @@ export type TotpCredentialGroupByOutputType = {
   _max: TotpCredentialMaxAggregateOutputType | null;
 };
 
-type GetTotpCredentialGroupByPayload<T extends TotpCredentialGroupByArgs> =
-  Prisma.PrismaPromise<
-    Array<
-      Prisma.PickEnumerable<TotpCredentialGroupByOutputType, T['by']> & {
-        [P in keyof T &
-          keyof TotpCredentialGroupByOutputType]: P extends '_count'
-          ? T[P] extends boolean
-            ? number
-            : Prisma.GetScalarType<T[P], TotpCredentialGroupByOutputType[P]>
-          : Prisma.GetScalarType<T[P], TotpCredentialGroupByOutputType[P]>;
-      }
-    >
-  >;
+export type GetTotpCredentialGroupByPayload<
+  T extends TotpCredentialGroupByArgs,
+> = Prisma.PrismaPromise<
+  Array<
+    Prisma.PickEnumerable<TotpCredentialGroupByOutputType, T['by']> & {
+      [P in keyof T & keyof TotpCredentialGroupByOutputType]: P extends '_count'
+        ? T[P] extends boolean
+          ? number
+          : Prisma.GetScalarType<T[P], TotpCredentialGroupByOutputType[P]>
+        : Prisma.GetScalarType<T[P], TotpCredentialGroupByOutputType[P]>;
+    }
+  >
+>;
 
 export type TotpCredentialWhereInput = {
   AND?: Prisma.TotpCredentialWhereInput | Prisma.TotpCredentialWhereInput[];
@@ -1357,6 +1357,11 @@ export type TotpCredentialFindManyArgs<
    * Skip the first `n` TotpCredentials.
    */
   skip?: number;
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+   *
+   * Filter by unique combinations of TotpCredentials.
+   */
   distinct?:
     | Prisma.TotpCredentialScalarFieldEnum
     | Prisma.TotpCredentialScalarFieldEnum[];

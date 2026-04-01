@@ -172,7 +172,7 @@ export type LoginHistoryGroupByOutputType = {
   _max: LoginHistoryMaxAggregateOutputType | null;
 };
 
-type GetLoginHistoryGroupByPayload<T extends LoginHistoryGroupByArgs> =
+export type GetLoginHistoryGroupByPayload<T extends LoginHistoryGroupByArgs> =
   Prisma.PrismaPromise<
     Array<
       Prisma.PickEnumerable<LoginHistoryGroupByOutputType, T['by']> & {
@@ -1520,6 +1520,11 @@ export type LoginHistoryFindManyArgs<
    * Skip the first `n` LoginHistories.
    */
   skip?: number;
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+   *
+   * Filter by unique combinations of LoginHistories.
+   */
   distinct?:
     | Prisma.LoginHistoryScalarFieldEnum
     | Prisma.LoginHistoryScalarFieldEnum[];

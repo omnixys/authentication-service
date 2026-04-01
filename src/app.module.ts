@@ -15,25 +15,97 @@
  * For more information, visit <https://www.gnu.org/licenses/>.
  */
 
+import { ValkeyAdapterModule } from './adapter/valkey-adapter.module.js';
 import { AdminModule } from './admin/admin.module.js';
 import { AuthenticationModule } from './authentication/authentication.module.js';
 import { BannerService } from './banner.service.js';
 import { env } from './config/env.js';
 import { ScalarsModule } from './core/scalars/scalar.module.js';
 import { HealthModule } from './health/health.module.js';
-import { ApolloFederationDriver, ApolloFederationDriverConfig } from '@nestjs/apollo';
 import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { GraphQLModule } from '@nestjs/graphql';
-import { GqlFastifyContext } from '@omnixys/context';
+import { ValkeyModule } from '@omnixys/cache';
+import { OmnixysGraphQLModule } from '@omnixys/graphql';
 import { KafkaModule } from '@omnixys/kafka';
 import { LoggerModule } from '@omnixys/logger';
 import { ObservabilityModule } from '@omnixys/observability';
+import { SecurityModule } from '@omnixys/security';
 
-const { SCHEMA_TARGET, SERVICE, KAFKA_BROKER, TEMPO_URI } = env;
+const {
+  SCHEMA_TARGET,
+  SERVICE,
+  KAFKA_BROKER,
+  TEMPO_URI,
+  VALKEY_URL,
+  VALKEY_PASSWORD,
+  PC_JWE_KEY,
+  KC_REALM,
+  KC_URL,
+  RESET_TOKEN_HMAC_SECRET,
+  DEVICE_FINGERPRINT_HMAC_SECRET,
+  MAGIC_LINK_HMAC_SECRET,
+  ENCRYPTION_KEY,
+  FINGERPRINT_SECRET,
+} = env;
 
 @Module({
   imports: [
+    ValkeyModule.forRoot({
+      serviceName: `${SERVICE}-service`,
+      url: VALKEY_URL,
+      password: VALKEY_PASSWORD,
+
+      pubSub: { enabled: true },
+      streams: { enabled: true },
+    }),
+
+    OmnixysGraphQLModule.forRoot({
+      autoSchemaFile:
+        SCHEMA_TARGET === 'tmp'
+          ? { path: '/tmp/schema.gql', federation: 2 }
+          : SCHEMA_TARGET === 'false'
+            ? false
+            : { path: 'dist/schema.gql', federation: 2 },
+      sortSchema: true,
+    }),
+
+    SecurityModule.forRoot({
+      jwt: {
+        issuer: `${KC_URL}/realms/${KC_REALM}`,
+        jwksUri: `${KC_URL}/realms/${KC_REALM}/protocol/openid-connect/certs`,
+      },
+
+      jwe: {
+        keys: [
+          {
+            kid: 'v1',
+            value: PC_JWE_KEY,
+          },
+        ],
+      },
+
+      session: {
+        ttlMs: 1000 * 60 * 60,
+      },
+
+      rateLimit: {
+        enabled: true,
+      },
+
+      hash: {
+        hmacResetToken: RESET_TOKEN_HMAC_SECRET,
+        hmacDeviceFingerprint: DEVICE_FINGERPRINT_HMAC_SECRET,
+        hmacMagicLink: MAGIC_LINK_HMAC_SECRET,
+
+        encryptionKey: ENCRYPTION_KEY,
+      },
+
+      zeroTrust: {
+        imports: [ValkeyAdapterModule],
+      },
+
+      fingerprintSecret: FINGERPRINT_SECRET,
+      globalGuards: false,
+    }),
     KafkaModule.forRoot({
       clientId: `${SERVICE}-service`,
       brokers: [KAFKA_BROKER],
@@ -50,7 +122,7 @@ const { SCHEMA_TARGET, SERVICE, KAFKA_BROKER, TEMPO_URI } = env;
       },
 
       metrics: {
-        port: 9464,
+        port: 17501,
         enabled: true,
       },
     }),
@@ -60,7 +132,7 @@ const { SCHEMA_TARGET, SERVICE, KAFKA_BROKER, TEMPO_URI } = env;
 
       kafka: {
         enabled: true,
-        topic: 'logstream.logs',
+        topic: 'logstream.input',
       },
       batch: {
         enabled: true,
@@ -73,31 +145,6 @@ const { SCHEMA_TARGET, SERVICE, KAFKA_BROKER, TEMPO_URI } = env;
     HealthModule,
     AuthenticationModule,
     ScalarsModule,
-    // GraphQLModule.forRoot<ApolloDriverConfig>(graphQlModuleOptions),
-    ConfigModule.forRoot({ isGlobal: true }),
-    GraphQLModule.forRootAsync<ApolloFederationDriverConfig>({
-      driver: ApolloFederationDriver,
-
-      inject: [ConfigService],
-      useFactory: (cfg: ConfigService) => ({
-        // autoSchemaFile: join(process.cwd(), 'dist/schema.gql'),
-        autoSchemaFile:
-          SCHEMA_TARGET === 'tmp'
-            ? { path: '/tmp/schema.gql', federation: 2 }
-            : SCHEMA_TARGET === 'false'
-              ? false
-              : { path: 'dist/schema.gql', federation: 2 },
-        sortSchema: true,
-        playground: cfg.get('GRAPHQL_PLAYGROUND') === 'true',
-        csrfPrevention: false,
-        introspection: true,
-
-        context: ({ req, reply }: GqlFastifyContext) => ({
-          req,
-          reply,
-        }),
-      }),
-    }),
   ],
   controllers: [],
   providers: [BannerService],

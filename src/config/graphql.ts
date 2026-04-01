@@ -17,48 +17,25 @@
 
 import { env } from './env.js';
 import type { ApolloFederationDriverConfig } from '@nestjs/apollo';
-import {
-  ApolloDriver,
-  ApolloFederationDriver,
-  type ApolloDriverConfig,
-} from '@nestjs/apollo';
-import { join } from 'node:path';
+import { GqlFastifyContext } from '@omnixys/context';
 
 const { SCHEMA_TARGET } = env;
 
-// Utility zur sicheren Pfadwahl
-function getSafeSchemaPath(): string | false {
-  const target = SCHEMA_TARGET;
-  if (target === 'false') {
-    return false;
-  }
-  if (target === 'tmp') {
-    return '/tmp/schema.gql';
-  }
-  return join(process.cwd(), target, 'schema.gql');
-}
-
-/**
- * Standard-GraphQL-Konfiguration (ohne Federation).
- */
-export const graphQlModuleOptions: ApolloDriverConfig = {
-  autoSchemaFile: getSafeSchemaPath(),
-  sortSchema: true,
-  introspection: true,
-  driver: ApolloDriver,
-  playground: false,
-};
-
-/**
- * Federation-Unterstützung, z.B. für Subgraphen.
- */
-export const graphQlModuleOptions2: ApolloFederationDriverConfig = {
+export const graphQlModuleOptions3: ApolloFederationDriverConfig = {
   autoSchemaFile:
     SCHEMA_TARGET === 'tmp'
       ? { path: '/tmp/schema.gql', federation: 2 }
       : SCHEMA_TARGET === 'false'
         ? false
         : { path: 'dist/schema.gql', federation: 2 },
-  driver: ApolloFederationDriver,
-  playground: false,
+
+  sortSchema: true,
+  playground: true,
+  csrfPrevention: false,
+  introspection: true,
+
+  context: ({ req, reply }: GqlFastifyContext) => ({
+    req,
+    reply,
+  }),
 };

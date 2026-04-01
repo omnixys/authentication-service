@@ -11,9 +11,7 @@ import {
 } from '../models/dtos/reset-verification-result.dto.js';
 import { CompleteResetInput } from '../models/inputs/complete.reset.input.js';
 import { StepUpVerificationInput } from '../models/inputs/stepup-verification-input.js';
-import { Argon2Service } from './argon2.service.js';
 import { BackupCodeService } from './backup-code.service.js';
-import { HmacService } from './hmac.service.js';
 import { AuthenticateBaseService } from './keycloak-base.service.js';
 import { LockoutService } from './lockout.service.js';
 // import { MailService } from './mail.service.js';
@@ -24,6 +22,7 @@ import { HttpService } from '@nestjs/axios';
 import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { KafkaProducerService, KafkaTopics } from '@omnixys/kafka';
 import { OmnixysLogger } from '@omnixys/logger';
+import { HashService, HmacService } from '@omnixys/security';
 import { AuthenticationResponseJSON } from '@simplewebauthn/server';
 import { randomBytes } from 'crypto';
 import { addMinutes } from 'date-fns';
@@ -34,7 +33,7 @@ export class ResetService extends AuthenticateBaseService {
     logger: OmnixysLogger,
     http: HttpService,
     private readonly prisma: PrismaService,
-    private readonly argon: Argon2Service,
+    private readonly argon: HashService,
     private readonly lockout: LockoutService,
     // private readonly mailService: MailService,
     private readonly hmac: HmacService,
@@ -79,7 +78,7 @@ export class ResetService extends AuthenticateBaseService {
 
     // 4) create token
     const rawToken = randomBytes(32).toString('hex');
-    const tokenLookupHash = this.hmac.hash(rawToken);
+    const tokenLookupHash = this.hmac.hash(rawToken, 'resetToken');
     const tokenHash = await this.argon.hash(rawToken);
 
     await this.prisma.passwordResetToken.create({
@@ -118,7 +117,8 @@ export class ResetService extends AuthenticateBaseService {
       meta: {
         service: 'authentication-service',
         version: '1',
-        class: 'send Request Email to User',
+        operation: 'send Request Email to User',
+        type: 'EVENT',
       },
     });
   }
@@ -288,7 +288,7 @@ export class ResetService extends AuthenticateBaseService {
 
   // ----- Internal -----
   private async validateAndLoadToken(rawToken: string) {
-    const tokenLookupHash = this.hmac.hash(rawToken);
+    const tokenLookupHash = this.hmac.hash(rawToken, 'resetToken');
 
     const token = await this.prisma.passwordResetToken.findUnique({
       where: { tokenLookupHash },

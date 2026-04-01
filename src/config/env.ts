@@ -86,14 +86,24 @@ export const env = {
   DATABASE_URL: process.env.DATABASE_URL ?? 'DATABASE_URL',
   DATABASE_URL_LOCALE: process.env.DATABASE_URL_LOCALE ?? 'DATABASE_URL_LOCALE',
   SHADOW_DATABASE_URL: process.env.SHADOW_DATABASE_URL ?? 'SHADOW_DATABASE_URL',
+
+  RESET_TOKEN_HMAC_SECRET:
+    process.env.RESET_TOKEN_HMAC_SECRET ?? 'omnixys-reset-secret',
+  DEVICE_FINGERPRINT_HMAC_SECRET:
+    process.env.DEVICE_FINGERPRINT_HMAC_SECRET ??
+    'omnixys-device-fingerprint-secret',
+  MAGIC_LINK_HMAC_SECRET:
+    process.env.MAGIC_LINK_HMAC_SECRET ?? 'omnixys-magic-link-secret',
+  ENCRYPTION_KEY: process.env.ENCRYPTION_KEY ?? 'omnixys-encryption-key',
+  FINGERPRINT_SECRET: process.env.FINGERPRINT_SECRET ?? 'omnixys-fingerprint-secret',
 } as const;
 
-// /**
-//  * Debug output:
-//  * Print all environment variables in non-production environments.
-//  */
-// if (process.env.NODE_ENV !== 'production') {
-//   console.log('================= ENVIRONMENT VARIABLES =================');
-//   console.log(JSON.stringify(env, null, 2));
-//   console.log('==========================================================');
-// }
+/**
+ * Debug output:
+ * Print all environment variables in non-production environments.
+ */
+if (process.env.NODE_ENV !== 'production') {
+  console.trace('================= ENVIRONMENT VARIABLES =================');
+  console.trace(JSON.stringify(env, null, 2));
+  console.trace('==========================================================');
+}

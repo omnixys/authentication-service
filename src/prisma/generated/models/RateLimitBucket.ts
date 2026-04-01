@@ -202,19 +202,20 @@ export type RateLimitBucketGroupByOutputType = {
   _max: RateLimitBucketMaxAggregateOutputType | null;
 };
 
-type GetRateLimitBucketGroupByPayload<T extends RateLimitBucketGroupByArgs> =
-  Prisma.PrismaPromise<
-    Array<
-      Prisma.PickEnumerable<RateLimitBucketGroupByOutputType, T['by']> & {
-        [P in keyof T &
-          keyof RateLimitBucketGroupByOutputType]: P extends '_count'
-          ? T[P] extends boolean
-            ? number
-            : Prisma.GetScalarType<T[P], RateLimitBucketGroupByOutputType[P]>
-          : Prisma.GetScalarType<T[P], RateLimitBucketGroupByOutputType[P]>;
-      }
-    >
-  >;
+export type GetRateLimitBucketGroupByPayload<
+  T extends RateLimitBucketGroupByArgs,
+> = Prisma.PrismaPromise<
+  Array<
+    Prisma.PickEnumerable<RateLimitBucketGroupByOutputType, T['by']> & {
+      [P in keyof T &
+        keyof RateLimitBucketGroupByOutputType]: P extends '_count'
+        ? T[P] extends boolean
+          ? number
+          : Prisma.GetScalarType<T[P], RateLimitBucketGroupByOutputType[P]>
+        : Prisma.GetScalarType<T[P], RateLimitBucketGroupByOutputType[P]>;
+    }
+  >
+>;
 
 export type RateLimitBucketWhereInput = {
   AND?: Prisma.RateLimitBucketWhereInput | Prisma.RateLimitBucketWhereInput[];
@@ -1282,6 +1283,11 @@ export type RateLimitBucketFindManyArgs<
    * Skip the first `n` RateLimitBuckets.
    */
   skip?: number;
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+   *
+   * Filter by unique combinations of RateLimitBuckets.
+   */
   distinct?:
     | Prisma.RateLimitBucketScalarFieldEnum
     | Prisma.RateLimitBucketScalarFieldEnum[];

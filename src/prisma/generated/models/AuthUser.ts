@@ -219,7 +219,7 @@ export type AuthUserGroupByOutputType = {
   _max: AuthUserMaxAggregateOutputType | null;
 };
 
-type GetAuthUserGroupByPayload<T extends AuthUserGroupByArgs> =
+export type GetAuthUserGroupByPayload<T extends AuthUserGroupByArgs> =
   Prisma.PrismaPromise<
     Array<
       Prisma.PickEnumerable<AuthUserGroupByOutputType, T['by']> & {
@@ -2818,6 +2818,11 @@ export type AuthUserFindManyArgs<
    * Skip the first `n` AuthUsers.
    */
   skip?: number;
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+   *
+   * Filter by unique combinations of AuthUsers.
+   */
   distinct?: Prisma.AuthUserScalarFieldEnum | Prisma.AuthUserScalarFieldEnum[];
 };
 

@@ -1,11 +1,11 @@
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
 import {
-  Resolver,
-  Mutation,
   Args,
   Field,
+  Mutation,
   ObjectType,
   Query,
+  Resolver,
 } from '@nestjs/graphql';
 
 import {
@@ -25,8 +25,12 @@ import { BackupCodeService } from '../services/backup-code.service.js';
 import { SecurityQuestionService } from '../services/security-question.service.js';
 import { TotpService } from '../services/totp.service.js';
 import { WebAuthnService } from '../services/web-authn.service.js';
-import { CookieAuthGuard, CurrentUser, CurrentUserData } from '@omnixys/auth';
 import { LoggingInterceptor } from '@omnixys/logger';
+import {
+  CookieAuthGuard,
+  CurrentUser,
+  CurrentUserData,
+} from '@omnixys/security';
 import {
   AuthenticationResponseJSON,
   RegistrationResponseJSON,

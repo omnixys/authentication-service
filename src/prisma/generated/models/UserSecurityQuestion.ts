@@ -163,7 +163,7 @@ export type UserSecurityQuestionGroupByOutputType = {
   _max: UserSecurityQuestionMaxAggregateOutputType | null;
 };
 
-type GetUserSecurityQuestionGroupByPayload<
+export type GetUserSecurityQuestionGroupByPayload<
   T extends UserSecurityQuestionGroupByArgs,
 > = Prisma.PrismaPromise<
   Array<
@@ -1702,6 +1702,11 @@ export type UserSecurityQuestionFindManyArgs<
    * Skip the first `n` UserSecurityQuestions.
    */
   skip?: number;
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+   *
+   * Filter by unique combinations of UserSecurityQuestions.
+   */
   distinct?:
     | Prisma.UserSecurityQuestionScalarFieldEnum
     | Prisma.UserSecurityQuestionScalarFieldEnum[];

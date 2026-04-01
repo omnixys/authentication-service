@@ -253,7 +253,7 @@ export type WebAuthnCredentialGroupByOutputType = {
   _max: WebAuthnCredentialMaxAggregateOutputType | null;
 };
 
-type GetWebAuthnCredentialGroupByPayload<
+export type GetWebAuthnCredentialGroupByPayload<
   T extends WebAuthnCredentialGroupByArgs,
 > = Prisma.PrismaPromise<
   Array<
@@ -1922,6 +1922,11 @@ export type WebAuthnCredentialFindManyArgs<
    * Skip the first `n` WebAuthnCredentials.
    */
   skip?: number;
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+   *
+   * Filter by unique combinations of WebAuthnCredentials.
+   */
   distinct?:
     | Prisma.WebAuthnCredentialScalarFieldEnum
     | Prisma.WebAuthnCredentialScalarFieldEnum[];

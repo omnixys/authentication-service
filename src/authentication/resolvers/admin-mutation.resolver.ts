@@ -25,8 +25,9 @@ import { AdminWriteService } from '../services/admin-write.service.js';
 import { UseInterceptors } from '@nestjs/common';
 import { Args, Context, ID, Mutation, Resolver } from '@nestjs/graphql';
 import { GqlFastifyContext, gqlSetTokens } from '@omnixys/context';
-import { RealmRoleType } from '@omnixys/graphql';
 import { getLogger, LoggingInterceptor } from '@omnixys/logger';
+import { TraceRunner } from '@omnixys/observability';
+import { RealmRoleType } from '@omnixys/shared';
 
 /**
  * @fileoverview
@@ -74,9 +75,11 @@ export class AdminMutationResolver {
     @Args('id', { type: () => ID }) id: string,
     @Args('input', { type: () => UpdateKcUserInput }) input: UpdateKcUserInput,
   ): Promise<boolean> {
-    this.logger.debug('adminUpdateUser: id=%s', id);
-    await this.adminService.updateUser(id, input);
-    return true;
+    return TraceRunner.run('Update Resolver', async () => {
+      this.logger.debug('adminUpdateUser: id=%s', id);
+      await this.adminService.updateUser(id, input);
+      return true;
+    });
   }
 
   /**
@@ -97,8 +100,10 @@ export class AdminMutationResolver {
     @Args('input', { type: () => UpdateUserPasswordInput })
     input: UpdateUserPasswordInput,
   ): Promise<boolean> {
-    await this.adminService.setUserPassword(input.id, input.newPassword);
-    return true;
+    return TraceRunner.run('Change User Password Resolver', async () => {
+      await this.adminService.setUserPassword(input.id, input.newPassword);
+      return true;
+    });
   }
 
   /**
@@ -114,8 +119,10 @@ export class AdminMutationResolver {
   async deleteUser(
     @Args('id', { type: () => ID }) id: string,
   ): Promise<boolean> {
-    await this.adminService.deleteUser(id);
-    return true;
+    return TraceRunner.run('Delete User Resolver', async () => {
+      await this.adminService.deleteUser(id);
+      return true;
+    });
   }
 
   // ---------------------------------------------------------------------------
@@ -137,9 +144,11 @@ export class AdminMutationResolver {
     @Args('id', { type: () => ID }) id: string,
     @Args('roleName', { type: () => RealmRoleType }) roleName: RealmRoleType,
   ): Promise<boolean> {
-    this.logger.debug('assignRealmRole: userId=%s, role=%s', id, roleName);
-    await this.adminService.assignRealmRoleToUser(id, roleName);
-    return true;
+    return TraceRunner.run('Assign Realmrole Resolver', async () => {
+      this.logger.debug('assignRealmRole: userId=%s, role=%s', id, roleName);
+      await this.adminService.assignRealmRoleToUser(id, roleName);
+      return true;
+    });
   }
 
   /**
@@ -157,9 +166,11 @@ export class AdminMutationResolver {
     @Args('id', { type: () => ID }) id: string,
     @Args('roleName', { type: () => RealmRoleType }) roleName: RealmRoleType,
   ): Promise<boolean> {
-    this.logger.debug('removeRealmRole: userId=%s, role=%s', id, roleName);
-    await this.adminService.removeRealmRoleFromUser(id, roleName);
-    return true;
+    return TraceRunner.run('Remove Realm Role  Resolver', async () => {
+      this.logger.debug('removeRealmRole: userId=%s, role=%s', id, roleName);
+      await this.adminService.removeRealmRoleFromUser(id, roleName);
+      return true;
+    });
   }
 
   @Mutation(() => TokenPayload, { name: 'adminSignUp' })
@@ -167,10 +178,12 @@ export class AdminMutationResolver {
     @Args('input', { type: () => AdminSignUpInput }) input: AdminSignUpInput,
     @Context() ctx: GqlFastifyContext,
   ): Promise<TokenPayload> {
-    this.logger.debug('signIn: input=%o', input);
-    const result = await this.adminService.adminSignUp(input);
-    const res = ctx.reply;
-    gqlSetTokens(res, result.accessToken, result.expiresIn * 1000);
-    return result;
+    return TraceRunner.run('admin SignUp Resolver', async () => {
+      this.logger.debug('signIn: input=%o', input);
+      const result = await this.adminService.adminSignUp(input);
+      const res = ctx.reply;
+      gqlSetTokens(res, result.accessToken, result.expiresIn * 1000);
+      return result;
+    });
   }
 }

@@ -154,19 +154,20 @@ export type SecurityQuestionGroupByOutputType = {
   _max: SecurityQuestionMaxAggregateOutputType | null;
 };
 
-type GetSecurityQuestionGroupByPayload<T extends SecurityQuestionGroupByArgs> =
-  Prisma.PrismaPromise<
-    Array<
-      Prisma.PickEnumerable<SecurityQuestionGroupByOutputType, T['by']> & {
-        [P in keyof T &
-          keyof SecurityQuestionGroupByOutputType]: P extends '_count'
-          ? T[P] extends boolean
-            ? number
-            : Prisma.GetScalarType<T[P], SecurityQuestionGroupByOutputType[P]>
-          : Prisma.GetScalarType<T[P], SecurityQuestionGroupByOutputType[P]>;
-      }
-    >
-  >;
+export type GetSecurityQuestionGroupByPayload<
+  T extends SecurityQuestionGroupByArgs,
+> = Prisma.PrismaPromise<
+  Array<
+    Prisma.PickEnumerable<SecurityQuestionGroupByOutputType, T['by']> & {
+      [P in keyof T &
+        keyof SecurityQuestionGroupByOutputType]: P extends '_count'
+        ? T[P] extends boolean
+          ? number
+          : Prisma.GetScalarType<T[P], SecurityQuestionGroupByOutputType[P]>
+        : Prisma.GetScalarType<T[P], SecurityQuestionGroupByOutputType[P]>;
+    }
+  >
+>;
 
 export type SecurityQuestionWhereInput = {
   AND?: Prisma.SecurityQuestionWhereInput | Prisma.SecurityQuestionWhereInput[];
@@ -1359,6 +1360,11 @@ export type SecurityQuestionFindManyArgs<
    * Skip the first `n` SecurityQuestions.
    */
   skip?: number;
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+   *
+   * Filter by unique combinations of SecurityQuestions.
+   */
   distinct?:
     | Prisma.SecurityQuestionScalarFieldEnum
     | Prisma.SecurityQuestionScalarFieldEnum[];

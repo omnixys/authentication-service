@@ -23,6 +23,7 @@ import { keycloakConfig, paths } from '../../config/keycloak.js';
 import type { HttpService } from '@nestjs/axios';
 import { BadRequestException, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import type { OmnixysLogger } from '@omnixys/logger';
+import { TraceRunner } from '@omnixys/observability';
 import type { RoleData } from '@omnixys/shared';
 import { ENUM_TO_KC, type RealmRoleType } from '@omnixys/shared';
 import * as jose from 'jose';
@@ -102,72 +103,74 @@ export abstract class AuthenticateBaseService {
       mapTo: 'throw-on-error',
     },
   ): Promise<T> {
-    const headers: Record<string, string> = { ...cfg.headers };
-    const baseURL = keycloakConfig.url;
+    return TraceRunner.run('Keycloak Request: ' + url, async () => {
+      const headers: Record<string, string> = { ...cfg.headers };
+      const baseURL = keycloakConfig.url;
 
-    if (cfg.adminAuth !== false) {
-      const token = await this.getAdminToken();
-      headers.Authorization = `Bearer ${token}`;
-    }
+      if (cfg.adminAuth !== false) {
+        const token = await this.getAdminToken();
+        headers.Authorization = `Bearer ${token}`;
+      }
 
-    try {
-      const res = await firstValueFrom(
-        this.http.request<T>({
-          method,
-          url,
-          baseURL,
-          params: cfg.params,
-          data: cfg.data,
-          headers,
-        }),
-      );
-      return res.data;
-    } catch (err: any) {
-      const status = err.response?.status ?? 500;
-
-      if (behavior.mapTo === 'null-on-401' && (status === 400 || status === 401)) {
-        void this.logger.warn(
-          '%s %s -> %s %o',
-          method.toUpperCase(),
-          url,
-          status,
-          err.response?.data,
+      try {
+        const res = await firstValueFrom(
+          this.http.request<T>({
+            method,
+            url,
+            baseURL,
+            params: cfg.params,
+            data: cfg.data,
+            headers,
+          }),
         );
-        return null as T;
-      }
+        return res.data;
+      } catch (err: any) {
+        const status = err.response?.status ?? 500;
 
-      const body = err.response?.data;
-      const msg =
-        typeof body === 'string'
-          ? body
-          : body && typeof body === 'object'
-            ? JSON.stringify(body)
-            : err.message;
+        if (behavior.mapTo === 'null-on-401' && (status === 400 || status === 401)) {
+          void this.logger.warn(
+            '%s %s -> %s %o',
+            method.toUpperCase(),
+            url,
+            status,
+            err.response?.data,
+          );
+          return null as T;
+        }
 
-      if (status === 401) {
-        throw new UnauthorizedException(msg);
-      }
-      if (status === 404) {
-        throw new NotFoundException(msg);
-      }
-      if (status === 409 && behavior.returnNullOn409) {
-        // do NOT throw → caller needs this info for fallback logic
-        this.logger.warn(
-          'KC 409 Conflict on %s %s → returning null for fallback logic: %o',
-          method.toUpperCase(),
-          url,
-          msg,
+        const body = err.response?.data;
+        const msg =
+          typeof body === 'string'
+            ? body
+            : body && typeof body === 'object'
+              ? JSON.stringify(body)
+              : err.message;
+
+        if (status === 401) {
+          throw new UnauthorizedException(msg);
+        }
+        if (status === 404) {
+          throw new NotFoundException(msg);
+        }
+        if (status === 409 && behavior.returnNullOn409) {
+          // do NOT throw → caller needs this info for fallback logic
+          this.logger.warn(
+            'KC 409 Conflict on %s %s → returning null for fallback logic: %o',
+            method.toUpperCase(),
+            url,
+            msg,
+          );
+          return null as T;
+        }
+        if (status >= 400 && status < 500) {
+          throw new BadRequestException(msg);
+        }
+
+        throw new Error(
+          `Keycloak request failed: ${method.toUpperCase()} ${url} -> ${status} ${msg}`,
         );
-        return null as T;
       }
-      if (status >= 400 && status < 500) {
-        throw new BadRequestException(msg);
-      }
-
-      throw new Error(
-        `Keycloak request failed: ${method.toUpperCase()} ${url} -> ${status} ${msg}`,
-      );
-    }
+    });
   }
 
   /**

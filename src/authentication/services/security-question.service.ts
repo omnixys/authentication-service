@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
 
+import { HashService } from '@omnixys/security';
 import { SecurityQuestion } from '../../prisma/generated/client.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { SecurityQuestionInput } from '../models/inputs/security-question.input.js';
-import { Argon2Service } from './argon2.service.js';
 import { Injectable, BadRequestException } from '@nestjs/common';
 
 export interface AddSecurityQuestionAnswerInput {
@@ -20,7 +20,7 @@ export interface VerifySecurityAnswerInput {
 export class SecurityQuestionService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly argon: Argon2Service,
+    private readonly argon: HashService,
   ) {}
 
   // --------------------------------------------------

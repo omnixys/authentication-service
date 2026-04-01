@@ -19,23 +19,22 @@
 
 import { keycloakConfig, paths } from '../../config/keycloak.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
-import { ValkeyKey } from '../../valkey/valkey.keys.js';
-import { ValkeyService } from '../../valkey/valkey.service.js';
 import type { KeycloakToken } from '../models/dtos/kc-token.dto.js';
 import { RequestMeta } from '../models/dtos/request-meta.dto.js';
 import { AuthContext } from '../models/entitys/login-context.js';
 import type { LogInInput } from '../models/inputs/log-in.input.js';
 import { toToken } from '../models/mappers/token.mapper.js';
 import type { TokenPayload } from '../models/payloads/token.payload.js';
-import { DeviceService } from './device.service.js';
 import { AuthenticateBaseService } from './keycloak-base.service.js';
 import { LockoutService } from './lockout.service.js';
-import { RiskEngineService } from './risk-engine.service.js';
+import { AuthenticateReadService } from './read.service.js';
 import { TotpService } from './totp.service.js';
 import { HttpService } from '@nestjs/axios';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { ValkeyKey, ValkeyService } from '@omnixys/cache';
 import { KafkaProducerService, KafkaTopics } from '@omnixys/kafka';
 import { OmnixysLogger } from '@omnixys/logger';
+import { AccessBlockedException, DeviceService, FingerprintService, HashService, RiskEngineService, RiskMemoryService, StepUpRequiredException, ZeroTrustService } from '@omnixys/security';
 import { randomBytes } from 'crypto';
 
 /**
@@ -52,11 +51,16 @@ export class AuthWriteService extends AuthenticateBaseService {
     http: HttpService,
     private readonly risk: RiskEngineService,
     private readonly deviceService: DeviceService,
+    private readonly fingerPrintService: FingerprintService,
     private readonly prisma: PrismaService,
-    private readonly valkey: ValkeyService,
+    private readonly cache: ValkeyService,
     private readonly kafka: KafkaProducerService,
     private readonly totpService: TotpService,
     private readonly lockout: LockoutService,
+    private readonly readService: AuthenticateReadService,
+    private readonly riskMemory: RiskMemoryService,
+    private readonly hashService: HashService,
+    private readonly zeroTrustService: ZeroTrustService,
   ) {
     super(logger, http);
   }
@@ -65,26 +69,80 @@ export class AuthWriteService extends AuthenticateBaseService {
    * Password-Login (ROPC).
    * @returns TokenPayload oder null (bei invalid_grant)
    */
-  async login({ username, password }: LogInInput): Promise<TokenPayload> {
+  async login(
+    input: LogInInput & {
+      ip?: string;
+      userAgent?: string;
+      acceptLanguage?: string;
+      clientDeviceId?: string;
+    },
+  ): Promise<TokenPayload> {
+    const { username, password } = input;
+
     if (!username || !password) {
       throw new UnauthorizedException('username oder passwort fehlt!');
     }
-    const body = new URLSearchParams({
-      grant_type: 'password',
-      username,
-      password,
-      scope: 'openid',
+
+    const userId = (await this.readService.findByUsername(username)).id;
+
+    const riskResult = await this.zeroTrustService.evaluate({
+      userId,
+      ip: input.ip,
+      userAgent: input.userAgent,
+      acceptLanguage: input.acceptLanguage,
+      clientDeviceId: input.clientDeviceId,
+
+      isPasswordless: false,
+      isResetFlow: false,
     });
-    const data = await this.kcRequest<KeycloakToken>(
-      'post',
-      paths.accessToken,
-      { data: body.toString(), headers: this.loginHeaders, adminAuth: false },
-      { mapTo: 'null-on-401' },
-    );
-    if (!data) {
-      throw new UnauthorizedException('username oder passwort falsch!');
+
+    if (riskResult.decision === 'BLOCK') {
+      throw new AccessBlockedException(riskResult.reasons);
     }
-    return toToken(data);
+
+    if (riskResult.decision === 'STEP_UP') {
+      throw new StepUpRequiredException(riskResult.stepUp!, riskResult.reasons);
+    }
+
+    try {
+      const body = new URLSearchParams({
+        grant_type: 'password',
+        username,
+        password,
+        scope: 'openid',
+      });
+
+      const data = await this.kcRequest<KeycloakToken>(
+        'post',
+        paths.accessToken,
+        {
+          data: body.toString(),
+          headers: this.loginHeaders,
+          adminAuth: false,
+        },
+        { mapTo: 'null-on-401' },
+      );
+
+      if (!data) {
+        await this.riskMemory.incrementFailures(userId);
+
+        throw new UnauthorizedException('username oder passwort falsch!');
+      }
+
+      await this.riskMemory.resetFailures(userId); 
+
+      if (input.ip) {
+        await this.riskMemory.storeLastIp(userId, input.ip);
+      }
+
+      await this.deviceService.register(userId, input.clientDeviceId ?? 'unknown');
+
+      return toToken(data);
+    } catch (err) {
+      // zusätzliche Sicherheit (Timing / Side-channel)
+      await this.hashService.dummyVerify();
+      throw err;
+    }
   }
 
   /**
@@ -198,7 +256,7 @@ export class AuthWriteService extends AuthenticateBaseService {
       throw new UnauthorizedException('Login blocked');
     }
 
-    if (risk.decision !== 'NONE') {
+    if (risk.decision !== 'STEP_UP') {
       // English comment tailored for VS:
       // In v1 we hard-fail and require a step-up flow.
       // In v2 return a StepUpRequired payload and persist a temporary step-up session.
@@ -214,11 +272,11 @@ export class AuthWriteService extends AuthenticateBaseService {
     }
 
     // 5) (Optional) fingerprint is computed but not stored here.
-    void this.deviceService.computeFingerprint({
-      ip: ctx.ip,
-      userAgent: ctx.userAgent,
+    void this.fingerPrintService.create({
+      ip: ctx.ip ?? 'unknown',
+      userAgent: ctx.userAgent ?? 'unknown',
       acceptLanguage: ctx.acceptLanguage,
-      clientDeviceId: ctx.clientDeviceId,
+      clientDeviceId: ctx.clientDeviceId ?? 'unknown',
     });
 
     return token;
@@ -271,9 +329,14 @@ export class AuthWriteService extends AuthenticateBaseService {
       ip: context.ip,
     };
 
-    await this.valkey.client.set(ValkeyKey.magicLinkToken(token), JSON.stringify(payload), {
-      PX: 15 * 60 * 1000,
-    });
+    await this.cache.set(
+      ValkeyKey.magicLinkToken,
+      {
+        token,
+        payload: JSON.stringify(payload),
+      },
+      5 * 60,
+    );
 
     void this.kafka.send({
       topic: KafkaTopics.notification.sendMagicLink,
@@ -290,6 +353,7 @@ export class AuthWriteService extends AuthenticateBaseService {
         service: 'authentication-service',
         operation: ' sending Magic Link Email Request tu User',
         version: '1',
+        type: 'EVENT',
       },
     });
 
@@ -302,7 +366,7 @@ export class AuthWriteService extends AuthenticateBaseService {
     }
 
     // Atomic read + delete
-    const raw = await this.valkey.client.get(ValkeyKey.magicLinkToken(token));
+    const raw = await this.cache.get(ValkeyKey.magicLinkToken, token);
     if (!raw) {
       throw new UnauthorizedException('Invalid or expired magic link');
     }
@@ -313,7 +377,7 @@ export class AuthWriteService extends AuthenticateBaseService {
       ip?: string;
     };
 
-    await this.valkey.client.del(ValkeyKey.magicLinkToken(token));
+    await this.cache.delete(ValkeyKey.magicLinkToken, token);
 
     // Optional: additional risk evaluation
     // await this.risk.evaluate({ ... });
