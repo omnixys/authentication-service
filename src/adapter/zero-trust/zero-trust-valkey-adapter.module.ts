@@ -16,4 +16,4 @@ import { Global, Module } from '@nestjs/common';
   ],
   exports: ['RISK_MEMORY_STORE', 'DEVICE_STORE'],
 })
-export class ValkeyAdapterModule {}
+export class ZeroTrustValkeyAdapterModule {}

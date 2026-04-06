@@ -13,9 +13,3 @@ export interface KCSignUpDTO {
   password: string;
   securityQuestions?: AddSecurityQuestionInput[];
 }
-
-export interface UserIdDTO {
-  newId: string;
-  oldId: string;
-  token?: string;
-}

@@ -82,14 +82,14 @@ export class AdminWriteService extends AuthenticateBaseService {
     // Rolle zuweisen
     await this.assignRealmRoleToUser(userId, RealmRoleType.ADMIN);
 
-    const token = await this.authService.login({ username, password });
+    const token = await this.authService.passwordLogin({ username, password });
     return token;
   }
 
   /**
    * Benutzer löschen.
    */
-  async deleteUser(id: string): Promise<void> {
+  async deleteUser(id: string, actorId: string): Promise<void> {
     await this.kcRequest('delete', `${paths.users}/${encodeURIComponent(id)}`);
 
     await this.prisma.authUser.delete({ where: { id } });
@@ -102,6 +102,8 @@ export class AdminWriteService extends AuthenticateBaseService {
         service: 'authentication.service',
         version: '1',
         type: 'EVENT',
+        actorId,
+        tenantId: 'omnixys',
       },
     });
 
@@ -113,8 +115,62 @@ export class AdminWriteService extends AuthenticateBaseService {
         service: 'authentication.service',
         version: '1',
         type: 'EVENT',
+        actorId,
+        tenantId: 'omnixys',
       },
     });
+
+        void this.kafka.send({
+          topic: KafkaTopics.event.delete,
+          payload: { userId: id },
+          meta: {
+            operation: 'Deleting Events from event-service',
+            service: 'authentication.service',
+            version: '1',
+            type: 'EVENT',
+            actorId,
+            tenantId: 'omnixys',
+          },
+        });
+    
+            void this.kafka.send({
+              topic: KafkaTopics.seat.removeGuestId,
+              payload: { userId: id },
+              meta: {
+                operation: 'Removing Seat Reservation from seat-service',
+                service: 'authentication.service',
+                version: '1',
+                type: 'EVENT',
+                actorId,
+                tenantId: 'omnixys',
+              },
+            });
+    
+            void this.kafka.send({
+              topic: KafkaTopics.invitation.deleteUserInvitations,
+              payload: { userId: id },
+              meta: {
+                operation: 'Deleting Invitations from invitation-service',
+                service: 'authentication.service',
+                version: '1',
+                type: 'EVENT',
+                actorId,
+                tenantId: 'omnixys',
+              },
+            });
+    
+            void this.kafka.send({
+              topic: KafkaTopics.ticket.deleteUserTickets,
+              payload: { userId: id },
+              meta: {
+                operation: 'Deleting Tickets from ticket-service',
+                service: 'authentication.service',
+                version: '1',
+                type: 'EVENT',
+                actorId,
+                tenantId: 'omnixys',
+              },
+            });
   }
 
   /**

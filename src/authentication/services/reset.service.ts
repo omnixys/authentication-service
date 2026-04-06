@@ -4,7 +4,6 @@
 
 import { ResetTokenState } from '../../prisma/generated/client.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
-import { RequestMeta } from '../models/dtos/request-meta.dto.js';
 import {
   MfaPreference,
   ResetVerificationResult,
@@ -23,6 +22,7 @@ import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/
 import { KafkaProducerService, KafkaTopics } from '@omnixys/kafka';
 import { OmnixysLogger } from '@omnixys/logger';
 import { HashService, HmacService } from '@omnixys/security';
+import { ClientContext } from '@omnixys/shared';
 import { AuthenticationResponseJSON } from '@simplewebauthn/server';
 import { randomBytes } from 'crypto';
 import { addMinutes } from 'date-fns';
@@ -46,7 +46,7 @@ export class ResetService extends AuthenticateBaseService {
     super(logger, http);
   }
 
-  async requestReset(email: string, context: RequestMeta): Promise<void> {
+  async requestReset(email: string, context: ClientContext): Promise<void> {
     this.logger.debug('Request Reset password Token');
 
     this.logger.debug('Check IP Rate Limit');
@@ -103,6 +103,7 @@ export class ResetService extends AuthenticateBaseService {
       location: context.location ?? 'Germany',
     });
 
+    // TODO actorId in Http Header schreiben nach login oder signUp
     void this.kafkaProducer.send({
       topic: KafkaTopics.notification.sendRequestReset,
       payload: {
@@ -119,6 +120,8 @@ export class ResetService extends AuthenticateBaseService {
         version: '1',
         operation: 'send Request Email to User',
         type: 'EVENT',
+        actorId: 'tmp',
+        tenantId: 'omnixys',
       },
     });
   }

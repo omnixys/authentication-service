@@ -95,7 +95,8 @@ export const env = {
   MAGIC_LINK_HMAC_SECRET:
     process.env.MAGIC_LINK_HMAC_SECRET ?? 'omnixys-magic-link-secret',
   ENCRYPTION_KEY: process.env.ENCRYPTION_KEY ?? 'omnixys-encryption-key',
-  FINGERPRINT_SECRET: process.env.FINGERPRINT_SECRET ?? 'omnixys-fingerprint-secret',
+  FINGERPRINT_SECRET:
+    process.env.FINGERPRINT_SECRET ?? 'omnixys-fingerprint-secret',
 } as const;
 
 /**

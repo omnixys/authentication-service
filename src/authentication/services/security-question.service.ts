@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
 
-import { HashService } from '@omnixys/security';
 import { SecurityQuestion } from '../../prisma/generated/client.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { SecurityQuestionInput } from '../models/inputs/security-question.input.js';
 import { Injectable, BadRequestException } from '@nestjs/common';
+import { HashService } from '@omnixys/security';
 
 export interface AddSecurityQuestionAnswerInput {
   questionId: string;

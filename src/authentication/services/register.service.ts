@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { env } from '../../config/env.js';
 import { paths } from '../../config/keycloak.js';
 import { MfaPreference } from '../../prisma/generated/enums.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
@@ -11,12 +12,15 @@ import { AuthWriteService } from './authentication-write.service.js';
 import { AuthenticateBaseService } from './keycloak-base.service.js';
 import { HttpService } from '@nestjs/axios';
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { ValkeyService } from '@omnixys/cache';
+import { ValkeyKey, ValkeyService } from '@omnixys/cache';
 import { KafkaProducerService, KafkaTopics } from '@omnixys/kafka';
 import { OmnixysLogger } from '@omnixys/logger';
 import { TraceRunner } from '@omnixys/observability';
-import { RealmRoleType } from '@omnixys/shared';
+import { EncryptionService } from '@omnixys/security';
+import { createTmpUsername, RealmRoleType, SignUpTokenPayload } from '@omnixys/shared';
 import * as argon2 from 'argon2';
+
+const { SERVICE } = env;
 
 @Injectable()
 export class RegisterService extends AuthenticateBaseService {
@@ -27,7 +31,8 @@ export class RegisterService extends AuthenticateBaseService {
     private authService: AuthWriteService,
     private adminService: AdminWriteService,
     private prisma: PrismaService,
-    private readonly valkey: ValkeyService,
+    private readonly cache: ValkeyService,
+    private readonly encryptionService: EncryptionService,
   ) {
     super(logger, http);
   }
@@ -36,7 +41,10 @@ export class RegisterService extends AuthenticateBaseService {
     return TraceRunner.run('Verify Keycloak SignUp', async () => {
       const key = `verification:signup:auth:${token}`;
 
-      const raw = await this.valkey.client.get(key);
+      const decryptedToken = this.encryptionService.decrypt(token, true);
+      const { authKey } = JSON.parse(decryptedToken) as SignUpTokenPayload;
+
+      const raw = await this.cache.get(ValkeyKey.signupVerificationAuth, authKey);
       if (!raw) {
         return { message: 'ALREADY_CONSUMED_OR_EXPIRED' };
       }
@@ -48,7 +56,7 @@ export class RegisterService extends AuthenticateBaseService {
         const payload = await this.signUp(input, token);
 
         // Delete key
-        await this.valkey.client.del(key);
+        await this.cache.client.del(key);
         payload.message = 'OK';
         return payload;
       } catch (e: any) {
@@ -58,7 +66,7 @@ export class RegisterService extends AuthenticateBaseService {
     });
   }
 
-  async signUp(input: KCSignUpDTO, valkeyToken?: string): Promise<SignUpPayload> {
+  async signUp(input: KCSignUpDTO, signUpToken: string): Promise<SignUpPayload> {
     return TraceRunner.run('Keycloak Sign Up', async () => {
       void this.logger.debug('signUp: input=%o', input);
 
@@ -127,29 +135,33 @@ export class RegisterService extends AuthenticateBaseService {
         }
 
         void this.producer.send({
-          topic: KafkaTopics.user.addId,
-          payload: { newId: userId, oldId: input.id, token: valkeyToken },
+          topic: KafkaTopics.user.createUser,
+          payload: { userId, token: signUpToken },
           meta: {
-            service: 'authentication-service',
+            service: SERVICE,
             operation: 'Add User ID from Kafka to UserService',
             version: '1',
             type: 'EVENT',
+            actorId: createTmpUsername(input.lastName, input.lastName),
+            tenantId: 'omnixys',
           },
         });
 
-        void this.producer.send<typeof KafkaTopics.address.createUserAddresses>({
+        void this.producer.send({
           topic: KafkaTopics.address.createUserAddresses,
-          payload: { userId, token: valkeyToken },
+          payload: { userId, token: signUpToken },
           meta: {
-            service: 'authentication-service',
+            service: SERVICE,
             operation: 'create User Addresses',
             version: '1',
             type: 'EVENT',
+            actorId: createTmpUsername(input.lastName, input.lastName),
+            tenantId: 'omnixys',
           },
         });
 
-        const token = await this.authService.login({ username, password });
-        return { userId, token };
+        const token = await this.authService.passwordLogin({ username, password });
+        return { userId, token, username };
       });
     });
   }

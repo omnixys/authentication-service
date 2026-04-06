@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
 import { OAuthService } from '../services/o-auth.service.js';
 import { Controller, Get, Param, Query, BadRequestException, Res } from '@nestjs/common';
+import { ClientInfo } from '@omnixys/context';
+import { ClientContext } from '@omnixys/shared';
 import { FastifyReply } from 'fastify';
 
 const isProd = process.env.NODE_ENV === 'production';
@@ -28,6 +30,7 @@ export class OAuthController {
   ===================================================== */
   @Get(':provider/callback')
   async callback(
+    @ClientInfo() client: ClientContext,
     @Param('provider') provider: string,
     @Res() reply: FastifyReply,
     @Query('code') code?: string,
@@ -42,7 +45,7 @@ export class OAuthController {
       throw new BadRequestException('Missing OAuth parameters');
     }
 
-    const token = await this.oauthService.handleCallback(provider, code, state);
+    const token = await this.oauthService.handleCallback(provider, code, state, client);
     /* -----------------------------
        Cookie setzen (Fastify!)
     ----------------------------- */

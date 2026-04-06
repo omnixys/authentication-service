@@ -17,7 +17,6 @@
  */
 
 import { JsonScalar } from '../../core/scalars/json.scalar.js';
-import { RequestMeta } from '../models/dtos/request-meta.dto.js';
 import { LogInInput } from '../models/inputs/log-in.input.js';
 import { LoginTotpInput } from '../models/inputs/login-totp.input.js';
 import { SuccessPayload } from '../models/payloads/success.payload.js';
@@ -41,7 +40,7 @@ import {
   CurrentUserData,
   Public,
 } from '@omnixys/security';
-import { ClientInfo as ClientInfoType } from '@omnixys/shared';
+import { ClientContext } from '@omnixys/shared';
 import { AuthenticationResponseJSON } from '@simplewebauthn/server';
 
 /**
@@ -85,7 +84,7 @@ export class AuthMutationResolver {
   @Public()
   async credentialsLogin(
     @Args('input', { type: () => LogInInput }) input: LogInInput,
-    @ClientInfo() client: ClientInfoType,
+    @ClientInfo() client: ClientContext,
   ): Promise<TokenPayload> {
     return TraceRunner.run('Credentials Login Resolver', async () => {
       // const res = ctx?.reply;
@@ -96,7 +95,7 @@ export class AuthMutationResolver {
       const acceptLanguage = client.locale;
       const clientDeviceId = client.device;
 
-      return this.authService.login({
+      return this.authService.passwordLogin({
         ...input,
         ip,
         userAgent,
@@ -183,6 +182,7 @@ export class AuthMutationResolver {
   @Mutation(() => TokenPayload)
   async verifyPasswordlessAuthentication(
     @Args('response', { type: () => JsonScalar }) response: unknown,
+    @ClientInfo() client: ClientContext,
   ): Promise<TokenPayload> {
     return TraceRunner.run('Verify Passwordless Auth Resolver', async () => {
       if (!response || typeof response !== 'object') {
@@ -198,7 +198,10 @@ export class AuthMutationResolver {
         throw new UnauthorizedException('Authentication failed');
       }
 
-      const token = await this.authService.createPasswordlessSession(userId);
+      const token = await this.authService.createPasswordlessSession(
+        userId,
+        client,
+      );
       return token;
     });
   }
@@ -206,6 +209,7 @@ export class AuthMutationResolver {
   @Mutation(() => TokenPayload)
   async verifyWebAuthnAuthentication(
     @Args('response', { type: () => JsonScalar }) response: unknown,
+    @ClientInfo() client: ClientContext,
   ): Promise<TokenPayload> {
     return TraceRunner.run('Verify WebAuthn Resolver', async () => {
       if (!response || typeof response !== 'object') {
@@ -221,18 +225,34 @@ export class AuthMutationResolver {
         throw new UnauthorizedException('Authentication failed');
       }
 
-      const token = await this.authService.createPasswordlessSession(userId);
+      const token = await this.authService.createPasswordlessSession(
+        userId,
+        client,
+      );
       return token;
     });
   }
 
   @Mutation(() => TokenPayload)
-  async loginTotp(@Args('input') input: LoginTotpInput): Promise<TokenPayload> {
+  async loginTotp(
+    @Args('input') input: LoginTotpInput,
+    @ClientInfo() client: ClientContext,
+  ): Promise<TokenPayload> {
     return TraceRunner.run('Login TOTP Resolver', async () => {
-      const token = await this.authService.loginWithTotp(
-        input.username,
-        input.code,
-      );
+      const ip = client.ip;
+      const userAgent = client.userAgent;
+      const acceptLanguage = client.locale;
+      const clientDeviceId = client.device;
+
+      const token = await this.authService.loginWithTotp({
+        username: input.username,
+        code: input.code,
+
+        ip,
+        userAgent,
+        acceptLanguage,
+        clientDeviceId,
+      });
       return token;
     });
   }
@@ -240,18 +260,11 @@ export class AuthMutationResolver {
   @Mutation(() => Boolean)
   async sendMagicLink(
     @Args('email') email: string,
-    @ClientInfo() client: ClientInfoType,
+    @ClientInfo() client: ClientContext,
   ): Promise<boolean> {
     return TraceRunner.run('Send Magic Link Resolver', async () => {
       try {
-        const context: RequestMeta = {
-          ip: client.ip,
-          device: client.device,
-          locale: client.locale,
-          location: client.location,
-        };
-
-        void this.authService.requestMagicLink(email, context);
+        void this.authService.requestMagicLink(email, client);
       } catch (error) {
         // Intentionally swallow errors to avoid leaking account existence.
         // Log internally for monitoring & auditing.
@@ -267,9 +280,15 @@ export class AuthMutationResolver {
   }
 
   @Mutation(() => TokenPayload)
-  async verifyMagicLink(@Args('token') token: string): Promise<TokenPayload> {
+  async verifyMagicLink(
+    @Args('token') token: string,
+    @ClientInfo() client: ClientContext,
+  ): Promise<TokenPayload> {
     return TraceRunner.run('Verify Magic Link Resolver', async () => {
-      const tokenPayload = await this.authService.loginWithMagicLink(token);
+      const tokenPayload = await this.authService.loginWithMagicLink(
+        token,
+        client,
+      );
       return tokenPayload;
     });
   }

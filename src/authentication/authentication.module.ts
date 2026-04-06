@@ -15,14 +15,12 @@
  * For more information, visit <https://www.gnu.org/licenses/>.
  */
 
-import { DeviceService } from '@omnixys/security';
 import { CoreHttpModule } from '../http.module.js';
 import { PrismaModule } from '../prisma/prisma.module.js';
 import { OAuthController } from './controllers/o-auth.controller.js';
 import { AdminMutationResolver } from './resolvers/admin-mutation.resolver.js';
 import { AuthMutationResolver } from './resolvers/authentication-mutation.resolver.js';
 import { AuthQueryResolver } from './resolvers/authentication-query.resolver.js';
-import { DebugResolver } from './resolvers/debug.resolver.js';
 import { MfaMutationResolver } from './resolvers/mfa-mutation.resolver.js';
 import { RegisterResolver } from './resolvers/register.resolver.js';
 import { ResetMutationResolver } from './resolvers/reset-mutation.resolver.js';
@@ -41,6 +39,7 @@ import { TotpService } from './services/totp.service.js';
 import { UserWriteService } from './services/user-write.service.js';
 import { WebAuthnService } from './services/web-authn.service.js';
 import { Module } from '@nestjs/common';
+import { DeviceService } from '@omnixys/security';
 
 @Module({
   imports: [CoreHttpModule, PrismaModule],
@@ -54,7 +53,6 @@ import { Module } from '@nestjs/common';
     MfaMutationResolver,
     ResetMutationResolver,
     RegisterResolver,
-    DebugResolver,
 
     AuthenticateReadService,
     UserWriteService,

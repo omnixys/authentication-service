@@ -20,9 +20,8 @@
 import { keycloakConfig, paths } from '../../config/keycloak.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import type { KeycloakToken } from '../models/dtos/kc-token.dto.js';
-import { RequestMeta } from '../models/dtos/request-meta.dto.js';
-import { AuthContext } from '../models/entitys/login-context.js';
 import type { LogInInput } from '../models/inputs/log-in.input.js';
+import { LoginTotpInput } from '../models/inputs/login-totp.input.js';
 import { toToken } from '../models/mappers/token.mapper.js';
 import type { TokenPayload } from '../models/payloads/token.payload.js';
 import { AuthenticateBaseService } from './keycloak-base.service.js';
@@ -34,9 +33,26 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ValkeyKey, ValkeyService } from '@omnixys/cache';
 import { KafkaProducerService, KafkaTopics } from '@omnixys/kafka';
 import { OmnixysLogger } from '@omnixys/logger';
-import { AccessBlockedException, DeviceService, FingerprintService, HashService, RiskEngineService, RiskMemoryService, StepUpRequiredException, ZeroTrustService } from '@omnixys/security';
+import {
+  AccessBlockedException,
+  DeviceService,
+  HashService,
+  RiskMemoryService,
+  StepUpRequiredException,
+  ZeroTrustService,
+} from '@omnixys/security';
+import { ClientContext } from '@omnixys/shared';
 import { randomBytes } from 'crypto';
 
+export interface RequestContext {
+  ip?: string;
+  userAgent?: string;
+  acceptLanguage?: string;
+  clientDeviceId?: string;
+}
+export interface RiskEvaluationRequest extends RequestContext {
+  username: string;
+}
 /**
  * @file Mutierende Operationen gegen Keycloak (Authentication-Flows & User-Mutationen).
  *  - login/refresh/logout
@@ -49,9 +65,7 @@ export class AuthWriteService extends AuthenticateBaseService {
   constructor(
     logger: OmnixysLogger,
     http: HttpService,
-    private readonly risk: RiskEngineService,
     private readonly deviceService: DeviceService,
-    private readonly fingerPrintService: FingerprintService,
     private readonly prisma: PrismaService,
     private readonly cache: ValkeyService,
     private readonly kafka: KafkaProducerService,
@@ -69,14 +83,7 @@ export class AuthWriteService extends AuthenticateBaseService {
    * Password-Login (ROPC).
    * @returns TokenPayload oder null (bei invalid_grant)
    */
-  async login(
-    input: LogInInput & {
-      ip?: string;
-      userAgent?: string;
-      acceptLanguage?: string;
-      clientDeviceId?: string;
-    },
-  ): Promise<TokenPayload> {
+  async passwordLogin(input: LogInInput & RequestContext): Promise<TokenPayload> {
     const { username, password } = input;
 
     if (!username || !password) {
@@ -129,7 +136,7 @@ export class AuthWriteService extends AuthenticateBaseService {
         throw new UnauthorizedException('username oder passwort falsch!');
       }
 
-      await this.riskMemory.resetFailures(userId); 
+      await this.riskMemory.resetFailures(userId);
 
       if (input.ip) {
         await this.riskMemory.storeLastIp(userId, input.ip);
@@ -187,125 +194,136 @@ export class AuthWriteService extends AuthenticateBaseService {
     });
   }
 
-  async createPasswordlessSession(userId: string): Promise<TokenPayload> {
-    const body = new URLSearchParams({
-      grant_type: 'client_credentials',
-      client_id: keycloakConfig.clientId,
-      client_secret: keycloakConfig.clientSecret,
-    });
+  async createPasswordlessSession(userId: string, context: RequestContext): Promise<TokenPayload> {
+    const riskResult = await this.zeroTrustService.evaluate({
+      userId,
+      ip: context.ip,
+      userAgent: context.userAgent,
+      acceptLanguage: context.acceptLanguage,
+      clientDeviceId: context.clientDeviceId,
 
-    const serviceToken = await this.kcRequest<KeycloakToken>('post', paths.accessToken, {
-      data: body.toString(),
-      headers: this.loginHeaders,
-      adminAuth: false,
-    });
-
-    // Jetzt impersonation:
-    const exchangeBody = new URLSearchParams({
-      grant_type: 'urn:ietf:params:oauth:grant-type:token-exchange',
-      client_id: keycloakConfig.clientId,
-      subject_token: serviceToken.access_token,
-      subject_token_type: 'urn:ietf:params:oauth:token-type:access_token',
-      requested_subject: userId,
-      scope: 'openid profile email',
-    });
-
-    const exchanged = await this.kcRequest<KeycloakToken>('post', paths.accessToken, {
-      data: exchangeBody.toString(),
-      headers: this.loginHeaders,
-      adminAuth: false,
-    });
-
-    return toToken(exchanged);
-  }
-
-  /**
-   * Password login + adaptive risk.
-   */
-  async loginWithRisk(username: string, password: string, ctx: AuthContext): Promise<TokenPayload> {
-    // 1) Perform Keycloak login
-    const token = await this.login({ username, password });
-
-    // 2) Ensure local auth user exists (your DB, not Keycloak)
-    const email = username; // you use email as username
-    const user =
-      (await this.prisma.authUser.findUnique({ where: { email } })) ??
-      (await this.prisma.authUser.create({
-        data: {
-          email,
-          username,
-          // mfaPreference default NONE
-        },
-      }));
-
-    // 3) Evaluate risk
-    const risk = await this.risk.evaluate({
-      userId: user.id,
-      ip: ctx.ip,
-      userAgent: ctx.userAgent,
-      acceptLanguage: ctx.acceptLanguage,
-      clientDeviceId: ctx.clientDeviceId,
-      isPasswordless: false,
+      isPasswordless: true,
       isResetFlow: false,
-      failedAttempts: user.failedAttempts,
     });
 
-    if (risk.decision === 'BLOCK') {
-      // English comment tailored for VS:
-      // Fail closed on high risk and avoid leaking details.
-      throw new UnauthorizedException('Login blocked');
+    if (riskResult.decision === 'BLOCK') {
+      throw new AccessBlockedException(riskResult.reasons);
     }
 
-    if (risk.decision !== 'STEP_UP') {
-      // English comment tailored for VS:
-      // In v1 we hard-fail and require a step-up flow.
-      // In v2 return a StepUpRequired payload and persist a temporary step-up session.
-      throw new UnauthorizedException(`Step-up required: ${risk.decision}`);
+    if (riskResult.decision === 'STEP_UP') {
+      throw new StepUpRequiredException(riskResult.stepUp!, riskResult.reasons);
     }
 
-    // 4) Success → reset failures (optional)
-    if (user.failedAttempts !== 0) {
-      await this.prisma.authUser.update({
-        where: { id: user.id },
-        data: { failedAttempts: 0, lockedUntil: null },
+    try {
+      const body = new URLSearchParams({
+        grant_type: 'client_credentials',
+        client_id: keycloakConfig.clientId,
+        client_secret: keycloakConfig.clientSecret,
       });
+
+      const serviceToken = await this.kcRequest<KeycloakToken>('post', paths.accessToken, {
+        data: body.toString(),
+        headers: this.loginHeaders,
+        adminAuth: false,
+      });
+
+      // Jetzt impersonation:
+      const exchangeBody = new URLSearchParams({
+        grant_type: 'urn:ietf:params:oauth:grant-type:token-exchange',
+        client_id: keycloakConfig.clientId,
+        subject_token: serviceToken.access_token,
+        subject_token_type: 'urn:ietf:params:oauth:token-type:access_token',
+        requested_subject: userId,
+        scope: 'openid profile email',
+      });
+
+      const exchanged = await this.kcRequest<KeycloakToken>('post', paths.accessToken, {
+        data: exchangeBody.toString(),
+        headers: this.loginHeaders,
+        adminAuth: false,
+      });
+
+      if (!exchanged) {
+        await this.riskMemory.incrementFailures(userId);
+
+        throw new UnauthorizedException('Token exchange failed');
+      }
+
+      await this.riskMemory.resetFailures(userId);
+
+      if (context.ip) {
+        await this.riskMemory.storeLastIp(userId, context.ip);
+      }
+
+      await this.deviceService.register(userId, context.clientDeviceId ?? 'unknown');
+
+      return toToken(exchanged);
+    } catch (err) {
+      await this.hashService.dummyVerify();
+      throw err;
     }
-
-    // 5) (Optional) fingerprint is computed but not stored here.
-    void this.fingerPrintService.create({
-      ip: ctx.ip ?? 'unknown',
-      userAgent: ctx.userAgent ?? 'unknown',
-      acceptLanguage: ctx.acceptLanguage,
-      clientDeviceId: ctx.clientDeviceId ?? 'unknown',
-    });
-
-    return token;
   }
 
-  async loginWithTotp(username: string, code: string): Promise<TokenPayload> {
+  async loginWithTotp(input: LoginTotpInput & RequestContext): Promise<TokenPayload> {
+    const { username, code } = input;
+
     if (!username || !code) {
       throw new UnauthorizedException('Missing credentials');
     }
 
-    const user = await this.prisma.authUser.findUnique({
-      where: { email: username },
+    const userId = (await this.readService.findByUsername(username)).id;
+
+    const riskResult = await this.zeroTrustService.evaluate({
+      userId,
+      ip: input.ip,
+      userAgent: input.userAgent,
+      acceptLanguage: input.acceptLanguage,
+      clientDeviceId: input.clientDeviceId,
+
+      isPasswordless: true,
+      isResetFlow: false,
     });
 
-    if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
+    if (riskResult.decision === 'BLOCK') {
+      throw new AccessBlockedException(riskResult.reasons);
     }
 
-    const valid = await this.totpService.verifyForUser(user.id, code);
-
-    if (!valid) {
-      throw new UnauthorizedException('Invalid TOTP code');
+    if (riskResult.decision === 'STEP_UP') {
+      throw new StepUpRequiredException(riskResult.stepUp!, riskResult.reasons);
     }
 
-    // create session via token exchange
-    return this.createPasswordlessSession(user.id);
+    try {
+      const user = await this.prisma.authUser.findUnique({
+        where: { email: username },
+      });
+
+      if (!user) {
+        throw new UnauthorizedException('Invalid credentials');
+      }
+
+      const valid = await this.totpService.verifyForUser(user.id, code);
+
+      if (!valid) {
+        throw new UnauthorizedException('Invalid TOTP code');
+      }
+
+      await this.riskMemory.resetFailures(userId);
+
+      if (input.ip) {
+        await this.riskMemory.storeLastIp(userId, input.ip);
+      }
+
+      await this.deviceService.register(userId, input.clientDeviceId ?? 'unknown');
+
+      // create session via token exchange
+      return this.createPasswordlessSession(user.id, input);
+    } catch (err) {
+      await this.hashService.dummyVerify();
+      throw err;
+    }
   }
 
-  async requestMagicLink(email: string, context: RequestMeta): Promise<boolean> {
+  async requestMagicLink(email: string, context: ClientContext): Promise<boolean> {
     this.logger.debug('requesting magic link for email %s', email);
 
     await this.lockout.checkIpRateLimit(context?.ip, 'magic-link');
@@ -338,6 +356,8 @@ export class AuthWriteService extends AuthenticateBaseService {
       5 * 60,
     );
 
+    // ActorId in den header setzen
+
     void this.kafka.send({
       topic: KafkaTopics.notification.sendMagicLink,
       payload: {
@@ -354,13 +374,15 @@ export class AuthWriteService extends AuthenticateBaseService {
         operation: ' sending Magic Link Email Request tu User',
         version: '1',
         type: 'EVENT',
+        actorId: 'tmp',
+        tenantId: 'omnixys',
       },
     });
 
     return true;
   }
 
-  async loginWithMagicLink(token: string): Promise<TokenPayload> {
+  async loginWithMagicLink(token: string, context: RequestContext): Promise<TokenPayload> {
     if (!token || token.length < 32) {
       throw new UnauthorizedException('Invalid token');
     }
@@ -379,9 +401,38 @@ export class AuthWriteService extends AuthenticateBaseService {
 
     await this.cache.delete(ValkeyKey.magicLinkToken, token);
 
-    // Optional: additional risk evaluation
-    // await this.risk.evaluate({ ... });
+    const riskResult = await this.zeroTrustService.evaluate({
+      userId: payload.userId,
+      ip: context.ip,
+      userAgent: context.userAgent,
+      acceptLanguage: context.acceptLanguage,
+      clientDeviceId: context.clientDeviceId,
 
-    return this.createPasswordlessSession(payload.userId);
+      isPasswordless: true,
+      isResetFlow: false,
+    });
+
+    if (riskResult.decision === 'BLOCK') {
+      throw new AccessBlockedException(riskResult.reasons);
+    }
+
+    if (riskResult.decision === 'STEP_UP') {
+      throw new StepUpRequiredException(riskResult.stepUp!, riskResult.reasons);
+    }
+
+    try {
+      await this.riskMemory.resetFailures(payload.userId);
+
+      if (context.ip) {
+        await this.riskMemory.storeLastIp(payload.userId, context.ip);
+      }
+
+      await this.deviceService.register(payload.userId, context.clientDeviceId ?? 'unknown');
+
+      return this.createPasswordlessSession(payload.userId, context);
+    } catch (err) {
+      await this.hashService.dummyVerify();
+      throw err;
+    }
   }
 }

@@ -124,7 +124,7 @@ export class AuthQueryResolver {
 
   @Query(() => KcUser, { name: 'meAuth' })
   @UseGuards(CookieAuthGuard, RoleGuard)
-  @Roles(RealmRoleType.ADMIN, RealmRoleType.USER)
+  @Roles(RealmRoleType.ADMIN, RealmRoleType.USER, RealmRoleType.GUEST)
   async me(@CurrentUser() currentUser: CurrentUserData): Promise<KcUser> {
     this.logger.debug('me By Cookie');
 

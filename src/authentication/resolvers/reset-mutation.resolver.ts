@@ -2,7 +2,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 
 import { JsonScalar } from '../../core/scalars/json.scalar.js';
-import { RequestMeta } from '../models/dtos/request-meta.dto.js';
 import { MfaPreference } from '../models/dtos/reset-verification-result.dto.js';
 import { ResetService } from '../services/reset.service.js';
 import { BadRequestException } from '@nestjs/common';
@@ -16,7 +15,7 @@ import {
 } from '@nestjs/graphql';
 import { ClientInfo } from '@omnixys/context';
 import { OmnixysLogger } from '@omnixys/logger';
-import { ClientInfo as ClientInfoType } from '@omnixys/shared';
+import { ClientContext } from '@omnixys/shared';
 import { AuthenticationResponseJSON } from '@simplewebauthn/server';
 
 /* =======================================================
@@ -108,16 +107,10 @@ export class ResetMutationResolver {
   @Mutation(() => Boolean)
   async requestPasswordReset(
     @Args('email', { type: () => String }) email: string,
-    @ClientInfo() client: ClientInfoType,
+    @ClientInfo() client: ClientContext,
   ): Promise<boolean> {
     try {
-      const context: RequestMeta = {
-        ip: client.ip,
-        device: client.device,
-        locale: client.locale,
-        location: client.location,
-      };
-      await this.resetService.requestReset(email, context);
+      await this.resetService.requestReset(email, client);
     } catch (error) {
       // Intentionally swallow errors to avoid leaking account existence.
       // Log internally for monitoring & auditing.

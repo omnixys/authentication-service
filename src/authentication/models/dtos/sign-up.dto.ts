@@ -19,18 +19,6 @@ import { Field, InputType } from '@nestjs/graphql';
 import { PhoneNumberInput } from '@omnixys/graphql';
 import { IsEmail, IsString, Length } from 'class-validator';
 
-export interface GuestSignUpDTO {
-  invitationId: string;
-  seatId?: string;
-  eventId: string;
-  firstName: string;
-  lastName: string;
-  pendingContactId?: string | null;
-  email?: string;
-  phoneNumbers?: PhoneNumberInput[];
-  actorId?: string;
-}
-
 /**
  * Input type for creating a new user.
  * Corresponds to fields in the User entity.

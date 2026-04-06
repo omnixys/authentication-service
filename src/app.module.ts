@@ -15,7 +15,8 @@
  * For more information, visit <https://www.gnu.org/licenses/>.
  */
 
-import { ValkeyAdapterModule } from './adapter/valkey-adapter.module.js';
+import { RateLimitValkeyAdapterModule } from './adapter/rate-limit/rate-limit-valkey-adapter.module.js';
+import { ZeroTrustValkeyAdapterModule } from './adapter/zero-trust/zero-trust-valkey-adapter.module.js';
 import { AdminModule } from './admin/admin.module.js';
 import { AuthenticationModule } from './authentication/authentication.module.js';
 import { BannerService } from './banner.service.js';
@@ -50,7 +51,7 @@ const {
 @Module({
   imports: [
     ValkeyModule.forRoot({
-      serviceName: `${SERVICE}-service`,
+      serviceName: SERVICE,
       url: VALKEY_URL,
       password: VALKEY_PASSWORD,
 
@@ -83,12 +84,11 @@ const {
         ],
       },
 
-      session: {
-        ttlMs: 1000 * 60 * 60,
-      },
-
       rateLimit: {
         enabled: true,
+        defaultLimit: 100,
+        defaultWindowMs: 60000,
+        imports: [RateLimitValkeyAdapterModule],
       },
 
       hash: {
@@ -100,16 +100,17 @@ const {
       },
 
       zeroTrust: {
-        imports: [ValkeyAdapterModule],
+        imports: [ZeroTrustValkeyAdapterModule],
       },
 
       fingerprintSecret: FINGERPRINT_SECRET,
       globalGuards: false,
     }),
     KafkaModule.forRoot({
-      clientId: `${SERVICE}-service`,
+      clientId: SERVICE,
       brokers: [KAFKA_BROKER],
-      groupId: `${SERVICE}-consumer`,
+      groupId: `${SERVICE}-group`,
+      serviceName: SERVICE
     }),
 
     ObservabilityModule.forRoot({

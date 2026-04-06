@@ -14,25 +14,26 @@
  *
  * For more information, visit <https://www.gnu.org/licenses/>.
  */
-import { UserSignUpInput } from '../models/inputs/sign-up.input.js';
 import { ChangeMyPasswordInput } from '../models/inputs/update-password.input.js';
 import { UpdateMyProfileInput } from '../models/inputs/user-update.input.js';
+import { GuestSignUpPayload } from '../models/payloads/sign-in.payload.js';
 import { SuccessPayload } from '../models/payloads/success.payload.js';
-import { TokenPayload } from '../models/payloads/token.payload.js';
 import { UserWriteService } from '../services/user-write.service.js';
 import {
   UnauthorizedException,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { Args, Context, Mutation, Resolver } from '@nestjs/graphql';
-import { GqlFastifyContext, gqlSetTokens } from '@omnixys/context';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { ClientInfo } from '@omnixys/context';
 import { LoggingInterceptor, OmnixysLogger } from '@omnixys/logger';
+import { TraceRunner } from '@omnixys/observability';
 import {
   CookieAuthGuard,
   CurrentUser,
   CurrentUserData,
 } from '@omnixys/security';
+import { type ClientContext } from '@omnixys/shared';
 
 @Resolver()
 @UseInterceptors(LoggingInterceptor)
@@ -87,26 +88,35 @@ export class UserMutationResolver {
     return { ok: true, message: 'Profile updated' };
   }
 
-  @Mutation(() => TokenPayload, { name: 'userSignUp' })
-  async userSignIn(
-    @Args('input', { type: () => UserSignUpInput }) input: UserSignUpInput,
-    @Context() ctx: GqlFastifyContext,
-  ): Promise<TokenPayload> {
-    this.log.debug('signIn: input=%o', input);
-    const result = await this.userService.userSignUp(input);
-    const res = ctx?.reply;
+  // @Mutation(() => TokenPayload, { name: 'userSignUp' })
+  // async userSignIn(
+  //   @Args('input', { type: () => UserSignUpInput }) input: UserSignUpInput,
+  //   @Context() ctx: GqlFastifyContext,
+  // ): Promise<TokenPayload> {
+  //   this.log.debug('signIn: input=%o', input);
+  //   const result = await this.userService.userSignUp(input);
+  //   const res = ctx?.reply;
 
-    gqlSetTokens(res, result.accessToken, result.expiresIn * 1000);
+  //   gqlSetTokens(res, result.accessToken, result.expiresIn * 1000);
 
-    return result;
-  }
-
-  // @Mutation(() => SignUpPayload, { name: 'guestSignUp' })
-  // async guestSignIn(
-  //   @Args('input', { type: () => GuestSignUpInput }) input: GuestSignUpInput,
-  // ): Promise<SignUpPayload> {
-  //   this.logger.debug('signIn: input=%o', input);
-  //   const result = await this.userService.guestSignUp(input);
   //   return result;
   // }
+
+  @Mutation(() => GuestSignUpPayload, { name: 'verifyGuestSignUp' })
+  async verifyGuestSignUp(
+    @Args('token') token: string,
+    @ClientInfo() clientInfo: ClientContext,
+  ): Promise<GuestSignUpPayload> {
+    return TraceRunner.run(
+      '[RESOLVER] Verify Guest SignUp',
+      async (): Promise<GuestSignUpPayload> => {
+        this.log.debug('guestSignUp: token=%s', token);
+        const result = await this.userService.guestSignUp(token, clientInfo);
+        return {
+          message: result.message,
+          results: result.users
+        }
+      },
+    );
+  }
 }

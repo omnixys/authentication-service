@@ -22,11 +22,18 @@ import {
 } from '../models/inputs/update-user.input.js';
 import { TokenPayload } from '../models/payloads/token.payload.js';
 import { AdminWriteService } from '../services/admin-write.service.js';
-import { UseInterceptors } from '@nestjs/common';
+import { UseGuards, UseInterceptors } from '@nestjs/common';
 import { Args, Context, ID, Mutation, Resolver } from '@nestjs/graphql';
 import { GqlFastifyContext, gqlSetTokens } from '@omnixys/context';
 import { getLogger, LoggingInterceptor } from '@omnixys/logger';
 import { TraceRunner } from '@omnixys/observability';
+import {
+  CookieAuthGuard,
+  CurrentUser,
+  CurrentUserData,
+  RoleGuard,
+  Roles,
+} from '@omnixys/security';
 import { RealmRoleType } from '@omnixys/shared';
 
 /**
@@ -116,11 +123,14 @@ export class AdminMutationResolver {
    * @returns A boolean value indicating whether the user was deleted successfully.
    */
   @Mutation(() => Boolean, { name: 'deleteKcUser' })
+  @UseGuards(CookieAuthGuard, RoleGuard)
+  @Roles(RealmRoleType.ADMIN)
   async deleteUser(
     @Args('id', { type: () => ID }) id: string,
+    @CurrentUser() CurrentUser: CurrentUserData,
   ): Promise<boolean> {
     return TraceRunner.run('Delete User Resolver', async () => {
-      await this.adminService.deleteUser(id);
+      await this.adminService.deleteUser(id, CurrentUser.id);
       return true;
     });
   }

@@ -9,6 +9,7 @@ import { HttpService } from '@nestjs/axios';
 import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { ValkeyKey, ValkeyService } from '@omnixys/cache';
 import { OmnixysLogger } from '@omnixys/logger';
+import { ClientContext } from '@omnixys/shared';
 
 /* =========================================================
    TYPE DEFINITIONS
@@ -89,7 +90,7 @@ export class OAuthService extends AuthenticateBaseService {
      STEP 2 – Handle Callback + Validate State
   ===================================================== */
 
-  async handleCallback(provider: string, code: string, state: string) {
+  async handleCallback(provider: string, code: string, state: string, client: ClientContext) {
     const stored = await this.cache.client.get(`oauth:state:${state}`);
 
     if (!stored || stored !== provider) {
@@ -99,11 +100,11 @@ export class OAuthService extends AuthenticateBaseService {
     await this.cache.client.del(`oauth:state:${state}`);
 
     if (provider === 'github') {
-      return this.handleGithub(code);
+      return this.handleGithub(code, client);
     }
 
     if (provider === 'google') {
-      return this.handleGoogle(code);
+      return this.handleGoogle(code, client);
     }
 
     if (!['github', 'google'].includes(provider)) {
@@ -117,7 +118,7 @@ export class OAuthService extends AuthenticateBaseService {
      GITHUB FLOW
   ===================================================== */
 
-  private async handleGithub(code: string) {
+  private async handleGithub(code: string, client: ClientContext) {
     const tokenRes = await fetch('https://github.com/login/oauth/access_token', {
       method: 'POST',
       headers: { Accept: 'application/json' },
@@ -176,14 +177,14 @@ export class OAuthService extends AuthenticateBaseService {
       name: githubUser.name ?? undefined,
     });
 
-    return this.authService.createPasswordlessSession(user.id);
+    return this.authService.createPasswordlessSession(user.id, client);
   }
 
   /* =====================================================
      GOOGLE FLOW
   ===================================================== */
 
-  private async handleGoogle(code: string) {
+  private async handleGoogle(code: string, client: ClientContext) {
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -221,7 +222,7 @@ export class OAuthService extends AuthenticateBaseService {
       name: googleUser.name,
     });
 
-    return this.authService.createPasswordlessSession(user.id);
+    return this.authService.createPasswordlessSession(user.id, client);
   }
 
   /* =====================================================

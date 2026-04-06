@@ -1,5 +1,3 @@
-// src/infrastructure/security/valkey-risk-memory.store.ts
-
 import { Injectable } from '@nestjs/common';
 import { ValkeyService } from '@omnixys/cache';
 import { RiskMemoryStore } from '@omnixys/security';
