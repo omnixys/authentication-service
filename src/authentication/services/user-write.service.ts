@@ -29,7 +29,7 @@ import { AuthenticateBaseService } from './keycloak-base.service.js';
 import { AuthenticateReadService } from './read.service.js';
 import { HttpService } from '@nestjs/axios';
 import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
-import { ValkeyKey, ValkeyService } from '@omnixys/cache';
+import { DelayedJobKeys, DelayedJobService, ValkeyKey, ValkeyService } from '@omnixys/cache';
 import { EventType, KafkaProducerService, KafkaTopics } from '@omnixys/kafka';
 import { OmnixysLogger } from '@omnixys/logger';
 import { TraceRunner } from '@omnixys/observability';
@@ -54,7 +54,13 @@ export interface GuestSignUp {
   users?: SignUpResult[];
   message?: string;
 }
+//TODO Enum statt strings bei guestVerify
 
+export enum VerifyGuestMessage {
+  SUCCESS = 'SUCCESS',
+  ALREADY_CONSUMED_OR_EXPIRED = 'ALREADY_CONSUMED_OR_EXPIRED',
+  INVALID_TOKEN = 'INVALID_TOKEN',
+}
 /**
  * @file Mutierende Operationen gegen Keycloak (Authentication-Flows & User-Mutationen).
  *  - login/refresh/logout
@@ -74,6 +80,7 @@ export class UserWriteService extends AuthenticateBaseService {
     private readonly encryptionServie: EncryptionService,
     private readonly cacheService: ValkeyService,
     private readonly prisma: PrismaService,
+    private readonly delayedJobService: DelayedJobService,
   ) {
     super(omnixysLogger, http);
   }
@@ -121,7 +128,7 @@ export class UserWriteService extends AuthenticateBaseService {
           /**
            * Create user
            */
-          const user = await this.createUser({
+          const user = await this.createGuestUser({
             firstName: invitee.firstName,
             lastName: invitee.lastName,
             email: invitee.email,
@@ -183,7 +190,7 @@ export class UserWriteService extends AuthenticateBaseService {
   /**
    * Creates a single user in Keycloak + DB
    */
-  async createUser(data: {
+  async createGuestUser(data: {
     firstName: string;
     lastName: string;
     email?: string;
@@ -241,6 +248,12 @@ export class UserWriteService extends AuthenticateBaseService {
         username,
         mfaPreference: MfaPreference.SECURITY_QUESTIONS,
       },
+    });
+
+    await this.delayedJobService.schedule({
+      type: DelayedJobKeys.user.delete,
+      payload: { userId: userId },
+      delayMs: 30_000,
     });
 
     return {

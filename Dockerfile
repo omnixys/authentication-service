@@ -18,7 +18,7 @@
 # ---------------------------------------------------------------------------------------
 # syntax=docker/dockerfile:1.14.0
 
-ARG NODE_VERSION=24.10.0
+ARG NODE_VERSION=25.8.2
 
 # ---------------------------------------------------------------------------------------
 # Stage 0: Base image
@@ -27,7 +27,7 @@ ARG NODE_VERSION=24.10.0
 # ---------------------------------------------------------------------------------------
 FROM node:${NODE_VERSION}-bookworm-slim AS base
 WORKDIR /home/node
-RUN corepack enable pnpm
+RUN npm install -g pnpm@10.33.0
 
 # ---------------------------------------------------------------------------------------
 # Stage 1: Build (dist)
@@ -106,7 +106,7 @@ RUN apt-get update && \
     mkdir -p /opt/app/log && chown -R node:node /opt/app
 
 # ----- Enable pnpm (runtime) -----
-RUN corepack enable pnpm
+RUN npm install -g pnpm@10.33.0
 
 # ----- Switch to non-root user -----
 USER node

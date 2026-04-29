@@ -9,7 +9,7 @@ CREATE TYPE "security_question_key" AS ENUM ('FIRST_PET', 'BIRTH_CITY', 'MOTHER_
 
 -- CreateTable
 CREATE TABLE "auth_user" (
-    "id" TEXT NOT NULL,
+    "id" UUID NOT NULL,
     "email" TEXT NOT NULL,
     "username" TEXT NOT NULL,
     "mfa_preference" "mfa_preference" NOT NULL DEFAULT 'NONE',
@@ -23,18 +23,18 @@ CREATE TABLE "auth_user" (
 
 -- CreateTable
 CREATE TABLE "totp_credential" (
-    "id" TEXT NOT NULL,
+    "id" UUID NOT NULL,
     "encrypted_secret" TEXT NOT NULL,
     "enabled" BOOLEAN NOT NULL DEFAULT false,
-    "user_id" TEXT NOT NULL,
+    "user_id" UUID NOT NULL,
 
     CONSTRAINT "totp_credential_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "web_auth_n_credentials" (
-    "id" TEXT NOT NULL,
-    "credential_id" TEXT NOT NULL,
+    "id" UUID NOT NULL,
+    "credential_id" UUID NOT NULL,
     "public_key" TEXT NOT NULL,
     "counter" INTEGER NOT NULL,
     "device_type" TEXT NOT NULL,
@@ -44,24 +44,24 @@ CREATE TABLE "web_auth_n_credentials" (
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "last_used_at" TIMESTAMP(3),
     "revoked_at" TIMESTAMP(3),
-    "user_id" TEXT NOT NULL,
+    "user_id" UUID NOT NULL,
 
     CONSTRAINT "web_auth_n_credentials_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "backup_code" (
-    "id" TEXT NOT NULL,
+    "id" UUID NOT NULL,
     "code_hash" TEXT NOT NULL,
     "used_at" TIMESTAMP(3),
-    "user_id" TEXT NOT NULL,
+    "user_id" UUID NOT NULL,
 
     CONSTRAINT "backup_code_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "security_question" (
-    "id" TEXT NOT NULL,
+    "id" UUID NOT NULL,
     "key" "security_question_key" NOT NULL,
     "question" TEXT NOT NULL,
 
@@ -70,17 +70,17 @@ CREATE TABLE "security_question" (
 
 -- CreateTable
 CREATE TABLE "user_security_question" (
-    "id" TEXT NOT NULL,
+    "id" UUID NOT NULL,
     "answer_hash" TEXT NOT NULL,
-    "user_id" TEXT NOT NULL,
-    "questionId" TEXT NOT NULL,
+    "user_id" UUID NOT NULL,
+    "questionId" UUID NOT NULL,
 
     CONSTRAINT "user_security_question_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "password_reset_token" (
-    "id" TEXT NOT NULL,
+    "id" UUID NOT NULL,
     "token_hash" TEXT NOT NULL,
     "token_lookup_hash" TEXT NOT NULL,
     "state" "reset_token_state" NOT NULL DEFAULT 'ISSUED',
@@ -88,7 +88,7 @@ CREATE TABLE "password_reset_token" (
     "attempts" INTEGER NOT NULL DEFAULT 0,
     "locked" BOOLEAN NOT NULL DEFAULT false,
     "used_at" TIMESTAMP(3),
-    "user_id" TEXT NOT NULL,
+    "user_id" UUID NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "password_reset_token_pkey" PRIMARY KEY ("id")
@@ -96,7 +96,7 @@ CREATE TABLE "password_reset_token" (
 
 -- CreateTable
 CREATE TABLE "rate_limit_bucket" (
-    "id" TEXT NOT NULL,
+    "id" UUID NOT NULL,
     "key" TEXT NOT NULL,
     "window_start" TIMESTAMP(3) NOT NULL,
     "count" INTEGER NOT NULL,
@@ -107,8 +107,8 @@ CREATE TABLE "rate_limit_bucket" (
 
 -- CreateTable
 CREATE TABLE "KnownDevice" (
-    "id" TEXT NOT NULL,
-    "user_id" TEXT NOT NULL,
+    "id" UUID NOT NULL,
+    "user_id" UUID NOT NULL,
     "fingerprint" TEXT NOT NULL,
     "first_seen" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "last_seen" TIMESTAMP(3) NOT NULL,
@@ -118,8 +118,8 @@ CREATE TABLE "KnownDevice" (
 
 -- CreateTable
 CREATE TABLE "LoginHistory" (
-    "id" TEXT NOT NULL,
-    "user_id" TEXT NOT NULL,
+    "id" UUID NOT NULL,
+    "user_id" UUID NOT NULL,
     "ip" TEXT NOT NULL,
     "country" TEXT,
     "city" TEXT,
@@ -130,10 +130,10 @@ CREATE TABLE "LoginHistory" (
 
 -- CreateTable
 CREATE TABLE "OAuthAccount" (
-    "id" TEXT NOT NULL,
+    "id" UUID NOT NULL,
     "provider" TEXT NOT NULL,
-    "provider_id" TEXT NOT NULL,
-    "user_id" TEXT NOT NULL,
+    "provider_id" UUID NOT NULL,
+    "user_id" UUID NOT NULL,
 
     CONSTRAINT "OAuthAccount_pkey" PRIMARY KEY ("id")
 );

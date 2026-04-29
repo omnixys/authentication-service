@@ -18,7 +18,7 @@
 import type { KeycloakTokenPayload } from '../dtos/kc-token.dto.js';
 import type { KeycloakUser } from '../dtos/kc-user.dto.js';
 import type { KcUser } from '../entitys/user.entity.js';
-import { toEnumRoles, type RealmRoleType } from '@omnixys/shared';
+import { RealmRoleType, toEnumRoles } from '@omnixys/shared';
 
 /**
  * Ist es ein Admin-API-User?
@@ -59,6 +59,7 @@ function fromTokenPayload(p: KeycloakTokenPayload): KcUser {
 
   // Merge + Enum-Normalisierung
   const roles: RealmRoleType[] = toEnumRoles([...realmRolesStr]);
+  const role = resolvePrimaryRole(roles);
 
   return {
     id: p.sub ?? 'N/A',
@@ -66,8 +67,21 @@ function fromTokenPayload(p: KeycloakTokenPayload): KcUser {
     firstName: p.first_name ?? 'N/A',
     lastName: p.last_name ?? 'N/A',
     email: p.email ?? 'N/A',
-    roles,
+    role,
   };
+}
+
+function resolvePrimaryRole(roles: RealmRoleType[]): RealmRoleType | undefined {
+  const priority = [
+    RealmRoleType.ADMIN,
+    RealmRoleType.USER,
+    RealmRoleType.SUPREME,
+    RealmRoleType.ELITE,
+    RealmRoleType.BASIC,
+    RealmRoleType.GUEST,
+  ];
+
+  return priority.find((p) => roles.includes(p));
 }
 
 /** Liste von Admin-API-Usern → Domain */

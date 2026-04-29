@@ -92,24 +92,24 @@ export class AuthWriteService extends AuthenticateBaseService {
 
     const userId = (await this.readService.findByUsername(username)).id;
 
-    const riskResult = await this.zeroTrustService.evaluate({
-      userId,
-      ip: input.ip,
-      userAgent: input.userAgent,
-      acceptLanguage: input.acceptLanguage,
-      clientDeviceId: input.clientDeviceId,
+    // const riskResult = await this.zeroTrustService.evaluate({
+    //   userId,
+    //   ip: input.ip,
+    //   userAgent: input.userAgent,
+    //   acceptLanguage: input.acceptLanguage,
+    //   clientDeviceId: input.clientDeviceId,
 
-      isPasswordless: false,
-      isResetFlow: false,
-    });
+    //   isPasswordless: false,
+    //   isResetFlow: false,
+    // });
 
-    if (riskResult.decision === 'BLOCK') {
-      throw new AccessBlockedException(riskResult.reasons);
-    }
+    // if (riskResult.decision === 'BLOCK') {
+    //   throw new AccessBlockedException(riskResult.reasons);
+    // }
 
-    if (riskResult.decision === 'STEP_UP') {
-      throw new StepUpRequiredException(riskResult.stepUp!, riskResult.reasons);
-    }
+    // if (riskResult.decision === 'STEP_UP') {
+    //   throw new StepUpRequiredException(riskResult.stepUp!, riskResult.reasons);
+    // }
 
     try {
       const body = new URLSearchParams({
@@ -306,6 +306,12 @@ export class AuthWriteService extends AuthenticateBaseService {
       if (!valid) {
         throw new UnauthorizedException('Invalid TOTP code');
       }
+
+      // await this.riskMemory.markStepUpVerified(userId, {
+      //   ip: input.ip,
+      //   deviceId: input.clientDeviceId,
+      //   userAgent: input.userAgent,
+      // });
 
       await this.riskMemory.resetFailures(userId);
 

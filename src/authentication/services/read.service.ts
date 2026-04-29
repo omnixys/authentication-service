@@ -24,6 +24,7 @@ import { AuthenticateBaseService } from './keycloak-base.service.js';
 import { HttpService } from '@nestjs/axios';
 import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { OmnixysLogger } from '@omnixys/logger';
+import { TraceRunner } from '@omnixys/observability';
 import * as jose from 'jose';
 
 /**
@@ -55,26 +56,69 @@ export class AuthenticateReadService extends AuthenticateBaseService {
    * Benutzer per ID (exakt).
    */
   async findById(id: string): Promise<KcUser> {
-    void this.logger.debug('findById: id=%s', id);
-    const rawData = await this.kcRequest<KeycloakUser>(
-      'get',
-      `${paths.users}/${encodeURIComponent(id)}`,
-      {
-        params: { id, exact: true },
-      },
-    );
+    return TraceRunner.run('[SERVICE] findByID', async () => {
+      void this.logger.debug('findById: id=%s', id);
+      const rawData = await this.kcRequest<KeycloakUser>(
+        'get',
+        `${paths.users}/${encodeURIComponent(id)}`,
+        {
+          params: { id, exact: true },
+        },
+      );
 
-    if (rawData?.id !== id) {
+      if (rawData?.id !== id) {
+        void this.logger.debug('findById: raw=%o', rawData);
+        throw new NotFoundException(`User '${id}' nicht gefunden.`);
+      }
+
       void this.logger.debug('findById: raw=%o', rawData);
-      throw new NotFoundException(`User '${id}' nicht gefunden.`);
-    }
-
-    void this.logger.debug('findById: raw=%o', rawData);
-    const user = toUser(rawData);
-    void this.logger.debug('findById: user=%o', user);
-    return user;
+      const user = toUser(rawData);
+      void this.logger.debug('findById: user=%o', user);
+      return user;
+    });
   }
 
+  async findByIds(ids: string[]): Promise<KcUser[]> {
+    return TraceRunner.run('[SERVICE] findByIds', async () => {
+      if (!ids.length) return [];
+
+      void this.logger.debug('findByIds: ids=%o', ids);
+
+      /**
+       * Execute parallel requests against Keycloak Admin API
+       * - No bulk endpoint exists → fan-out pattern required
+       * - Use Promise.all for concurrency
+       */
+      const results = await Promise.all(
+        ids.map(async (id) => {
+          try {
+            const rawData = await this.kcRequest<KeycloakUser>(
+              'get',
+              `${paths.users}/${encodeURIComponent(id)}`,
+            );
+
+            if (!rawData?.id || rawData.id !== id) {
+              throw new NotFoundException(`User '${id}' nicht gefunden.`);
+            }
+
+            return toUser(rawData);
+          } catch (error) {
+            /**
+             * Important:
+             * - Decide if you want "fail fast" or "partial success"
+             * - Here: fail fast (strict consistency)
+             */
+            this.logger.error('findByIds failed for id=%s', id, error);
+            throw error;
+          }
+        }),
+      );
+
+      void this.logger.debug('findByIds: result=%o', results);
+      return results;
+    });
+  }
+  
   async findByUsername(username: string): Promise<KcUser> {
     this.logger.debug('findByUsername: username=%s', username);
 

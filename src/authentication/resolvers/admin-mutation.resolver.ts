@@ -23,8 +23,8 @@ import {
 import { TokenPayload } from '../models/payloads/token.payload.js';
 import { AdminWriteService } from '../services/admin-write.service.js';
 import { UseGuards, UseInterceptors } from '@nestjs/common';
-import { Args, Context, ID, Mutation, Resolver } from '@nestjs/graphql';
-import { GqlFastifyContext, gqlSetTokens } from '@omnixys/context';
+import { Args, ID, Mutation, Resolver } from '@nestjs/graphql';
+// import { GqlFastifyContext, gqlSetTokens } from '@omnixys/context';
 import { getLogger, LoggingInterceptor } from '@omnixys/logger';
 import { TraceRunner } from '@omnixys/observability';
 import {
@@ -186,13 +186,13 @@ export class AdminMutationResolver {
   @Mutation(() => TokenPayload, { name: 'adminSignUp' })
   async adminSignIn(
     @Args('input', { type: () => AdminSignUpInput }) input: AdminSignUpInput,
-    @Context() ctx: GqlFastifyContext,
+    // @Context() ctx: GqlFastifyContext,
   ): Promise<TokenPayload> {
     return TraceRunner.run('admin SignUp Resolver', async () => {
       this.logger.debug('signIn: input=%o', input);
       const result = await this.adminService.adminSignUp(input);
-      const res = ctx.reply;
-      gqlSetTokens(res, result.accessToken, result.expiresIn * 1000);
+      // const res = ctx.reply;
+      // gqlSetTokens(res, result.accessToken, result.expiresIn * 1000);
       return result;
     });
   }

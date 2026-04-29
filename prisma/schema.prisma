@@ -45,7 +45,7 @@ enum SecurityQuestionType {
 }
 
 model AuthUser {
-  id       String @id @default(uuid())
+  id       String @id @default(uuid()) @db.Uuid
   email    String @unique
   username String @unique
 
@@ -73,11 +73,11 @@ model AuthUser {
 }
 
 model TotpCredential {
-  id              String  @id @default(uuid())
+  id              String  @id @default(uuid()) @db.Uuid
   encryptedSecret String  @map("encrypted_secret")
   enabled         Boolean @default(false)
 
-  userId String   @unique @map("user_id")
+  userId String   @unique @map("user_id") @db.Uuid
   user   AuthUser @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("totp_credential")
@@ -85,8 +85,8 @@ model TotpCredential {
 }
 
 model WebAuthnCredential {
-  id           String  @id @default(uuid())
-  credentialId String  @unique @map("credential_id")
+  id           String  @id @default(uuid()) @db.Uuid
+  credentialId String  @unique @map("credential_id") @db.Uuid
   publicKey    String  @map("public_key")
   counter      Int
   deviceType   String  @map("device_type")
@@ -99,7 +99,7 @@ model WebAuthnCredential {
   revokedAt  DateTime? @map("revoked_at")
 
   user   AuthUser @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId String   @map("user_id")
+  userId String   @map("user_id") @db.Uuid
 
   @@index([userId])
   @@map("web_auth_n_credentials")
@@ -107,11 +107,11 @@ model WebAuthnCredential {
 }
 
 model BackupCode {
-  id       String    @id @default(uuid())
+  id       String    @id @default(uuid()) @db.Uuid
   codeHash String    @map("code_hash")
   usedAt   DateTime? @map("used_at")
 
-  userId String   @map("user_id")
+  userId String   @map("user_id") @db.Uuid
   user   AuthUser @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
@@ -120,7 +120,7 @@ model BackupCode {
 }
 
 model SecurityQuestion {
-  id       String               @id @default(uuid())
+  id       String               @id @default(uuid()) @db.Uuid
   key      SecurityQuestionType @unique
   question String               @unique
 
@@ -131,13 +131,13 @@ model SecurityQuestion {
 }
 
 model UserSecurityQuestion {
-  id         String @id @default(uuid())
+  id         String @id @default(uuid()) @db.Uuid
   answerHash String @map("answer_hash")
 
   user   AuthUser @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId String   @map("user_id")
+  userId String   @map("user_id") @db.Uuid
 
-  questionId String
+  questionId String @db.Uuid
   question   SecurityQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
 
   @@unique([userId, questionId])
@@ -147,7 +147,7 @@ model UserSecurityQuestion {
 }
 
 model PasswordResetToken {
-  id String @id @default(uuid())
+  id String @id @default(uuid()) @db.Uuid
 
   tokenHash       String          @map("token_hash")
   tokenLookupHash String          @unique @map("token_lookup_hash")
@@ -158,7 +158,7 @@ model PasswordResetToken {
   locked    Boolean   @default(false)
   usedAt    DateTime? @map("used_at")
 
-  userId String   @map("user_id")
+  userId String   @map("user_id") @db.Uuid
   user   AuthUser @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now()) @map("created_at")
@@ -171,7 +171,7 @@ model PasswordResetToken {
 }
 
 model RateLimitBucket {
-  id          String    @id @default(uuid())
+  id          String    @id @default(uuid()) @db.Uuid
   key         String    @unique
   windowStart DateTime  @map("window_start")
   count       Int
@@ -183,8 +183,8 @@ model RateLimitBucket {
 }
 
 model KnownDevice {
-  id          String   @id @default(uuid())
-  userId      String   @map("user_id")
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
   fingerprint String
   firstSeen   DateTime @default(now()) @map("first_seen")
   lastSeen    DateTime @updatedAt @map("last_seen")
@@ -197,8 +197,8 @@ model KnownDevice {
 }
 
 model LoginHistory {
-  id        String   @id @default(uuid())
-  userId    String   @map("user_id")
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
   ip        String
   country   String?
   city      String?
@@ -212,10 +212,10 @@ model LoginHistory {
 }
 
 model OAuthAccount {
-  id         String   @id @default(uuid())
+  id         String   @id @default(uuid()) @db.Uuid
   provider   String
-  providerId String   @map("provider_id")
-  userId     String   @map("user_id")
+  providerId String   @map("provider_id") @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
   user       AuthUser @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerId])

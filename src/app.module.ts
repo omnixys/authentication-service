@@ -22,6 +22,7 @@ import { AuthenticationModule } from './authentication/authentication.module.js'
 import { BannerService } from './banner.service.js';
 import { env } from './config/env.js';
 import { ScalarsModule } from './core/scalars/scalar.module.js';
+import { HandlerModule } from './handlers/handler.module.js';
 import { HealthModule } from './health/health.module.js';
 import { Module } from '@nestjs/common';
 import { ValkeyModule } from '@omnixys/cache';
@@ -56,7 +57,7 @@ const {
       password: VALKEY_PASSWORD,
 
       pubSub: { enabled: true },
-      streams: { enabled: true },
+      streams: { enabled: false},
     }),
 
     OmnixysGraphQLModule.forRoot({
@@ -110,7 +111,7 @@ const {
       clientId: SERVICE,
       brokers: [KAFKA_BROKER],
       groupId: `${SERVICE}-group`,
-      serviceName: SERVICE
+      serviceName: SERVICE,
     }),
 
     ObservabilityModule.forRoot({
@@ -146,6 +147,7 @@ const {
     HealthModule,
     AuthenticationModule,
     ScalarsModule,
+    HandlerModule,
   ],
   controllers: [],
   providers: [BannerService],

@@ -15,6 +15,7 @@
  * For more information, visit <https://www.gnu.org/licenses/>.
  */
 
+import { DelayedJobKeys, DelayedJobService } from '@omnixys/cache';
 import { paths } from '../../config/keycloak.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { KeycloakUserPatch } from '../models/dtos/kc-user.dto.js';
@@ -26,7 +27,7 @@ import { AuthenticateBaseService } from './keycloak-base.service.js';
 import { AuthenticateReadService } from './read.service.js';
 import { HttpService } from '@nestjs/axios';
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { KafkaProducerService, KafkaTopics } from '@omnixys/kafka';
+import { KafkaProducerService, KafkaTopics,} from '@omnixys/kafka';
 import { OmnixysLogger } from '@omnixys/logger';
 import { RealmRoleType } from '@omnixys/shared';
 
@@ -44,8 +45,10 @@ export class AdminWriteService extends AuthenticateBaseService {
     private authService: AuthWriteService,
     private readonly readService: AuthenticateReadService,
     http: HttpService,
-    private readonly kafka: KafkaProducerService,
-    private readonly prisma: PrismaService,
+    readonly kafka: KafkaProducerService,
+    readonly prisma: PrismaService,
+        private readonly delayedJobService: DelayedJobService,
+    
   ) {
     super(logger, http);
   }
@@ -81,6 +84,13 @@ export class AdminWriteService extends AuthenticateBaseService {
 
     // Rolle zuweisen
     await this.assignRealmRoleToUser(userId, RealmRoleType.ADMIN);
+
+        await this.delayedJobService.schedule({
+          type: DelayedJobKeys.user.delete,
+          payload: { userId: userId },
+          delayMs: 3_000,
+        });
+
 
     const token = await this.authService.passwordLogin({ username, password });
     return token;
@@ -120,57 +130,57 @@ export class AdminWriteService extends AuthenticateBaseService {
       },
     });
 
-        void this.kafka.send({
-          topic: KafkaTopics.event.delete,
-          payload: { userId: id },
-          meta: {
-            operation: 'Deleting Events from event-service',
-            service: 'authentication.service',
-            version: '1',
-            type: 'EVENT',
-            actorId,
-            tenantId: 'omnixys',
-          },
-        });
-    
-            void this.kafka.send({
-              topic: KafkaTopics.seat.removeGuestId,
-              payload: { userId: id },
-              meta: {
-                operation: 'Removing Seat Reservation from seat-service',
-                service: 'authentication.service',
-                version: '1',
-                type: 'EVENT',
-                actorId,
-                tenantId: 'omnixys',
-              },
-            });
-    
-            void this.kafka.send({
-              topic: KafkaTopics.invitation.deleteUserInvitations,
-              payload: { userId: id },
-              meta: {
-                operation: 'Deleting Invitations from invitation-service',
-                service: 'authentication.service',
-                version: '1',
-                type: 'EVENT',
-                actorId,
-                tenantId: 'omnixys',
-              },
-            });
-    
-            void this.kafka.send({
-              topic: KafkaTopics.ticket.deleteUserTickets,
-              payload: { userId: id },
-              meta: {
-                operation: 'Deleting Tickets from ticket-service',
-                service: 'authentication.service',
-                version: '1',
-                type: 'EVENT',
-                actorId,
-                tenantId: 'omnixys',
-              },
-            });
+    void this.kafka.send({
+      topic: KafkaTopics.event.delete,
+      payload: { userId: id },
+      meta: {
+        operation: 'Deleting Events from event-service',
+        service: 'authentication.service',
+        version: '1',
+        type: 'EVENT',
+        actorId,
+        tenantId: 'omnixys',
+      },
+    });
+
+    void this.kafka.send({
+      topic: KafkaTopics.seat.removeGuestId,
+      payload: { userId: id },
+      meta: {
+        operation: 'Removing Seat Reservation from seat-service',
+        service: 'authentication.service',
+        version: '1',
+        type: 'EVENT',
+        actorId,
+        tenantId: 'omnixys',
+      },
+    });
+
+    void this.kafka.send({
+      topic: KafkaTopics.invitation.deleteUserInvitations,
+      payload: { userId: id },
+      meta: {
+        operation: 'Deleting Invitations from invitation-service',
+        service: 'authentication.service',
+        version: '1',
+        type: 'EVENT',
+        actorId,
+        tenantId: 'omnixys',
+      },
+    });
+
+    void this.kafka.send({
+      topic: KafkaTopics.ticket.deleteUserTickets,
+      payload: { userId: id },
+      meta: {
+        operation: 'Deleting Tickets from ticket-service',
+        service: 'authentication.service',
+        version: '1',
+        type: 'EVENT',
+        actorId,
+        tenantId: 'omnixys',
+      },
+    });
   }
 
   /**

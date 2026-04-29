@@ -161,7 +161,7 @@ export class RegisterService extends AuthenticateBaseService {
         });
 
         const token = await this.authService.passwordLogin({ username, password });
-        return { userId, token, username };
+        return { userId, token, username, password: '' };
       });
     });
   }

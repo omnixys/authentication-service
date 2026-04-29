@@ -46,7 +46,7 @@
     "test:user": "pnpm test -- __tests__/e2e/authentication/authentication.user.e2e-spec.ts",
     "test:admin": "pnpm test -- __tests__/e2e/authentication/authentication.admin.e2e-spec.ts",
     "prepare": "husky",
-    "generate": "prisma generate",
+    "generate": "pnpm prisma format && pnpm prisma validate && prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio --schema prisma/schema.prisma",
     "prisma:seed": "tsx prisma/seed.ts",
@@ -73,15 +73,16 @@
     "@nestjs/core": "^11.1.17",
     "@nestjs/graphql": "^13.2.4",
     "@nestjs/platform-fastify": "^11.1.17",
+    "@nestjs/schedule": "^6.1.3",
     "@nestjs/terminus": "^11.1.1",
-    "@omnixys/security": "file:../../packages/ts/security",
-    "@omnixys/cache": "file:../../packages/ts/cache",
-    "@omnixys/context": "file:../../packages/ts/context",
-    "@omnixys/graphql": "file:../../packages/ts/graphql",
-    "@omnixys/kafka": "file:../../packages/ts/kafka",
-    "@omnixys/logger": "file:../../packages/ts/logger",
-    "@omnixys/observability": "file:../../packages/ts/observability",
-    "@omnixys/shared": "file:../../packages/ts/shared",
+    "@omnixys/cache": "^1.0.0",
+    "@omnixys/context": "^1.0.0",
+    "@omnixys/graphql": "^1.0.0",
+    "@omnixys/kafka": "^1.0.0",
+    "@omnixys/logger": "^1.0.0",
+    "@omnixys/observability": "^1.0.0",
+    "@omnixys/security": "^1.0.0",
+    "@omnixys/shared": "^1.0.0",
     "@prisma/adapter-pg": "^7.6.0",
     "@prisma/client": "^7.6.0",
     "@simplewebauthn/server": "^13.3.0",
@@ -91,9 +92,10 @@
     "chalk": "^5.6.2",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.4",
+    "cron": "^4.4.0",
     "date-fns": "^4.1.0",
     "dotenv": "^17.3.1",
-    "fastify": "5.8.2",
+    "fastify": "5.8.5",
     "geoip-lite": "^2.0.1",
     "graphql": "^16.13.2",
     "jose": "^6.2.2",
@@ -103,8 +105,7 @@
     "rxjs": "^7.8.2"
   },
   "devDependencies": {
-    "@commitlint/config-conventional": "^20.0.0",
-    "@eslint/js": "^10.0.1",
+    "@commitlint/config-conventional": "^20.5.0",
     "@nestjs/cli": "^11.0.16",
     "@nestjs/schematics": "latest",
     "@nestjs/testing": "^11.0.1",
@@ -144,5 +145,10 @@
     "typedoc": "^0.28.14",
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.20.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "fastify": "5.8.5"
+    }
   }
 }

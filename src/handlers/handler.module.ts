@@ -15,26 +15,14 @@
  * For more information, visit <https://www.gnu.org/licenses/>.
  */
 
-import { Field, ID, ObjectType } from '@nestjs/graphql';
-import { RealmRoleType } from '@omnixys/shared';
+import { AuthenticationModule } from '../authentication/authentication.module.js';
+import { InvitationHandler } from './invitation.handler.js';
+import { UserDeleteHandler } from './user-delete.handler.js';
+import { Module } from '@nestjs/common';
 
-@ObjectType()
-export class KcUser {
-  @Field(() => ID)
-  id!: string;
-
-  @Field(() => String)
-  username!: string;
-
-  @Field(() => String)
-  firstName!: string;
-
-  @Field(() => String)
-  lastName!: string;
-
-  @Field(() => String)
-  email!: string;
-
-  @Field(() => RealmRoleType, { nullable: true })
-  role?: RealmRoleType;
-}
+@Module({
+  imports: [AuthenticationModule],
+  providers: [UserDeleteHandler, InvitationHandler],
+  exports: [],
+})
+export class HandlerModule {}

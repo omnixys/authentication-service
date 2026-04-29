@@ -15,6 +15,7 @@
  * For more information, visit <https://www.gnu.org/licenses/>.
  */
 
+import { ScheduleModule } from '@nestjs/schedule';
 import { CoreHttpModule } from '../http.module.js';
 import { PrismaModule } from '../prisma/prisma.module.js';
 import { OAuthController } from './controllers/o-auth.controller.js';
@@ -28,6 +29,7 @@ import { UserMutationResolver } from './resolvers/user-mutation.resolver.js';
 import { AdminWriteService } from './services/admin-write.service.js';
 import { AuthWriteService } from './services/authentication-write.service.js';
 import { BackupCodeService } from './services/backup-code.service.js';
+// import { CronSchedulerService } from './services/cron.service.js';
 import { LockoutService } from './services/lockout.service.js';
 import { OAuthService } from './services/o-auth.service.js';
 import { PendingContactService } from './services/pending-contact.service.js';
@@ -42,7 +44,7 @@ import { Module } from '@nestjs/common';
 import { DeviceService } from '@omnixys/security';
 
 @Module({
-  imports: [CoreHttpModule, PrismaModule],
+  imports: [CoreHttpModule, PrismaModule, ScheduleModule.forRoot()],
   controllers: [OAuthController],
   providers: [
     AuthQueryResolver,
@@ -67,6 +69,7 @@ import { DeviceService } from '@omnixys/security';
     SecurityQuestionService,
     DeviceService,
     OAuthService,
+    // CronSchedulerService,
   ],
   exports: [
     AuthenticateReadService,

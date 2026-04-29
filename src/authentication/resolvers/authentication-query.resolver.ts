@@ -36,7 +36,7 @@ import {
   RoleGuard,
   Roles,
 } from '@omnixys/security';
-import { RealmRoleType, toEnumRoles } from '@omnixys/shared';
+import { RealmRoleType } from '@omnixys/shared';
 
 /**
  * @file GraphQL-Resolver für **lesende** Authentication-Abfragen (ME/USERS).
@@ -119,7 +119,7 @@ export class AuthQueryResolver {
     }
 
     const user = await this.read.findById(currentUser.id);
-    return { ...user, roles: toEnumRoles(currentUser.roles) };
+   return { ...user, role: currentUser.role };
   }
 
   @Query(() => KcUser, { name: 'meAuth' })
@@ -143,7 +143,7 @@ export class AuthQueryResolver {
     }
 
     const user = await this.read.findById(currentUser.id);
-    return { ...user, roles: toEnumRoles(currentUser.roles) };
+    return { ...user, role: currentUser.role};
   }
 
   /**
