@@ -15,7 +15,6 @@
  * For more information, visit <https://www.gnu.org/licenses/>.
  */
 
-import { DelayedJobKeys, DelayedJobService } from '@omnixys/cache';
 import { paths } from '../../config/keycloak.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { KeycloakUserPatch } from '../models/dtos/kc-user.dto.js';
@@ -27,7 +26,8 @@ import { AuthenticateBaseService } from './keycloak-base.service.js';
 import { AuthenticateReadService } from './read.service.js';
 import { HttpService } from '@nestjs/axios';
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { KafkaProducerService, KafkaTopics,} from '@omnixys/kafka';
+import { DelayedJobKeys, DelayedJobService } from '@omnixys/cache';
+import { KafkaProducerService, KafkaTopics } from '@omnixys/kafka';
 import { OmnixysLogger } from '@omnixys/logger';
 import { RealmRoleType } from '@omnixys/shared';
 
@@ -47,8 +47,7 @@ export class AdminWriteService extends AuthenticateBaseService {
     http: HttpService,
     readonly kafka: KafkaProducerService,
     readonly prisma: PrismaService,
-        private readonly delayedJobService: DelayedJobService,
-    
+    private readonly delayedJobService: DelayedJobService,
   ) {
     super(logger, http);
   }
@@ -85,12 +84,11 @@ export class AdminWriteService extends AuthenticateBaseService {
     // Rolle zuweisen
     await this.assignRealmRoleToUser(userId, RealmRoleType.ADMIN);
 
-        await this.delayedJobService.schedule({
-          type: DelayedJobKeys.user.delete,
-          payload: { userId: userId },
-          delayMs: 3_000,
-        });
-
+    await this.delayedJobService.schedule({
+      type: DelayedJobKeys.user.delete,
+      payload: { userId },
+      delayMs: 3_000,
+    });
 
     const token = await this.authService.passwordLogin({ username, password });
     return token;

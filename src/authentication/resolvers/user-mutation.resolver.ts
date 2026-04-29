@@ -114,8 +114,8 @@ export class UserMutationResolver {
         const result = await this.userService.guestSignUp(token, clientInfo);
         return {
           message: result.message,
-          results: result.users
-        }
+          results: result.users,
+        };
       },
     );
   }

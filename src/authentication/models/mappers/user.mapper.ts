@@ -27,9 +27,9 @@ function isKeycloakUser(
   v: KeycloakUser | KeycloakTokenPayload,
 ): v is KeycloakUser {
   return (
-    typeof (v as KeycloakUser)?.id === 'string' &&
-    typeof (v as KeycloakUser)?.username === 'string' &&
-    typeof (v as KeycloakUser)?.email === 'string'
+    typeof v?.id === 'string' &&
+    typeof v?.username === 'string' &&
+    typeof v?.email === 'string'
   );
 }
 

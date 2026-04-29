@@ -76,7 +76,9 @@ export class InvitationHandler {
       const user = await this.authenticationReadService.findById(
         payload.userId,
       );
-      if (user.role !== RealmRoleType.GUEST) return;
+      if (user.role !== RealmRoleType.GUEST) {
+        return;
+      }
       await this.adminWriteService.deleteUser(payload.userId, actorId);
     });
   }

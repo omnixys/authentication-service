@@ -103,7 +103,7 @@ export abstract class AuthenticateBaseService {
       mapTo: 'throw-on-error',
     },
   ): Promise<T> {
-    return TraceRunner.run('Keycloak Request: ' + url, async () => {
+    return TraceRunner.run(`Keycloak Request: ${url}`, async () => {
       const headers: Record<string, string> = { ...cfg.headers };
       const baseURL = keycloakConfig.url;
 
@@ -168,6 +168,9 @@ export abstract class AuthenticateBaseService {
 
         throw new Error(
           `Keycloak request failed: ${method.toUpperCase()} ${url} -> ${status} ${msg}`,
+          {
+            cause: err,
+          },
         );
       }
     });

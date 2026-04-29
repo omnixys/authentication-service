@@ -15,7 +15,6 @@
  * For more information, visit <https://www.gnu.org/licenses/>.
  */
 
-import { ScheduleModule } from '@nestjs/schedule';
 import { CoreHttpModule } from '../http.module.js';
 import { PrismaModule } from '../prisma/prisma.module.js';
 import { OAuthController } from './controllers/o-auth.controller.js';
@@ -41,6 +40,7 @@ import { TotpService } from './services/totp.service.js';
 import { UserWriteService } from './services/user-write.service.js';
 import { WebAuthnService } from './services/web-authn.service.js';
 import { Module } from '@nestjs/common';
+import { ScheduleModule } from '@nestjs/schedule';
 import { DeviceService } from '@omnixys/security';
 
 @Module({

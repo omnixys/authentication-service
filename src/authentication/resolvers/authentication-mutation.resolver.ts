@@ -163,16 +163,16 @@ export class AuthMutationResolver {
 
   @Mutation(() => JsonScalar)
   async generatePasswordlessOptions(@Args('email') email: string) {
-    return TraceRunner.run('generate Passwordless Token Resolver', async () => {
-      return this.webAuthnService.generatePasswordlessOptions(email);
-    });
+    return TraceRunner.run('generate Passwordless Token Resolver', async () =>
+      this.webAuthnService.generatePasswordlessOptions(email),
+    );
   }
 
   @Mutation(() => JsonScalar)
   async generateWebAuthnAuthOptions() {
-    return TraceRunner.run('Generate WebAuthn Token Resolver', async () => {
-      return this.webAuthnService.generateDiscoverableAuthOptions();
-    });
+    return TraceRunner.run('Generate WebAuthn Token Resolver', async () =>
+      this.webAuthnService.generateDiscoverableAuthOptions(),
+    );
   }
 
   /* =====================================================

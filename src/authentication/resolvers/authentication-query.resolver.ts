@@ -119,7 +119,7 @@ export class AuthQueryResolver {
     }
 
     const user = await this.read.findById(currentUser.id);
-   return { ...user, role: currentUser.role };
+    return { ...user, role: currentUser.role };
   }
 
   @Query(() => KcUser, { name: 'meAuth' })
@@ -143,7 +143,7 @@ export class AuthQueryResolver {
     }
 
     const user = await this.read.findById(currentUser.id);
-    return { ...user, role: currentUser.role};
+    return { ...user, role: currentUser.role };
   }
 
   /**

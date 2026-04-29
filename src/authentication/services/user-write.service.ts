@@ -54,7 +54,7 @@ export interface GuestSignUp {
   users?: SignUpResult[];
   message?: string;
 }
-//TODO Enum statt strings bei guestVerify
+// TODO Enum statt strings bei guestVerify
 
 export enum VerifyGuestMessage {
   SUCCESS = 'SUCCESS',
@@ -180,9 +180,9 @@ export class UserWriteService extends AuthenticateBaseService {
         await this.cacheService.delete(ValkeyKey.guestVerificationAuth, authKey);
 
         return { users: results };
-      } catch (e: any) {
-        this.logger.error(e);
-        throw new Error('Guest signup failed');
+      } catch (e: unknown) {
+        this.logger.error(e instanceof Error ? e.message : String(e));
+        throw new Error('Guest signup failed', { cause: e });
       }
     });
   }
@@ -252,7 +252,7 @@ export class UserWriteService extends AuthenticateBaseService {
 
     await this.delayedJobService.schedule({
       type: DelayedJobKeys.user.delete,
-      payload: { userId: userId },
+      payload: { userId },
       delayMs: 30_000,
     });
 
@@ -444,7 +444,17 @@ export class UserWriteService extends AuthenticateBaseService {
   /**
    * Standard Kafka metadata builder.
    */
-  private meta(actorId: string, operation: string) {
+  private meta(
+    actorId: string,
+    operation: string,
+  ): {
+    actorId: string;
+    tenantId: string;
+    service: string;
+    operation: string;
+    version: string;
+    type: EventType;
+  } {
     const type: EventType = 'EVENT';
     return {
       actorId,

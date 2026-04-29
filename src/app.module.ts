@@ -57,7 +57,7 @@ const {
       password: VALKEY_PASSWORD,
 
       pubSub: { enabled: true },
-      streams: { enabled: false},
+      streams: { enabled: false },
     }),
 
     OmnixysGraphQLModule.forRoot({

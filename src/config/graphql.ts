@@ -17,7 +17,7 @@
 
 import { env } from './env.js';
 import type { ApolloFederationDriverConfig } from '@nestjs/apollo';
-import { GqlFastifyContext } from '@omnixys/context';
+import type { GqlFastifyContext } from '@omnixys/context';
 
 const { SCHEMA_TARGET } = env;
 

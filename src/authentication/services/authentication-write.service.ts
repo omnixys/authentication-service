@@ -211,7 +211,11 @@ export class AuthWriteService extends AuthenticateBaseService {
     }
 
     if (riskResult.decision === 'STEP_UP') {
-      throw new StepUpRequiredException(riskResult.stepUp!, riskResult.reasons);
+      const stepUpMethod = riskResult.stepUp;
+      if (!stepUpMethod) {
+        throw new UnauthorizedException('Step-up method missing');
+      }
+      throw new StepUpRequiredException(stepUpMethod, riskResult.reasons);
     }
 
     try {
@@ -289,7 +293,11 @@ export class AuthWriteService extends AuthenticateBaseService {
     }
 
     if (riskResult.decision === 'STEP_UP') {
-      throw new StepUpRequiredException(riskResult.stepUp!, riskResult.reasons);
+      const stepUpMethod = riskResult.stepUp;
+      if (!stepUpMethod) {
+        throw new UnauthorizedException('Step-up method missing');
+      }
+      throw new StepUpRequiredException(stepUpMethod, riskResult.reasons);
     }
 
     try {
@@ -423,7 +431,11 @@ export class AuthWriteService extends AuthenticateBaseService {
     }
 
     if (riskResult.decision === 'STEP_UP') {
-      throw new StepUpRequiredException(riskResult.stepUp!, riskResult.reasons);
+      const stepUpMethod = riskResult.stepUp;
+      if (!stepUpMethod) {
+        throw new UnauthorizedException('Step-up method missing');
+      }
+      throw new StepUpRequiredException(stepUpMethod, riskResult.reasons);
     }
 
     try {

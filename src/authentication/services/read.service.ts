@@ -80,7 +80,9 @@ export class AuthenticateReadService extends AuthenticateBaseService {
 
   async findByIds(ids: string[]): Promise<KcUser[]> {
     return TraceRunner.run('[SERVICE] findByIds', async () => {
-      if (!ids.length) return [];
+      if (!ids.length) {
+        return [];
+      }
 
       void this.logger.debug('findByIds: ids=%o', ids);
 
@@ -118,7 +120,7 @@ export class AuthenticateReadService extends AuthenticateBaseService {
       return results;
     });
   }
-  
+
   async findByUsername(username: string): Promise<KcUser> {
     this.logger.debug('findByUsername: username=%s', username);
 

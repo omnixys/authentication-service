@@ -1,6 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-
 import { JsonScalar } from '../../core/scalars/json.scalar.js';
 import { MfaPreference } from '../models/dtos/reset-verification-result.dto.js';
 import { ResetService } from '../services/reset.service.js';
@@ -147,7 +144,7 @@ export class ResetMutationResolver {
       code: input.code,
       credentialResponse: input.credentialResponse,
       answers: input.answers,
-    } as any);
+    });
 
     return true;
   }
@@ -167,7 +164,7 @@ export class ResetMutationResolver {
     await this.resetService.completeReset({
       token: input.token,
       newPassword: input.newPassword,
-    } as any);
+    });
 
     return true;
   }

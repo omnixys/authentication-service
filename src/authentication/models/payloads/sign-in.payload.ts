@@ -15,7 +15,10 @@
  * For more information, visit <https://www.gnu.org/licenses/>.
  */
 
-import { GuestSignUp, SignUpResult } from '../../services/user-write.service.js';
+import {
+  GuestSignUp,
+  SignUpResult,
+} from '../../services/user-write.service.js';
 import { KcUser } from '../entitys/user.entity.js';
 import { TokenPayload } from './token.payload.js';
 import { Field, ID, ObjectType } from '@nestjs/graphql';
