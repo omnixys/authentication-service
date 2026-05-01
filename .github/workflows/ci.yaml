@@ -34,10 +34,12 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: read
+  contents: write
   packages: write
   id-token: write
   actions: read
+  issues: write
+  pull-requests: write
 
 env:
   COSIGN_EXPERIMENTAL: 'true'
@@ -46,12 +48,7 @@ env:
 
 
 jobs:
-
-  permissions:
-    contents: write
-    issues: write
-    pull-requests: write
-
+    
   ci:
     name: Run Lint, Build and Typecheck
     runs-on: ubuntu-latest
@@ -119,11 +116,6 @@ jobs:
     strategy:
       matrix:
         node-version: [24.10.0]
-
-    permissions:
-      contents: write
-      issues: write
-      pull-requests: write
 
     steps:
       - uses: actions/checkout@v6
