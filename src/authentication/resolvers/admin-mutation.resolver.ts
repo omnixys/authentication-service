@@ -127,10 +127,10 @@ export class AdminMutationResolver {
   @Roles(RealmRoleType.ADMIN)
   async deleteUser(
     @Args('id', { type: () => ID }) id: string,
-    @CurrentUser() CurrentUser: CurrentUserData,
+    @CurrentUser() currentUser: CurrentUserData,
   ): Promise<boolean> {
     return TraceRunner.run('Delete User Resolver', async () => {
-      await this.adminService.deleteUser(id, CurrentUser.id);
+      await this.adminService.deleteUser(id, currentUser.id);
       return true;
     });
   }
@@ -175,7 +175,7 @@ export class AdminMutationResolver {
   async removeRealmRole(
     @Args('id', { type: () => ID }) id: string,
     @Args('roleName', { type: () => RealmRoleType }) roleName: RealmRoleType,
-  ): Promise<boolean> {
+  ): Promise<boolean> {   
     return TraceRunner.run('Remove Realm Role  Resolver', async () => {
       this.logger.debug('removeRealmRole: userId=%s, role=%s', id, roleName);
       await this.adminService.removeRealmRoleFromUser(id, roleName);

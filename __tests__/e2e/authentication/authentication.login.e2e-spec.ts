@@ -17,16 +17,12 @@
 
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-import { LoggerPlusService } from '../../../src/logger/logger-plus.service.js';
 import { env } from '../../env.js';
 import { gqlRequest } from '../../utils/graphql-client.js';
 import { createTestApp } from '../setup-e2e.js';
 import type { INestApplication } from '@nestjs/common';
 
 describe('🔐 Authentication E2E - Login/Refresh/Logout', () => {
-  const loggerPlusService = new LoggerPlusService();
-  const logger = loggerPlusService.getLogger('authentication-login');
-
   let app: INestApplication;
   let cookies: string[] = [];
   let accessToken: string | undefined = undefined;
@@ -45,7 +41,7 @@ describe('🔐 Authentication E2E - Login/Refresh/Logout', () => {
 
     const query = `
       mutation {
-        login(input: { username: "${username}", password: "${password}" }) {
+        credentialsLogin(input: { username: "${username}", password: "${password}" }) {
           accessToken
           refreshToken
         }
@@ -55,26 +51,24 @@ describe('🔐 Authentication E2E - Login/Refresh/Logout', () => {
       data,
       errors,
       cookies: setCookies,
-    } = await gqlRequest(app, 'login', query);
+    } = await gqlRequest(app, 'credentialsLogin', query);
     expect(errors).toBeUndefined();
 
     cookies = setCookies ?? [];
-    accessToken = data?.login?.accessToken ?? undefined;
-    refreshToken = data?.login?.refreshToken ?? undefined;
+    accessToken = data?.credentialsLogin?.accessToken ?? undefined;
+    refreshToken = data?.credentialsLogin?.refreshToken ?? undefined;
 
     expect(accessToken).toBeDefined();
     expect(refreshToken).toMatch(/^[-\w.]+$/);
-    logger.log('✅ Login successful');
   });
 
   it('should refresh tokens', async () => {
     const query = `
-      mutation { refresh(refreshToken: "${refreshToken}") { accessToken refreshToken } }
+      mutation { refresh { accessToken refreshToken } }
     `;
     const { data, errors } = await gqlRequest(app, 'refresh', query);
     expect(errors).toBeUndefined();
     expect(data?.refresh?.accessToken).toBeDefined();
-    logger.log('🔄 Refresh successful');
   });
 
   it('should logout successfully', async () => {
@@ -91,6 +85,5 @@ describe('🔐 Authentication E2E - Login/Refresh/Logout', () => {
     );
     expect(errors).toBeUndefined();
     expect(data?.logout?.ok).toBe(true);
-    logger.log('🚪 Logout successful');
   });
 });

@@ -15,14 +15,49 @@
  * For more information, visit <https://www.gnu.org/licenses/>.
  */
 
-import type { User } from '../../src/authentication/models/entitys/user.entity';
-import type { SignUpPayload } from '../../src/authentication/models/payloads/sign-in.payload';
-import type { SuccessPayload } from '../../src/authentication/models/payloads/success.payload';
-import type { TokenPayload } from '../../src/authentication/models/payloads/token.payload';
+export interface TestUserPayload {
+  id?: string;
+  username?: string;
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+  role?: string;
+}
+
+export interface TestTokenPayload {
+  accessToken?: string;
+  refreshToken?: string;
+  expiresIn?: number;
+  tokenType?: string;
+}
+
+export interface TestSuccessPayload {
+  ok: boolean;
+  message?: string;
+}
+
+export interface TestSignUpPayload {
+  user?: TestUserPayload;
+  password?: string;
+  username?: string;
+  userId?: string;
+  message?: string;
+  token?: TestTokenPayload;
+}
+
+export interface TestGuestSignUpPayload {
+  results?: Array<{
+    userId: string;
+    username: string;
+    password: string;
+    email: string;
+  }>;
+  message?: string;
+}
 
 // shared between PayloadMap and VariableMap
 export type GraphQLOperationKey =
-  | 'login'
+  | 'credentialsLogin'
   | 'refresh'
   | 'logout'
   | 'adminSignUp'
@@ -30,16 +65,41 @@ export type GraphQLOperationKey =
   | 'updateUser'
   | 'adminUpdateUser'
   | 'changeUserPassword'
-  | 'deleteUser'
+  | 'deleteKcUser'
   | 'assignRealmRole'
   | 'removeRealmRole'
+  | 'adminChangePassword'
   | 'changeMyPassword'
   | 'updateMyProfile'
-  | 'sendPasswordResetEmail'
+  | 'requestPasswordReset'
+  | 'verifyPasswordResetToken'
+  | 'verifyPasswordResetStepUp'
+  | 'completePasswordReset'
+  | 'verifySignUp'
+  | 'verifyGuestSignUp'
+  | 'setMfaPreference'
+  | 'listWebAuthnDevices'
+  | 'revokeWebAuthnCredential'
+  | 'enableTotp'
+  | 'confirmTotp'
+  | 'generateWebAuthnRegistrationOptions'
+  | 'verifyWebAuthnRegistration'
+  | 'generateWebAuthnAuthOptions2'
+  | 'verifyWebAuthnAuthentication2'
+  | 'regenerateBackupCodes'
+  | 'renameWebAuthnCredential'
+  | 'getSecurityQuestions'
+  | 'generatePasswordlessOptions'
+  | 'generateWebAuthnAuthOptions'
+  | 'verifyPasswordlessAuthentication'
+  | 'verifyWebAuthnAuthentication'
+  | 'loginTotp'
+  | 'sendMagicLink'
+  | 'verifyMagicLink'
   | 'getById'
   | 'getByUsername'
-  | 'getUsers'
-  | 'me'
+  | 'kc_users'
+  | 'meAuth'
   | 'meByToken';
 
 /**
@@ -48,28 +108,63 @@ export type GraphQLOperationKey =
  * ---------------------------------------
  */
 export interface PayloadMap extends Record<GraphQLOperationKey, unknown> {
-  login: TokenPayload;
-  refresh: TokenPayload;
-  logout: SuccessPayload;
-  adminSignUp: TokenPayload;
-  guestSignIn: SignUpPayload;
+  credentialsLogin: TestTokenPayload;
+  refresh: TestTokenPayload;
+  logout: TestSuccessPayload;
+  adminSignUp: TestTokenPayload;
+  guestSignIn: TestSignUpPayload;
 
   updateUser: boolean;
   adminUpdateUser: boolean;
   changeUserPassword: boolean;
-  deleteUser: boolean;
+  deleteKcUser: boolean;
   assignRealmRole: boolean;
   removeRealmRole: boolean;
+  adminChangePassword: boolean;
 
-  changeMyPassword: SuccessPayload;
-  updateMyProfile: SuccessPayload;
-  sendPasswordResetEmail: SuccessPayload;
+  changeMyPassword: TestSuccessPayload;
+  updateMyProfile: TestSuccessPayload;
+  requestPasswordReset: boolean;
+  verifyPasswordResetToken: { mfaRequired: boolean; mfaMethod: string };
+  verifyPasswordResetStepUp: boolean;
+  completePasswordReset: boolean;
+  verifySignUp: TestSignUpPayload;
+  verifyGuestSignUp: TestGuestSignUpPayload;
 
-  getById: User;
-  getByUsername: User;
-  getUsers: User[];
-  me: User;
-  meByToken: User;
+  setMfaPreference: boolean;
+  listWebAuthnDevices: Array<{
+    credentialId: string;
+    nickname?: string;
+    deviceType: string;
+    backedUp: boolean;
+    createdAt: string;
+    lastUsedAt?: string;
+    revokedAt?: string;
+  }>;
+  revokeWebAuthnCredential: boolean;
+  enableTotp: { secret?: string; otpauth?: string; uri?: string };
+  confirmTotp: boolean;
+  generateWebAuthnRegistrationOptions: Record<string, unknown>;
+  verifyWebAuthnRegistration: boolean;
+  generateWebAuthnAuthOptions2: Record<string, unknown>;
+  verifyWebAuthnAuthentication2: boolean;
+  regenerateBackupCodes: string[];
+  renameWebAuthnCredential: boolean;
+  getSecurityQuestions: Array<{ id: string; question: string }>;
+
+  generatePasswordlessOptions: Record<string, unknown>;
+  generateWebAuthnAuthOptions: Record<string, unknown>;
+  verifyPasswordlessAuthentication: TestTokenPayload;
+  verifyWebAuthnAuthentication: TestTokenPayload;
+  loginTotp: TestTokenPayload;
+  sendMagicLink: boolean;
+  verifyMagicLink: TestTokenPayload;
+
+  getById: TestUserPayload;
+  getByUsername: TestUserPayload;
+  kc_users: TestUserPayload[];
+  meAuth: TestUserPayload;
+  meByToken: TestUserPayload;
 }
 
 /* ----------------------------------------------
@@ -78,7 +173,7 @@ export interface PayloadMap extends Record<GraphQLOperationKey, unknown> {
  * ---------------------------------------------- */
 
 export interface VariableMap extends Record<GraphQLOperationKey, unknown> {
-  login: LoginVariables;
+  credentialsLogin: LoginVariables;
   refresh: RefreshVariables;
   logout: LogoutVariables;
   adminSignUp: AdminSignUpVariables;
@@ -87,18 +182,45 @@ export interface VariableMap extends Record<GraphQLOperationKey, unknown> {
   updateUser: UpdateUserVariables;
   adminUpdateUser: UpdateUserVariables;
   changeUserPassword: ChangePasswordVariables;
-  deleteUser: DeleteUserVariables;
+  deleteKcUser: DeleteUserVariables;
   assignRealmRole: AssignRealmRoleVariables;
   removeRealmRole: RemoveRealmRoleVariables;
+  adminChangePassword: AdminChangePasswordVariables;
 
   changeMyPassword: ChangeMyPasswordVariables;
   updateMyProfile: UpdateMyProfileVariables;
-  sendPasswordResetEmail: SendPasswordResetEmailVariables;
+  requestPasswordReset: RequestPasswordResetVariables;
+  verifyPasswordResetToken: VerifyPasswordResetTokenVariables;
+  verifyPasswordResetStepUp: VerifyPasswordResetStepUpVariables;
+  completePasswordReset: CompletePasswordResetVariables;
+  verifySignUp: TokenVariables;
+  verifyGuestSignUp: TokenVariables;
+
+  setMfaPreference: SetMfaPreferenceVariables;
+  listWebAuthnDevices: never;
+  revokeWebAuthnCredential: CredentialIdVariables;
+  enableTotp: never;
+  confirmTotp: CodeVariables;
+  generateWebAuthnRegistrationOptions: never;
+  verifyWebAuthnRegistration: ResponseVariables;
+  generateWebAuthnAuthOptions2: never;
+  verifyWebAuthnAuthentication2: ResponseVariables;
+  regenerateBackupCodes: never;
+  renameWebAuthnCredential: RenameWebAuthnCredentialVariables;
+  getSecurityQuestions: never;
+
+  generatePasswordlessOptions: EmailVariables;
+  generateWebAuthnAuthOptions: never;
+  verifyPasswordlessAuthentication: ResponseVariables;
+  verifyWebAuthnAuthentication: ResponseVariables;
+  loginTotp: LoginTotpVariables;
+  sendMagicLink: EmailVariables;
+  verifyMagicLink: TokenVariables;
 
   getById: GetByIdVariables;
   getByUsername: GetByUsernameVariables;
-  getUsers: never; // no vars
-  me: never; // no vars
+  kc_users: never; // no vars
+  meAuth: never; // no vars
   meByToken: never; // no vars
 }
 
@@ -177,7 +299,14 @@ export interface UpdateUserVariables {
 export interface ChangePasswordVariables {
   id: string;
   input: {
-    currentPassword: string;
+    oldPassword: string;
+    newPassword: string;
+  };
+}
+
+export interface AdminChangePasswordVariables {
+  input: {
+    id: string;
     newPassword: string;
   };
 }
@@ -210,7 +339,7 @@ export interface DeleteUserVariables {
  */
 export interface ChangeMyPasswordVariables {
   input: {
-    currentPassword: string;
+    oldPassword: string;
     newPassword: string;
   };
 }
@@ -230,8 +359,62 @@ export interface UpdateMyProfileVariables {
 /**
  * Me → Send Password Reset
  */
-export interface SendPasswordResetEmailVariables {
+export interface EmailVariables {
   email: string;
+}
+
+export type RequestPasswordResetVariables = EmailVariables;
+
+export interface VerifyPasswordResetTokenVariables {
+  token: string;
+}
+
+export interface VerifyPasswordResetStepUpVariables {
+  input: {
+    token: string;
+    code?: string;
+    credentialResponse?: unknown;
+    answers?: Array<{ questionId: string; answer: string }>;
+  };
+}
+
+export interface CompletePasswordResetVariables {
+  input: {
+    token: string;
+    newPassword: string;
+  };
+}
+
+export interface TokenVariables {
+  token: string;
+}
+
+export interface SetMfaPreferenceVariables {
+  method: string;
+}
+
+export interface CredentialIdVariables {
+  credentialId: string;
+}
+
+export interface CodeVariables {
+  code: string;
+}
+
+export interface ResponseVariables {
+  response: unknown;
+}
+
+export interface RenameWebAuthnCredentialVariables {
+  credentialId: string;
+  nickname: string;
+}
+
+export interface LoginTotpVariables {
+  input: {
+    username: string;
+    code: string;
+  };
 }
 
 /**

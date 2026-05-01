@@ -17,7 +17,6 @@
 
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-import { LoggerPlusService } from '../../../src/logger/logger-plus.service.js';
 import { env } from '../../env.js';
 import type { GraphQLResponse } from '../../utils/graphql-client.js';
 import { gqlRequest } from '../../utils/graphql-client.js';
@@ -26,9 +25,6 @@ import { createTestApp } from '../setup-e2e.js';
 import type { INestApplication } from '@nestjs/common';
 
 describe('👤 Authentication E2E - User Operations', () => {
-  const loggerPlusService = new LoggerPlusService();
-  const logger = loggerPlusService.getLogger('authentication-user');
-
   let app: INestApplication;
   let cookies: string[] = [];
   let accessToken: string | undefined = undefined;
@@ -40,36 +36,32 @@ describe('👤 Authentication E2E - User Operations', () => {
 
     const loginQuery = `
       mutation {
-        login(input: {
+        credentialsLogin(input: {
           username: "${env.OMNIXYS_USER_USERNAME}",
           password: "${env.OMNIXYS_USER_PASSWORD}"
         }) { accessToken }
       }
     `;
 
-    const result: GraphQLResponse<Pick<PayloadMap, 'login'>> = await gqlRequest(
-      app,
-      'login',
-      loginQuery,
-    );
+    const result: GraphQLResponse<Pick<PayloadMap, 'credentialsLogin'>> =
+      await gqlRequest(app, 'credentialsLogin', loginQuery);
 
     expect(result.errors).toBeUndefined();
-    accessToken = result.data?.login?.accessToken ?? undefined;
+    accessToken = result.data?.credentialsLogin?.accessToken ?? undefined;
     expect(accessToken).toBeDefined();
 
     cookies = result.cookies ?? [];
     authHeaders = { Authorization: `Bearer ${accessToken}` };
-    logger.log('🔑 User logged in successfully');
   });
 
   afterAll(async () => {});
 
-  it('should query me()', async () => {
-    const query = `query { me { id username email } }`;
+  it('should query meAuth()', async () => {
+    const query = `query { meAuth { id username email } }`;
 
-    const result: GraphQLResponse<Pick<PayloadMap, 'me'>> = await gqlRequest(
+    const result: GraphQLResponse<Pick<PayloadMap, 'meAuth'>> = await gqlRequest(
       app,
-      'me',
+      'meAuth',
       query,
       undefined,
       authHeaders,
@@ -77,17 +69,16 @@ describe('👤 Authentication E2E - User Operations', () => {
     );
 
     expect(result.errors).toBeUndefined();
-    expect(result.data?.me?.username).toBeDefined();
-    logger.log('🙋 me() successful');
+    expect(result.data?.meAuth?.username).toBeDefined();
   });
 
-  it('should send password reset email', async () => {
-    const mutation = `mutation { sendPasswordResetEmail { ok } }`;
+  it('should request a password reset without leaking account existence', async () => {
+    const mutation = `mutation { requestPasswordReset(email: "${env.OMNIXYS_USER_USERNAME}") }`;
 
-    const result: GraphQLResponse<Pick<PayloadMap, 'sendPasswordResetEmail'>> =
+    const result: GraphQLResponse<Pick<PayloadMap, 'requestPasswordReset'>> =
       await gqlRequest(
         app,
-        'sendPasswordResetEmail',
+        'requestPasswordReset',
         mutation,
         undefined,
         authHeaders,
@@ -95,7 +86,6 @@ describe('👤 Authentication E2E - User Operations', () => {
       );
 
     expect(result.errors ?? []).toHaveLength(0);
-    expect(result.data?.sendPasswordResetEmail?.ok).toBe(true);
-    logger.log('📨 sendPasswordResetEmail successful');
+    expect(result.data?.requestPasswordReset).toBe(true);
   });
 });

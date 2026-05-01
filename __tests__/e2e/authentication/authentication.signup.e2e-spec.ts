@@ -17,7 +17,6 @@
 
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-import { LoggerPlusService } from '../../../src/logger/logger-plus.service.js';
 import { env } from '../../env.js';
 import type { GraphQLResponse } from '../../utils/graphql-client.js';
 import { gqlRequest } from '../../utils/graphql-client.js';
@@ -26,9 +25,6 @@ import { createTestApp } from '../setup-e2e.js';
 import type { INestApplication } from '@nestjs/common';
 
 describe('👑 Authentication E2E - User SignUp Flow (Full Lifecycle)', () => {
-  const loggerPlusService = new LoggerPlusService();
-  const logger = loggerPlusService.getLogger('authentication-signup');
-
   let app: INestApplication;
   let cookies: string[] = [];
   let createdUserId: string | undefined = undefined;
@@ -74,7 +70,6 @@ describe('👑 Authentication E2E - User SignUp Flow (Full Lifecycle)', () => {
 
     expect(result.errors).toBeUndefined();
     expect(result.data?.adminSignUp?.accessToken).toBeDefined();
-    logger.log(`👑 AdminSignUp successful → ${createdUsername}`);
   });
 
   // -----------------------------------------------------
@@ -85,7 +80,7 @@ describe('👑 Authentication E2E - User SignUp Flow (Full Lifecycle)', () => {
 
     const query = `
       mutation {
-        login(input: {
+        credentialsLogin(input: {
           username: "${createdUsername}",
           password: "OldPass123!"
         }) {
@@ -95,20 +90,16 @@ describe('👑 Authentication E2E - User SignUp Flow (Full Lifecycle)', () => {
       }
     `;
 
-    const result: GraphQLResponse<Pick<PayloadMap, 'login'>> = await gqlRequest(
-      app,
-      'login',
-      query,
-    );
+    const result: GraphQLResponse<Pick<PayloadMap, 'credentialsLogin'>> =
+      await gqlRequest(app, 'credentialsLogin', query);
 
     expect(result.errors).toBeUndefined();
 
     cookies = result.cookies ?? [];
-    userAccessToken = result.data?.login?.accessToken;
+    userAccessToken = result.data?.credentialsLogin?.accessToken;
     userAuthHeaders = { Authorization: `Bearer ${userAccessToken}` };
 
     expect(userAccessToken).toBeDefined();
-    logger.log('🔑 New user login successful');
   });
 
   // -----------------------------------------------------
@@ -156,7 +147,6 @@ describe('👑 Authentication E2E - User SignUp Flow (Full Lifecycle)', () => {
 
     expect(resultId.errors).toBeUndefined();
     expect(resultId.data?.getById?.id).toBe(createdUserId);
-    logger.log(`📇 getByUsername/getById successful → ${createdUserId}`);
   });
 
   // -----------------------------------------------------
@@ -190,7 +180,6 @@ describe('👑 Authentication E2E - User SignUp Flow (Full Lifecycle)', () => {
 
     expect(result.errors ?? []).toHaveLength(0);
     expect(result.data?.updateMyProfile?.ok).toBe(true);
-    logger.log('🙋 updateMyProfile successful');
   });
 
   // -----------------------------------------------------
@@ -223,7 +212,6 @@ describe('👑 Authentication E2E - User SignUp Flow (Full Lifecycle)', () => {
 
     expect(result.errors ?? []).toHaveLength(0);
     expect(result.data?.changeMyPassword?.ok).toBe(true);
-    logger.log('🔐 changeMyPassword successful');
   });
 
   // -----------------------------------------------------
@@ -232,7 +220,7 @@ describe('👑 Authentication E2E - User SignUp Flow (Full Lifecycle)', () => {
   it('should login again with the new password', async () => {
     const query = `
       mutation {
-        login(input: {
+        credentialsLogin(input: {
           username: "${createdUsername}"
           password: "NewPass123!"
         }) {
@@ -241,15 +229,11 @@ describe('👑 Authentication E2E - User SignUp Flow (Full Lifecycle)', () => {
       }
     `;
 
-    const result: GraphQLResponse<Pick<PayloadMap, 'login'>> = await gqlRequest(
-      app,
-      'login',
-      query,
-    );
+    const result: GraphQLResponse<Pick<PayloadMap, 'credentialsLogin'>> =
+      await gqlRequest(app, 'credentialsLogin', query);
 
     expect(result.errors).toBeUndefined();
-    expect(result.data?.login?.accessToken).toBeDefined();
-    logger.log('✅ Login with new password successful');
+    expect(result.data?.credentialsLogin?.accessToken).toBeDefined();
   });
 
   // -----------------------------------------------------
@@ -261,36 +245,36 @@ describe('👑 Authentication E2E - User SignUp Flow (Full Lifecycle)', () => {
     // 🔐 Login als Admin
     const adminLoginQuery = `
       mutation {
-        login(input: {
+        credentialsLogin(input: {
           username: "${env.OMNIXYS_ADMIN_USERNAME}",
           password: "${env.OMNIXYS_ADMIN_PASSWORD}"
         }) { accessToken }
       }
     `;
 
-    const adminResult: GraphQLResponse<Pick<PayloadMap, 'login'>> =
-      await gqlRequest(app, 'login', adminLoginQuery);
+    const adminResult: GraphQLResponse<Pick<PayloadMap, 'credentialsLogin'>> =
+      await gqlRequest(app, 'credentialsLogin', adminLoginQuery);
 
     expect(adminResult.errors ?? []).toHaveLength(0);
-    const adminAccessToken = adminResult.data?.login?.accessToken ?? undefined;
+    const adminAccessToken =
+      adminResult.data?.credentialsLogin?.accessToken ?? undefined;
     expect(adminAccessToken).toBeDefined();
 
     const adminAuthHeaders = { Authorization: `Bearer ${adminAccessToken}` };
 
-    const deleteQuery = `mutation { deleteUser(id: "${createdUserId}") }`;
-    const deleteResult: GraphQLResponse<Pick<PayloadMap, 'deleteUser'>> =
+    const deleteQuery = `mutation { deleteKcUser(id: "${createdUserId}") }`;
+    const deleteResult: GraphQLResponse<Pick<PayloadMap, 'deleteKcUser'>> =
       await gqlRequest(
         app,
-        'deleteUser',
+        'deleteKcUser',
         deleteQuery,
         undefined,
         adminAuthHeaders,
       );
 
     expect(deleteResult.errors).toBeUndefined();
-    expect(deleteResult.data?.deleteUser).toBe(true);
+    expect(deleteResult.data?.deleteKcUser).toBe(true);
 
-    logger.log(`🗑️ deleteUser successful (deleted ${createdUserId})`);
     createdUserId = undefined;
   });
 });

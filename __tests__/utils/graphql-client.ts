@@ -23,7 +23,7 @@ import type {
   GraphQLOperationKey,
   PayloadMap,
   VariableMap,
-} from './graphql-types';
+} from './graphql-types.js';
 
 /// <summary>
 /// Defines the generic GraphQL response structure used by tests.
@@ -62,7 +62,7 @@ export async function gqlRequest<TKey extends GraphQLOperationKey>(
 
   // Attach cookies
   const cookieArray: string[] =
-    cookies && cookies.length > 0 ? [...cookies] : [...globalCookies];
+    cookies !== undefined ? [...cookies] : [...globalCookies];
   if (cookieArray.length > 0) {
     req = req.set('Cookie', cookieArray);
   }
@@ -121,6 +121,61 @@ export async function gqlRequest<TKey extends GraphQLOperationKey>(
       ),
     );
   }
+
+  return {
+    res,
+    data: body.data,
+    errors: body.errors,
+    cookies: setCookies,
+  };
+}
+
+export async function rawGqlRequest(
+  app: INestApplication,
+  query: string,
+  variables?: Readonly<Record<string, unknown>>,
+  headers?: Readonly<Record<string, string>>,
+  cookies?: readonly string[],
+): Promise<
+  GraphQLResponse<Record<string, object | string | number | boolean | null>>
+> {
+  const agent: Server = app.getHttpServer() as Server;
+  let req = request(agent).post('/graphql');
+
+  const cookieArray: string[] =
+    cookies !== undefined ? [...cookies] : [...globalCookies];
+  if (cookieArray.length > 0) {
+    req = req.set('Cookie', cookieArray);
+  }
+
+  if (headers) {
+    for (const [key, value] of Object.entries(headers)) {
+      if (value) {
+        req = req.set(key, value);
+      }
+    }
+  }
+
+  const res: Response = await req.send(
+    variables === undefined ? { query } : { query, variables },
+  );
+
+  const rawCookies = res.headers['set-cookie'];
+  const setCookies: string[] | undefined =
+    typeof rawCookies === 'string'
+      ? [rawCookies]
+      : Array.isArray(rawCookies)
+        ? rawCookies
+        : undefined;
+
+  if (setCookies) {
+    globalCookies = [...setCookies];
+  }
+
+  const body = res.body as {
+    data?: Record<string, object | string | number | boolean | null>;
+    errors?: Array<{ message: string; path?: string[] }>;
+  };
 
   return {
     res,

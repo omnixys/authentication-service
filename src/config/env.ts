@@ -103,7 +103,7 @@ export const env = {
  * Debug output:
  * Print all environment variables in non-production environments.
  */
-if (process.env.NODE_ENV !== 'production') {
+if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test' ) {
   console.debug('================= ENVIRONMENT VARIABLES =================');
   console.debug(JSON.stringify(env, null, 2));
   console.debug('==========================================================');

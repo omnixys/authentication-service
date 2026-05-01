@@ -85,3 +85,11 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 .npmrc
 .secrets/**
 node_profiles
+
+# __tests__/e2e/**
+# __tests__/mocks
+# __tests__/reports
+# __tests__/testcontainer
+# __tests__/utils
+# __tests__/env
+__tests__

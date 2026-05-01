@@ -59,14 +59,13 @@ export default tseslint.config(
     languageOptions: {
       globals: {
         ...globals.node,
-        ...globals.jest, // falls du Tests nutzt
       },
       ecmaVersion: 'latest',
       sourceType: 'module',
       parserOptions: {
         project: [
           './tsconfig.json',
-          './__tests__/tsconfig.test.json',
+          './tsconfig.test.json',
           './release.config.js',
         ],
 

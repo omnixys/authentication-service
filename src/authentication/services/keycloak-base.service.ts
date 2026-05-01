@@ -31,7 +31,7 @@ import { firstValueFrom } from 'rxjs';
 
 export type RemoteJwkSet = ReturnType<typeof jose.createRemoteJWKSet>;
 
-const { KC_ADMIN_PASSWORD, KC_ADMIN_USERNAME } = env;
+const { KC_ADMIN_PASSWORD, KC_ADMIN_USERNAME, KC_CLIENT_SECRET, KC_CLIENT_ID } = env;
 
 /**
  * Shared base class for Keycloak read/write services.
@@ -203,14 +203,16 @@ export abstract class AuthenticateBaseService {
 
     const params = new URLSearchParams({
       grant_type: 'password',
-      client_id: 'admin-cli',
+      client_id: KC_CLIENT_ID,
+      client_secret: KC_CLIENT_SECRET,
       username: KC_ADMIN_USERNAME,
       password: KC_ADMIN_PASSWORD,
+      scope: 'openid',
     });
 
     const res = await firstValueFrom(
       this.http.post<{ access_token: string; expires_in: number }>(
-        `/realms/master/protocol/openid-connect/token`,
+        `/realms/omnixys/protocol/openid-connect/token`,
         params.toString(),
         {
           baseURL: keycloakConfig.url,
@@ -249,6 +251,8 @@ export abstract class AuthenticateBaseService {
    */
   protected async getRealmRole(roleName: RealmRoleType | string): Promise<RoleData> {
     const effective = this.mapRoleInput(roleName);
+
+    
     try {
       const role = await this.kcRequest<RoleData>(
         'get',
@@ -258,7 +262,8 @@ export abstract class AuthenticateBaseService {
         throw new Error(`Incomplete role object (name='${effective}')`);
       }
       return { id: role.id, name: role.name };
-    } catch {
+    } catch (err) {
+      console.log(err)
       throw new NotFoundException(`Realm role '${effective}' not found.`);
     }
   }

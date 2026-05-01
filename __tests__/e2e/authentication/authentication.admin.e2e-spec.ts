@@ -17,7 +17,6 @@
  * For more information, visit <https://www.gnu.org/licenses/>.
  */
 
-import { LoggerPlusService } from '../../../src/logger/logger-plus.service.js';
 import { env } from '../../env.js';
 import { gqlRequest } from '../../utils/graphql-client.js';
 import { createTestApp } from '../setup-e2e.js';
@@ -29,12 +28,9 @@ import type { INestApplication } from '@nestjs/common';
  * - AdminSignUp (legt neuen Benutzer an)
  * - UpdateUser (Profilfelder)
  * - assignRealmRole / removeRealmRole
- * - deleteUser
+ * - deleteKcUser
  */
 describe('🛡️ Authentication E2E - Admin Operations (Full Flow)', () => {
-  const loggerPlusService = new LoggerPlusService();
-  const logger = loggerPlusService.getLogger('authentication-admin');
-
   let app: INestApplication;
   let cookies: string[] = [];
   let accessToken: string | undefined = undefined;
@@ -49,7 +45,7 @@ describe('🛡️ Authentication E2E - Admin Operations (Full Flow)', () => {
     // 🔹 Login als Admin
     const adminLoginQuery = `
       mutation {
-        login(input: {
+        credentialsLogin(input: {
           username: "${env.OMNIXYS_ADMIN_USERNAME ?? 'admin'}",
           password: "${env.OMNIXYS_ADMIN_PASSWORD ?? 'p'}"
         }) { accessToken }
@@ -57,15 +53,14 @@ describe('🛡️ Authentication E2E - Admin Operations (Full Flow)', () => {
     `;
     const { data, cookies: setCookies } = await gqlRequest(
       app,
-      'login',
+      'credentialsLogin',
       adminLoginQuery,
     );
     cookies = setCookies ?? [];
-    accessToken = data?.login?.accessToken;
+    accessToken = data?.credentialsLogin?.accessToken;
     authHeaders = { Authorization: `Bearer ${accessToken}` };
 
     expect(accessToken).toBeDefined();
-    logger.log('✅ Admin logged in successfully');
   });
 
   afterAll(async () => {});
@@ -104,7 +99,6 @@ describe('🛡️ Authentication E2E - Admin Operations (Full Flow)', () => {
     );
     expect(errors).toBeUndefined();
     expect(data?.adminSignUp?.accessToken).toBeDefined();
-    logger.log(`👤 New user created via adminSignUp → ${createdUsername}`);
   });
 
   // -----------------------------------------------------
@@ -131,7 +125,6 @@ describe('🛡️ Authentication E2E - Admin Operations (Full Flow)', () => {
     expect(errors).toBeUndefined();
     createdUserId = data?.getByUsername?.id ?? undefined;
     expect(createdUserId).toMatch(/^[\w-]+$/);
-    logger.log(`📇 getByUsername successful → ID=${createdUserId}`);
   });
 
   // -----------------------------------------------------
@@ -160,7 +153,29 @@ describe('🛡️ Authentication E2E - Admin Operations (Full Flow)', () => {
     );
     expect(errors).toBeUndefined();
     expect(data?.adminUpdateUser).toBe(true);
-    logger.log('✏️ adminUpdateUser successful');
+  });
+
+  it('should change the user password (adminChangePassword)', async () => {
+    const query = `
+      mutation {
+        adminChangePassword(
+          input: {
+            id: "${createdUserId}"
+            newPassword: "AdminChanged123!"
+          }
+        )
+      }
+    `;
+    const { data, errors } = await gqlRequest(
+      app,
+      'adminChangePassword',
+      query,
+      undefined,
+      authHeaders,
+      cookies,
+    );
+    expect(errors).toBeUndefined();
+    expect(data?.adminChangePassword).toBe(true);
   });
 
   // -----------------------------------------------------
@@ -191,24 +206,22 @@ describe('🛡️ Authentication E2E - Admin Operations (Full Flow)', () => {
     expect(r.errors ?? []).toHaveLength(0);
     expect(a.data?.assignRealmRole).toBe(true);
     expect(r.data?.removeRealmRole).toBe(true);
-    logger.log('🧩 Role assign/remove successful');
   });
 
   // -----------------------------------------------------
   // 🔹 DELETE USER
   // -----------------------------------------------------
   it('should delete the created user', async () => {
-    const query = `mutation { deleteUser(id: "${createdUserId}") }`;
+    const query = `mutation { deleteKcUser(id: "${createdUserId}") }`;
     const { data, errors } = await gqlRequest(
       app,
-      'deleteUser',
+      'deleteKcUser',
       query,
       undefined,
       authHeaders,
       cookies,
     );
     expect(errors).toBeUndefined();
-    expect(data?.deleteUser).toBe(true);
-    logger.log('🗑️ deleteUser successful');
+    expect(data?.deleteKcUser).toBe(true);
   });
 });

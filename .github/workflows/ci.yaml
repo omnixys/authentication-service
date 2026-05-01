@@ -34,47 +34,10 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  OMNIXYS_ADMIN_USERNAME: ${{ secrets.OMNIXYS_ADMIN_USERNAME }}
-  OMNIXYS_ADMIN_PASSWORD: ${{ secrets.OMNIXYS_ADMIN_PASSWORD }}
-  OMNIXYS_USER_USERNAME: ${{ secrets.OMNIXYS_USER_USERNAME }}
-  OMNIXYS_USER_PASSWORD: ${{ secrets.OMNIXYS_USER_PASSWORD }}
-  OMNIXYS_EMAIL_DOMAIN: ${{ secrets.OMNIXYS_EMAIL_DOMAIN }}
-
-  POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
-  POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-  POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
-  POSTGRES_SQL_HOST: postgres://${{ secrets.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@localhost:5433/${{ secrets.POSTGRES_DB }}
-
-  KAFKA_BROKER: ${{ secrets.KAFKA_BROKER }}
-  TEMPO_URI: ${{ secrets.TEMPO_URI }}
-
-  KC_DB_PASSWORD: ${{ secrets.KC_DB_PASSWORD }}
-  KC_ADMIN_USERNAME: ${{ secrets.KC_ADMIN_USERNAME }}
-  KC_ADMIN_PASSWORD: ${{ secrets.KC_ADMIN_PASSWORD }}
-  KC_URL: ${{ secrets.KC_TEST_URL }}
-  KC_REALM: ${{ secrets.KC_REALM }}
-  KC_CLIENT_ID: ${{ secrets.KC_CLIENT_ID }}
-  KC_CLIENT_SECRET: ${{ secrets.KC_CLIENT_SECRET }}
-
   KEYS_PATH: ${{ secrets.KEYS_PATH }}
   SERVICE: ${{ vars.SERVICE }}
   PORT: ${{ secrets.PORT }}
-  GRAPHQL_PLAYGROUND: ${{ secrets.GRAPHQL_PLAYGROUND }}
   NODE_ENV: ${{ secrets.NODE_ENV }}
-  HTTPS: ${{ secrets.HTTPS }}
-
-  LOG_LEVEL: ${{ secrets.LOG_LEVEL }}
-  LOG_PRETTY: ${{ secrets.LOG_PRETTY }}
-  LOG_DEFAULT: ${{ secrets.LOG_DEFAULT }}
-  LOG_DIRECTORY: ${{ secrets.LOG_DIRECTORY }}
-  LOG_FILE_DEFAULT_NAME: ${{ secrets.LOG_FILE_DEFAULT_NAME }}
-
-  VALKEY_PASSWORD: ${{ secrets.VALKEY_PASSWORD }}
-
-  POSTGRES_TEST_USER: ${{ secrets.POSTGRES_TEST_USER }}
-  POSTGRES_TEST_PASSWORD: ${{ secrets.POSTGRES_TEST_PASSWORD }}
-  POSTGRES_TEST_DB: ${{ secrets.POSTGRES_TEST_DB }}
-  POSTGRES_TEST_URL: postgres://${{ secrets.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@OMNIXYS_TOKEN:5433/${{ secrets.POSTGRES_DB }}
 
 jobs:
   ci:
@@ -87,65 +50,6 @@ jobs:
     strategy:
       matrix:
         node-version: [24.10.0]
-
-    services:
-      postgres:
-        image: postgres:18
-        ports:
-          - 5432:5432
-        env:
-          POSTGRES_USER: ${{ env.POSTGRES_USER }}
-          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
-          POSTGRES_DB: ${{ env.POSTGRES_DB }}
-          TZ: Europe/Berlin
-        options: >-
-          --health-cmd="pg_isready -U postgres -d postgres"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
-
-      valkey:
-        image: valkey/valkey:latest
-        ports:
-          - 6380:6379
-        env:
-          VALKEY_PASSWORD: ${{ env.VALKEY_PASSWORD }}
-          options: >-
-            --requirepass $VALKEY_PASSWORD
-            --appendonly yes
-            --health-cmd="valkey-cli -a $VALKEY_PASSWORD ping | grep PONG"
-            --health-interval=5s
-            --health-timeout=3s
-            --health-retries=10
-
-      zookeeper:
-        image: wurstmeister/zookeeper
-        ports:
-          - 2181:2181
-        env:
-          ALLOW_ANONYMOUS_LOGIN: yes
-        options: >-
-          --health-cmd "echo ruok | nc localhost 2181 | grep imok"
-          --health-interval 5s
-          --health-timeout 3s
-          --health-retries 10
-
-      kafka:
-        image: wurstmeister/kafka
-        env:
-          KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
-          KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
-          KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-          KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-        ports:
-          - 9092:9092
-        options: >-
-          --hostname kafka
-          --health-cmd "bash -c 'nc -z localhost 9092 || exit 1'"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 15
-          --health-start-period 20s
 
     steps:
       - name: 🧾 Checkout Repository
@@ -184,64 +88,11 @@ jobs:
         env:
           OMNIXYS_TOKEN: ${{ secrets.OMNIXYS_TOKEN }}
 
-      - name: 🚀 Start Keycloak (26.4)
-        run: |
-          docker run -d --name keycloak -p 8080:8080 \
-           -e KC_BOOTSTRAP_ADMIN_USERNAME=${{ env.KC_ADMIN_USERNAME }} \
-           -e KC_BOOTSTRAP_ADMIN_PASSWORD=${{ env.KC_ADMIN_PASSWORD }} \
-           -v "$(pwd)/__tests__/keycloak/omnixys-realm.json:/opt/keycloak/data/import/omnixys-realm.json:ro" \
-           --tmpfs /opt/keycloak/data:rw,size=200m \
-           quay.io/keycloak/keycloak:26.4 \
-           start-dev --import-realm --http-port=8080
-
-
-          echo "⏳ Waiting for Keycloak..."
-          for i in {1..10}; do
-            if  curl -fs http://localhost:8080/realms/master >/dev/null 2>&1; then
-              echo "✅ Base realm 'master' available (after $i checks)"
-              break
-            fi
-            echo "waiting for master realm ($i/10)..."
-            sleep 5
-          done
-
-          echo "⏳ Waiting for imported realm 'omnixys'..."
-          for i in {1..3}; do
-            status=$(curl -s -o /dev/null -w "%{http_code}" \
-              -H "Accept: application/json" \
-              http://localhost:8080/realms/omnixys || echo 000)
-
-            if [ "$status" = "200" ]; then
-              echo "✅ Realm 'omnixys' reachable (HTTP $status after $i tries)"
-              docker ps
-              exit 0
-            fi
-
-            echo "Realm not yet reachable (status $status, try $i/3)..."
-            sleep 5
-          done
-
-          echo "❌ Keycloak did not become ready in time. Dumping logs..."
-          docker logs keycloak
-          exit 1
-
       - name: 🔍 Lint check
         run: pnpm lint
 
       - name: 🧱 Build project
         run: pnpm build
 
-      # - name: 🧪 Run tests
-      #   run: pnpm t
-
       - name: 🔤 Typecheck
         run: npx tsc
-
-      - name: 📊 Upload coverage to Codecov
-        if: success()
-        uses: codecov/codecov-action@v4
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./__tests__/reports/e2e/coverage/lcov.info
-          flags: unittests
-          fail_ci_if_error: false

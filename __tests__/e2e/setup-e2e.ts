@@ -1,99 +1,106 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/**
- * @license GPL-3.0-or-later
- * Copyright (C) 2025 Caleb Gyamfi - Omnixys Technologies
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- *
- * For more information, visit <https://www.gnu.org/licenses/>.
- */
+import 'reflect-metadata';
 
-/* eslint-disable no-console */
-import { AppModule } from '../../src/app.module.js';
-import { env } from '../env.js';
-import { type INestApplication } from '@nestjs/common';
+// 🔥 KEIN AppModule import hier!
+
+import {
+  FastifyAdapter,
+  NestFastifyApplication,
+} from '@nestjs/platform-fastify';
 import { Test } from '@nestjs/testing';
-import axios, { type AxiosError } from 'axios';
 
-// =====================================================
-// 🔹 OPTIONAL HEALTH CHECK: KEYCLOAK
-// =====================================================
+import { createKafkaContainer } from '../testcontainers/kafka.container.js';
+import { createKeycloakContainer } from '../testcontainers/keycloak.container.js';
+import { createPostgresContainer } from '../testcontainers/postgres.container.js';
+import { TempoContainer } from '../testcontainers/tempo.container.js';
+import { createValkeyContainer } from '../testcontainers/valkey.container.js';
 
-async function verifyKeycloak(): Promise<void> {
-  const base = env.KC_URL;
-  const realm = env.KC_REALM;
+let app: NestFastifyApplication;
 
-  const url = `${base}/realms/${realm}`;
+let pgContainer: any;
+let valkeyContainer: any;
+let kafkaContainer: any;
+let keycloakContainer: any;
+let tempoContainer: any;
 
-  try {
-    const res = await axios.get(url);
-    console.log(
-      `[Keycloak] ✅ Realm reachable: ${res.status} ${res.statusText}`,
-    );
-  } catch (error: unknown) {
-    const err = error as AxiosError;
-    const msg =
-      err.response?.status && err.response.statusText
-        ? `${err.response.status} ${err.response.statusText}`
-        : (err.message ?? 'Unknown error');
-    console.error(`[Keycloak] ❌ Cannot reach ${url} – ${msg}`);
-    throw new Error('Keycloak not reachable — aborting tests.');
-  }
-}
+export async function createTestApp() {
+  console.log('🚀 Starting Postgres...');
+  const pg = await createPostgresContainer();
+  pgContainer = pg.container;
+  console.log('✅ Postgres ready');
 
-// =====================================================
-// 🚀 CREATE TEST APPLICATION
-// =====================================================
+  console.log('🚀 Starting Valkey...');
+  const valkey = await createValkeyContainer();
+  valkeyContainer = valkey.container;
+  console.log('✅ Valkey ready');
 
-export async function createTestApp(): Promise<{ app: INestApplication }> {
-  await verifyKeycloak();
+  console.log('🚀 Starting Kafka...');
+  const kafka = await createKafkaContainer();
+  kafkaContainer = kafka.container;
+  console.log('✅ Kafka ready');
+
+    console.log('🚀 Starting Keycloak...');
+    const keycloak = await createKeycloakContainer();
+    keycloakContainer = keycloak.container;
+  console.log('✅ Keycloak ready');
+  
+console.log('🚀 Starting Tempo...');
+
+const tempo = new TempoContainer();
+tempoContainer = tempo;
+
+const { urlHttp, urlOtel } = await tempo.start();
+
+process.env.TEMPO_URI = `${urlOtel}/v1/traces`;
+process.env.TEMPO_HEALTH_URL = `${urlHttp}/metrics`;
+
+console.log('✅ Tempo ready', {
+  otel: process.env.TEMPO_URI,
+});
+
+  // 🔥 ENV HIER SETZEN (VOR IMPORT)
+  process.env.DATABASE_URL = pg.url;
+  process.env.VALKEY_URL = valkey.url;
+  process.env.VALKEY_PASSWORD = valkey.password;
+  process.env.KAFKA_BROKER = kafka.broker;
+  process.env.KAFKAJS_NO_PARTITIONER_WARNING = '1';
+
+  process.env.KC_URL = keycloak.url;
+  process.env.KC_REALM = keycloak.realm;
+  process.env.KC_CLIENT_ID = keycloak.clientId;
+  process.env.KC_CLIENT_SECRET = keycloak.clientSecret;
+
+  console.log('🔥 ENV:', {
+    DATABASE_URL: process.env.DATABASE_URL,
+    VALKEY_URL: process.env.VALKEY_URL,
+    KAFKA_BROKER: process.env.KAFKA_BROKER,
+  });
+
+delete (global as any).env;
+
+// 🔥 DANN import
+const { AppModule } = await import('../../src/app.module.js');
+
+  console.log('🚀 Bootstrapping Nest...');
 
   const moduleRef = await Test.createTestingModule({
     imports: [AppModule],
   }).compile();
 
-  const app = moduleRef.createNestApplication();
+  app = moduleRef.createNestApplication(new FastifyAdapter());
 
-  app.enableShutdownHooks();
   await app.init();
+  await app.getHttpAdapter().getInstance().ready();
 
-  console.log('[setup-e2e] ✅ NestJS application initialized');
+  console.log('✅ Nest ready');
+
   return { app };
 }
 
-// =====================================================
-// 🧹 GRACEFUL SHUTDOWN (AFTER TESTS)
-// =====================================================
-
-let appRef: INestApplication | null = null;
-
-globalThis.createTestApp = async (): Promise<{ app: INestApplication }> => {
-  const { app } = await createTestApp();
-  appRef = app;
-  return { app };
-};
-
-afterAll(async () => {
-  if (!appRef) {
-    return;
-  }
-
-  console.log('[setup-e2e] 🧹 Initiating graceful shutdown ...');
-  try {
-    await appRef.close();
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    console.log('[setup-e2e] ✅ All modules closed cleanly.');
-  } catch (e) {
-    console.warn('[setup-e2e] ⚠️ Error during app.close()', e);
-  }
-});
+export async function shutdownTestApp() {
+  if (app) await app.close();
+  if (pgContainer) await pgContainer.stop();
+  if (valkeyContainer) await valkeyContainer.stop();
+  if (kafkaContainer) await kafkaContainer.stop();
+  if (keycloakContainer) await keycloakContainer.stop();
+  if (tempoContainer) await tempoContainer.stop()
+}
