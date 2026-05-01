@@ -33,12 +33,25 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+  actions: read
+
 env:
   COSIGN_EXPERIMENTAL: 'true'
   IMAGE_NAME: ${{ secrets.DOCKER_USER }}/${{ vars.SERVICE }}-service
   IMAGE_NAME_REPOSITORY: ghcr.io/${{ github.repository }}
 
+
 jobs:
+
+  permissions:
+    contents: write
+    issues: write
+    pull-requests: write
+
   ci:
     name: Run Lint, Build and Typecheck
     runs-on: ubuntu-latest
@@ -98,6 +111,10 @@ jobs:
 
   release:
     needs: ci
+    if: github.ref == 'refs/heads/main'
+    outputs:
+      released: ${{ steps.semantic.outputs.released }}
+      version: ${{ steps.read_version.outputs.version }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -144,10 +161,20 @@ jobs:
         env:
           OMNIXYS_TOKEN: ${{ secrets.OMNIXYS_TOKEN }}
 
-      - name: Semantic Release
-        run: pnpm run release
+      - name: 🚀 Semantic Release
+        id: semantic
+        run: |
+          OUTPUT=$(pnpm run release || true)
+          echo "$OUTPUT"
+      
+          if echo "$OUTPUT" | grep -q "Published"; then
+            echo "released=true" >> $GITHUB_OUTPUT
+          else
+            echo "released=false" >> $GITHUB_OUTPUT
+          fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.OMNIXYS_TOKEN }}
 
       - name: Read version
         run: |
@@ -173,6 +200,7 @@ jobs:
 
   push-docker:
     needs: release
+    if: needs.release.outputs.released == 'true'
     name: 🐳 Build & Push Multi-Arch Images (Docker)
     runs-on: ubuntu-latest
     strategy:
@@ -262,6 +290,7 @@ jobs:
 
   push-github:
     needs: release
+    if: needs.release.outputs.released == 'true'
     name: 🐳 Build & Push Multi-Arch Images (Github)
     runs-on: ubuntu-latest
     strategy:
