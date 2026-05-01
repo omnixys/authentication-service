@@ -39,9 +39,17 @@ env:
   PORT: ${{ secrets.PORT }}
   NODE_ENV: ${{ secrets.NODE_ENV }}
 
+  COSIGN_EXPERIMENTAL: 'true'
+  IMAGE_NAME: ${{ secrets.DOCKER_USER }}/${{ vars.SERVICE }}-service
+  IMAGE_NAME_REPOSITORY: ghcr.io/${{ github.repository }}
+  CURRENT_VERSION: ${{ vars.CURRENT_VERSION }}
+
+  DOCKER_USER: ${{ secrets.DOCKER_USER }}
+  DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+
 jobs:
   ci:
-    name: Run Lint, Build, Test, and Typecheck
+    name: Run Lint, Build and Typecheck
     runs-on: ubuntu-latest
     if: >
       !contains(github.event.head_commit.message, 'chore(version)') &&
@@ -96,3 +104,321 @@ jobs:
 
       - name: 🔤 Typecheck
         run: npx tsc
+
+  release:
+    needs: ci
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [24.10.0]
+
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup npm registry auth
+        run: |
+          echo "@omnixys:registry=https://npm.pkg.github.com" >> .npmrc
+          echo "//npm.pkg.github.com/:_authToken=${OMNIXYS_TOKEN}" >> .npmrc
+        env:
+          OMNIXYS_TOKEN: ${{ secrets.OMNIXYS_TOKEN }}
+
+      - name: ⚙️ Enable Corepack (pnpm)
+        run: |
+          corepack enable
+          corepack prepare pnpm@latest --activate
+
+      - name: ⚙️ Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'pnpm'
+
+      - name: ♻️ Restore pnpm cache
+        uses: actions/cache@v5
+        with:
+          path: ~/.pnpm-store
+          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
+
+      - name: 📦 Install dependencies
+        run: pnpm install --frozen-lockfile
+        env:
+          OMNIXYS_TOKEN: ${{ secrets.OMNIXYS_TOKEN }}
+
+      - name: Semantic Release
+        run: pnpm run release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Read version
+        run: |
+          echo "CURRENT_VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
+          echo "CURRENT_DATE=$(date -u +'%Y-%m-%d')" >> $GITHUB_ENV
+
+      - name: Update repo variable
+        env:
+          GH_TOKEN: ${{ secrets.OMNIXYS_TOKEN }}
+        run: |
+          gh variable set CURRENT_VERSION \
+            --body "$CURRENT_VERSION" \
+            --repo omnixys/${{ vars.SERVICE }}-service
+
+      - name: Update org variable
+        env:
+          GH_TOKEN: ${{ secrets.OMNIXYS_TOKEN }}
+        run: |
+          gh variable set CURRENT_DATE \
+            --body "$CURRENT_DATE" \
+            --org omnixys \
+            --visibility all
+
+  push-docker:
+    needs: release
+    name: 🐳 Build & Push Multi-Arch Images (Docker)
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [24.10.0]
+
+    steps:
+      - name: 🧾 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup npm registry auth
+        run: |
+          echo "@omnixys:registry=https://npm.pkg.github.com" >> .npmrc
+          echo "//npm.pkg.github.com/:_authToken=${OMNIXYS_TOKEN}" >> .npmrc
+        env:
+          OMNIXYS_TOKEN: ${{ secrets.OMNIXYS_TOKEN }}
+
+      - name: 🔎 Check if Docker tag already exists
+        id: check_tag
+        run: |
+          set -e
+
+          echo "Checking if tag exists: $IMAGE_NAME:${CURRENT_VERSION}"
+
+          if docker manifest inspect "$IMAGE_NAME:${CURRENT_VERSION}" > /dev/null 2>&1; then
+            echo "Tag exists → skipping build"
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "Tag does not exist → build required"
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          install: true
+          driver-opts: image=moby/buildkit:latest
+
+      - name: 🔑 Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Set up Docker Cache
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: buildx-${{ github.sha }}
+          restore-keys: |
+            buildx-
+
+      - name: Build and Push Docker Image (Multi-Arch)
+        if: steps.check_tag.outputs.exists == 'false'
+        uses: docker/build-push-action@v5
+        with:
+          secrets: |
+            omnixys_token=${{ env.OMNIXYS_TOKEN }}
+          context: .
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: |
+            ${{ env.IMAGE_NAME }}:${{ env.CURRENT_VERSION }}
+            ${{ env.IMAGE_NAME }}:latest
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.version=${{ env.CURRENT_VERSION }}
+            org.opencontainers.image.description=Omnixys Microservice – ${{ env.IMAGE_NAME }}
+            org.opencontainers.image.licenses=GPL-3.0-or-later
+          build-args: |
+            REVISION=${{ github.sha }}
+            CREATED=${{ env.CURRENT_DATE }}
+            APP_VERSION=${{ env.CURRENT_VERSION }}
+            APP_NAME=${{ vars.SERVICE }}
+            NODE_VERSION=${{ matrix.node-version }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Sign Docker Image with cosign (OIDC/GitHub)
+        if: steps.check_tag.outputs.exists == 'false'
+        run: |
+          cosign sign --yes --recursive ${{ env.IMAGE_NAME }}:${{ env.CURRENT_VERSION }}
+          cosign sign --yes --recursive ${{ env.IMAGE_NAME }}:latest
+
+  push-github:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    name: 🐳 Build & Push Multi-Arch Images (Github)
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [24.10.0]
+
+    steps:
+      - name: 🧾 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🔎 Check if Docker tag already exists
+        id: check_tag
+        run: |
+          set -e
+
+          echo "Checking if tag exists: $IMAGE_NAME:${CURRENT_VERSION}"
+
+          if docker manifest inspect "$IMAGE_NAME:${CURRENT_VERSION}" > /dev/null 2>&1; then
+            echo "Tag exists → skipping build"
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "Tag does not exist → build required"
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          install: true
+          driver-opts: image=moby/buildkit:latest
+
+      - name: Log in to GitHub Container Registry (GHCR)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Set up Docker Cache
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: buildx-${{ github.sha }}
+          restore-keys: |
+            buildx-
+
+      - name: Build and Push Docker Image (GHCR)
+        if: steps.check_tag.outputs.exists == 'false'
+        uses: docker/build-push-action@v5
+        with:
+          secrets: |
+            omnixys_token=${{ env.OMNIXYS_TOKEN }}
+          context: .
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: |
+            ${{ env.IMAGE_NAME_REPOSITORY }}:${{ env.CURRENT_VERSION }}
+            ${{ env.IMAGE_NAME_REPOSITORY }}:latest
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.version=${{ env.CURRENT_VERSION }}
+            org.opencontainers.image.description=Omnixys Microservice – ${{ env.IMAGE_NAME }}
+            org.opencontainers.image.licenses=GPL-3.0-or-later
+          build-args: |
+            REVISION=${{ github.sha }}
+            CREATED=${{ env.CURRENT_DATE }}
+            APP_VERSION=${{ env.CURRENT_VERSION }}
+            APP_NAME=${{ vars.SERVICE }}
+            NODE_VERSION=${{ matrix.node-version }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Sign Docker Image with cosign (OIDC/GitHub)
+        if: steps.check_tag.outputs.exists == 'false'
+        run: |
+          cosign sign --yes --recursive ${{ env.IMAGE_NAME_REPOSITORY }}:${{ env.CURRENT_VERSION }}
+          cosign sign --yes --recursive ${{ env.IMAGE_NAME_REPOSITORY }}:latest
+
+  deploy:
+    needs: push-docker
+    runs-on: [self-hosted, omnixys-prod]
+    concurrency:
+      group: omnixys-prod
+      cancel-in-progress: false
+    env:
+      SERVICE: ${{ vars.SERVICE }}
+
+    steps:
+      - name: 🔑 Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Deploy ${{ vars.SERVICE }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /opt/omnixys/compose/app/backend
+
+          echo "----------------------------------------"
+          echo "🚀 Deploying service: $SERVICE"
+          echo "----------------------------------------"
+
+          # ---------------------------------------
+          # 1️⃣ Pull image (prefer immutable SHA tag)
+          # ---------------------------------------
+
+          docker pull "omnixys/${SERVICE}-service:latest"
+          docker image prune -f --filter "until=24h"
+
+          # ---------------------------------------
+          # 2️⃣ Update service
+          # ---------------------------------------
+          docker compose up -d --no-deps "$SERVICE"
+
+
+          # ---------------------------------------
+          # 3️⃣ Health Check
+          # --------------------------------------- 
+          echo "⏳ Waiting for health..."
+
+          CID=$(docker compose ps -q "$SERVICE")
+
+          if [ -z "$CID" ]; then
+            echo "❌ No container for service $SERVICE"
+            docker compose ps
+            exit 1
+          fi
+
+          for i in {1..45}; do
+            STATUS=$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}no-healthcheck{{end}}' "$CID")
+
+            if [ "$STATUS" = "healthy" ] || [ "$STATUS" = "no-healthcheck" ]; then
+              echo "✅ $SERVICE is ok ($STATUS)"
+              exit 0
+            fi
+
+            echo "Waiting... ($i/45) Status: $STATUS"
+            sleep 2
+          done
+
+
+          echo "❌ $SERVICE failed health check"
+          echo "------ Recent Logs ------"
+          docker compose logs "$SERVICE" --tail=50 || true
+          echo "-------------------------"
+          exit 1
