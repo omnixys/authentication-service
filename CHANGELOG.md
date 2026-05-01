@@ -3,6 +3,13 @@
 All notable changes in this project will be documented in this file.
 
 
+## [1.0.1](https://github.com/omnixys/authentication-service/compare/v1.0.0...v1.0.1) (2026-05-01)
+
+### Ci
+
+* **Ci:** test ci ([](https://github.com/omnixys/authentication-service/commit/f07f500246d223395dff2d08b2b14a38c27e90c0))
+* **Ci:** test ci ([](https://github.com/omnixys/authentication-service/commit/52717ec1558e582f029c023f5982c897f61337c5))
+
 ## 1.0.0 (2026-05-01)
 
 ### ⚠ BREAKING CHANGE
