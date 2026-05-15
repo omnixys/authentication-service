@@ -5,7 +5,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  schemas  = ["authentication"]
 }
 
 enum MfaPreference {
@@ -16,7 +15,6 @@ enum MfaPreference {
   SECURITY_QUESTIONS
 
   @@map("mfa_preference")
-  @@schema("authentication")
 }
 
 enum ResetTokenState {
@@ -28,7 +26,6 @@ enum ResetTokenState {
   EXPIRED
 
   @@map("reset_token_state")
-  @@schema("authentication")
 }
 
 enum SecurityQuestionType {
@@ -41,7 +38,6 @@ enum SecurityQuestionType {
   BIRTH_DATE
 
   @@map("security_question_key")
-  @@schema("authentication")
 }
 
 model AuthUser {
@@ -54,8 +50,8 @@ model AuthUser {
   failedAttempts Int       @default(0) @map("failed_attempts")
   lockedUntil    DateTime? @map("locked_until")
 
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updatet_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
 
   totp              TotpCredential?
   webAuthn          WebAuthnCredential[]
@@ -69,7 +65,6 @@ model AuthUser {
   @@index([email])
   @@index([username])
   @@map("auth_user")
-  @@schema("authentication")
 }
 
 model TotpCredential {
@@ -81,7 +76,6 @@ model TotpCredential {
   user   AuthUser @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("totp_credential")
-  @@schema("authentication")
 }
 
 model WebAuthnCredential {
@@ -103,7 +97,6 @@ model WebAuthnCredential {
 
   @@index([userId])
   @@map("web_auth_n_credentials")
-  @@schema("authentication")
 }
 
 model BackupCode {
@@ -116,7 +109,6 @@ model BackupCode {
 
   @@index([userId])
   @@map("backup_code")
-  @@schema("authentication")
 }
 
 model SecurityQuestion {
@@ -127,7 +119,6 @@ model SecurityQuestion {
   userAnswers UserSecurityQuestion[]
 
   @@map("security_question")
-  @@schema("authentication")
 }
 
 model UserSecurityQuestion {
@@ -137,13 +128,12 @@ model UserSecurityQuestion {
   user   AuthUser @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId String   @map("user_id") @db.Uuid
 
-  questionId String @db.Uuid
+  questionId String           @map("question_id") @db.Uuid
   question   SecurityQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
 
   @@unique([userId, questionId])
   @@index([userId])
   @@map("user_security_question")
-  @@schema("authentication")
 }
 
 model PasswordResetToken {
@@ -167,7 +157,6 @@ model PasswordResetToken {
   @@index([expiresAt])
   @@index([tokenLookupHash, expiresAt])
   @@map("password_reset_token")
-  @@schema("authentication")
 }
 
 model RateLimitBucket {
@@ -179,13 +168,12 @@ model RateLimitBucket {
 
   @@unique([key, windowStart])
   @@map("rate_limit_bucket")
-  @@schema("authentication")
 }
 
 model KnownDevice {
   id          String   @id @default(uuid()) @db.Uuid
   userId      String   @map("user_id") @db.Uuid
-  fingerprint String
+  fingerprint String   @map("finger_print")
   firstSeen   DateTime @default(now()) @map("first_seen")
   lastSeen    DateTime @updatedAt @map("last_seen")
 
@@ -193,7 +181,7 @@ model KnownDevice {
 
   @@unique([userId, fingerprint])
   @@index([userId])
-  @@schema("authentication")
+  @@map("known_device")
 }
 
 model LoginHistory {
@@ -202,13 +190,13 @@ model LoginHistory {
   ip        String
   country   String?
   city      String?
-  createdAt DateTime @default(now())
+  createdAt DateTime @default(now()) @map("created_at")
 
   user AuthUser @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
   @@index([userId])
-  @@schema("authentication")
+  @@map("login_history")
 }
 
 model OAuthAccount {
@@ -220,5 +208,5 @@ model OAuthAccount {
 
   @@unique([provider, providerId])
   @@index([userId])
-  @@schema("authentication")
+  @@map("o_auth_account")
 }

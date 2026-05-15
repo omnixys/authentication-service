@@ -16,7 +16,7 @@ CREATE TABLE "auth_user" (
     "failed_attempts" INTEGER NOT NULL DEFAULT 0,
     "locked_until" TIMESTAMP(3),
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatet_at" TIMESTAMP(3) NOT NULL,
+    "updated_at" TIMESTAMP(3),
 
     CONSTRAINT "auth_user_pkey" PRIMARY KEY ("id")
 );
@@ -73,7 +73,7 @@ CREATE TABLE "user_security_question" (
     "id" UUID NOT NULL,
     "answer_hash" TEXT NOT NULL,
     "user_id" UUID NOT NULL,
-    "questionId" UUID NOT NULL,
+    "question_id" UUID NOT NULL,
 
     CONSTRAINT "user_security_question_pkey" PRIMARY KEY ("id")
 );
@@ -106,36 +106,36 @@ CREATE TABLE "rate_limit_bucket" (
 );
 
 -- CreateTable
-CREATE TABLE "KnownDevice" (
+CREATE TABLE "known_device" (
     "id" UUID NOT NULL,
     "user_id" UUID NOT NULL,
-    "fingerprint" TEXT NOT NULL,
+    "finger_print" TEXT NOT NULL,
     "first_seen" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "last_seen" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "KnownDevice_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "known_device_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "LoginHistory" (
+CREATE TABLE "login_history" (
     "id" UUID NOT NULL,
     "user_id" UUID NOT NULL,
     "ip" TEXT NOT NULL,
     "country" TEXT,
     "city" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "LoginHistory_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "login_history_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "OAuthAccount" (
+CREATE TABLE "o_auth_account" (
     "id" UUID NOT NULL,
     "provider" TEXT NOT NULL,
     "provider_id" UUID NOT NULL,
     "user_id" UUID NOT NULL,
 
-    CONSTRAINT "OAuthAccount_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "o_auth_account_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -172,7 +172,7 @@ CREATE UNIQUE INDEX "security_question_question_key" ON "security_question"("que
 CREATE INDEX "user_security_question_user_id_idx" ON "user_security_question"("user_id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "user_security_question_user_id_questionId_key" ON "user_security_question"("user_id", "questionId");
+CREATE UNIQUE INDEX "user_security_question_user_id_question_id_key" ON "user_security_question"("user_id", "question_id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "password_reset_token_token_lookup_hash_key" ON "password_reset_token"("token_lookup_hash");
@@ -193,22 +193,22 @@ CREATE UNIQUE INDEX "rate_limit_bucket_key_key" ON "rate_limit_bucket"("key");
 CREATE UNIQUE INDEX "rate_limit_bucket_key_window_start_key" ON "rate_limit_bucket"("key", "window_start");
 
 -- CreateIndex
-CREATE INDEX "KnownDevice_user_id_idx" ON "KnownDevice"("user_id");
+CREATE INDEX "known_device_user_id_idx" ON "known_device"("user_id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "KnownDevice_user_id_fingerprint_key" ON "KnownDevice"("user_id", "fingerprint");
+CREATE UNIQUE INDEX "known_device_user_id_finger_print_key" ON "known_device"("user_id", "finger_print");
 
 -- CreateIndex
-CREATE INDEX "LoginHistory_user_id_createdAt_idx" ON "LoginHistory"("user_id", "createdAt");
+CREATE INDEX "login_history_user_id_created_at_idx" ON "login_history"("user_id", "created_at");
 
 -- CreateIndex
-CREATE INDEX "LoginHistory_user_id_idx" ON "LoginHistory"("user_id");
+CREATE INDEX "login_history_user_id_idx" ON "login_history"("user_id");
 
 -- CreateIndex
-CREATE INDEX "OAuthAccount_user_id_idx" ON "OAuthAccount"("user_id");
+CREATE INDEX "o_auth_account_user_id_idx" ON "o_auth_account"("user_id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "OAuthAccount_provider_provider_id_key" ON "OAuthAccount"("provider", "provider_id");
+CREATE UNIQUE INDEX "o_auth_account_provider_provider_id_key" ON "o_auth_account"("provider", "provider_id");
 
 -- AddForeignKey
 ALTER TABLE "totp_credential" ADD CONSTRAINT "totp_credential_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth_user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -223,16 +223,16 @@ ALTER TABLE "backup_code" ADD CONSTRAINT "backup_code_user_id_fkey" FOREIGN KEY 
 ALTER TABLE "user_security_question" ADD CONSTRAINT "user_security_question_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth_user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "user_security_question" ADD CONSTRAINT "user_security_question_questionId_fkey" FOREIGN KEY ("questionId") REFERENCES "security_question"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "user_security_question" ADD CONSTRAINT "user_security_question_question_id_fkey" FOREIGN KEY ("question_id") REFERENCES "security_question"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "password_reset_token" ADD CONSTRAINT "password_reset_token_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth_user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "KnownDevice" ADD CONSTRAINT "KnownDevice_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth_user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "known_device" ADD CONSTRAINT "known_device_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth_user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "LoginHistory" ADD CONSTRAINT "LoginHistory_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth_user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "login_history" ADD CONSTRAINT "login_history_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth_user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "OAuthAccount" ADD CONSTRAINT "OAuthAccount_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth_user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "o_auth_account" ADD CONSTRAINT "o_auth_account_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth_user"("id") ON DELETE CASCADE ON UPDATE CASCADE;

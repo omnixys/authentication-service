@@ -4,9 +4,6 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
-overrides:
-  fastify: 5.8.5
-
 importers:
 
   .:
@@ -413,7 +410,7 @@ packages:
     engines: {node: '>=20'}
     peerDependencies:
       '@apollo/server': ^4.0.0 || ^5.0.0
-      fastify: 5.8.5
+      fastify: ^5.3.0
 
   '@babel/code-frame@7.29.0':
     resolution: {integrity: sha512-9NhCeYjq9+3uxgdtp20LSiJXJvN0FeCtNGpJxuMFZ1Kv3cWUNb6DOhJwUvcVCzKGR66cw4njwM6hrJLqgOwbcw==}
@@ -1480,7 +1477,7 @@ packages:
       '@nestjs/common': ^10.0.0 || ^11.0.0
       '@nestjs/graphql': ^13.2.4
       '@omnixys/shared': ^1.0.0
-      fastify: 5.8.5
+      fastify: ^5.8.4
       graphql: ^16.13.2
       rxjs: ^7.8.2
 
@@ -1521,7 +1518,7 @@ packages:
       '@nestjs/core': ^11.1.17
       '@nestjs/graphql': ^13.2.4
       '@omnixys/shared': ^1.0.0
-      fastify: 5.8.5
+      fastify: ^5.8.2
 
   '@omnixys/security@1.0.0':
     resolution: {integrity: sha512-N7kL3zw0CSfhJ92k9gUn5cDRyhVzg4Ad+LZ42zYGAMKK9yWbNFwz1nFJsZV/RqmfY9HbfLoA7lyIetX1sZwKMQ==, tarball: https://npm.pkg.github.com/download/@omnixys/security/1.0.0/7b41436b66c35187380c654cc577786a5b8b4ca8}
@@ -1532,7 +1529,7 @@ packages:
       '@omnixys/context': ^1.0.0
       '@omnixys/observability': ^1.0.0
       '@omnixys/shared': ^1.0.0
-      fastify: 5.8.5
+      fastify: ^5.8.4
 
   '@omnixys/shared@1.0.0':
     resolution: {integrity: sha512-94HotahJKl9ac+oZm2ybeHFpkfra8ROuGzdIXLtCc+hFghbLz1r17M9Ymn5qQPLpFY8+l/IMAmUKFNJGSjk2Mg==, tarball: https://npm.pkg.github.com/download/@omnixys/shared/1.0.0/cc3295810aaf9ed31a04883a3d998a06d9d06a00}
@@ -4100,6 +4097,9 @@ packages:
 
   fastify-plugin@5.1.0:
     resolution: {integrity: sha512-FAIDA8eovSt5qcDgcBvDuX/v0Cjz0ohGhENZ/wpc3y+oZCY2afZ9Baqql3g/lC+OHRnciQol4ww7tuthOb9idw==}
+
+  fastify@5.8.4:
+    resolution: {integrity: sha512-sa42J1xylbBAYUWALSBoyXKPDUvM3OoNOibIefA+Oha57FryXKKCZarA1iDntOCWp3O35voZLuDg2mdODXtPzQ==}
 
   fastify@5.8.5:
     resolution: {integrity: sha512-Yqptv59pQzPgQUSIm87hMqHJmdkb1+GPxdE6vW6FRyVE9G86mt7rOghitiU4JHRaTyDUk9pfeKmDeu70lAwM4Q==}
@@ -8018,7 +8018,7 @@ snapshots:
       '@nestjs/common': 11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
       '@nestjs/core': 11.1.19(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(reflect-metadata@0.2.2)(rxjs@7.8.2)
       fast-querystring: 1.1.2
-      fastify: 5.8.5
+      fastify: 5.8.4
       fastify-plugin: 5.1.0
       find-my-way: 9.5.0
       light-my-request: 6.6.0
@@ -11322,6 +11322,24 @@ snapshots:
   fast-uri@3.1.0: {}
 
   fastify-plugin@5.1.0: {}
+
+  fastify@5.8.4:
+    dependencies:
+      '@fastify/ajv-compiler': 4.0.5
+      '@fastify/error': 4.2.0
+      '@fastify/fast-json-stringify-compiler': 5.0.3
+      '@fastify/proxy-addr': 5.1.0
+      abstract-logging: 2.0.1
+      avvio: 9.2.0
+      fast-json-stringify: 6.3.0
+      find-my-way: 9.5.0
+      light-my-request: 6.6.0
+      pino: 10.3.1
+      process-warning: 5.0.0
+      rfdc: 1.4.1
+      secure-json-parse: 4.1.0
+      semver: 7.7.4
+      toad-cache: 3.7.0
 
   fastify@5.8.5:
     dependencies:
