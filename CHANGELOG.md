@@ -3,6 +3,16 @@
 All notable changes in this project will be documented in this file.
 
 
+## [1.0.1](https://github.com/omnixys/authentication-service/compare/v1.0.0...v1.0.1) (2026-05-24)
+
+### Docker
+
+* **Docker:** build ([](https://github.com/omnixys/authentication-service/commit/49339204002b84ea570334b9c6fb9929698a5823))
+
+### Prisma
+
+* **Prisma:** update prisma schema ([](https://github.com/omnixys/authentication-service/commit/bcb0d6524e556f6a8ded4eaa92328ea685ffb0f5))
+
 ## 1.0.0 (2026-05-01)
 
 ### ⚠ BREAKING CHANGE
