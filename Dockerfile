@@ -27,7 +27,7 @@ ARG NODE_VERSION=25.8.2
 # ---------------------------------------------------------------------------------------
 FROM node:${NODE_VERSION}-bookworm-slim AS base
 WORKDIR /home/node
-RUN npm install -g pnpm@10.33.0
+RUN npm install -g pnpm@11.1.2
 
 # ---------------------------------------------------------------------------------------
 # Stage 1: Build (dist)
@@ -106,7 +106,7 @@ RUN apt-get update && \
     mkdir -p /opt/app/log && chown -R node:node /opt/app
 
 # ----- Enable pnpm (runtime) -----
-RUN npm install -g pnpm@10.33.0
+RUN npm install -g pnpm@11.1.2
 
 # ----- Switch to non-root user -----
 USER node
