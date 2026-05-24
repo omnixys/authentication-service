@@ -3,6 +3,16 @@
 All notable changes in this project will be documented in this file.
 
 
+## [1.0.2](https://github.com/omnixys/authentication-service/compare/v1.0.1...v1.0.2) (2026-05-24)
+
+### Docker
+
+* **Docker:** build ([](https://github.com/omnixys/authentication-service/commit/ce340e35371f1780e006dc6e5cce1c7a4306514e))
+
+### Other
+
+* **Other:** Merge branch 'main' of https://github.com/omnixys/authentication-service ([](https://github.com/omnixys/authentication-service/commit/876613ac191a530caba5bef3e3218bf4d4fedd95))
+
 ## [1.0.1](https://github.com/omnixys/authentication-service/compare/v1.0.0...v1.0.1) (2026-05-24)
 
 ### Docker
