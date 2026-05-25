@@ -44,6 +44,7 @@ RUN --mount=type=secret,id=omnixys_token \
     pnpm install --frozen-lockfile --ignore-scripts
 
 COPY --chown=node:node . .
+ENV CI=true
 RUN pnpm run build
 
 # ---------------------------------------------------------------------------------------
