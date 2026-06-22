@@ -1,21 +1,25 @@
 import { AdminWriteService } from '../authentication/services/admin-write.service.js';
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import {
   DelayedJob,
   DelayedJobHandler,
   DelayedJobKeys,
   ValkeyLockService,
 } from '@omnixys/cache';
+import { OmnixysLogger } from '@omnixys/logger';
 
 @Injectable()
 @DelayedJobHandler()
 export class UserDeleteHandler {
-  private readonly logger = new Logger(UserDeleteHandler.name);
+  private readonly logger;
 
   constructor(
     private readonly adminWriteService: AdminWriteService,
     private readonly lock: ValkeyLockService,
-  ) {}
+    logger: OmnixysLogger,
+  ) {
+    this.logger = logger.log(this.constructor.name);
+  }
 
   @DelayedJob(DelayedJobKeys.user.delete)
   async deleteUser(payload: { userId: string }): Promise<void> {
@@ -31,7 +35,7 @@ export class UserDeleteHandler {
     try {
       await this.adminWriteService.deleteUser(userId, 'sys');
 
-      this.logger.log(`Deleted user ${userId}`);
+      this.logger.info('Delayed user deletion completed', { userId });
     } finally {
       await this.lock.releaseLock(lockKey, token);
     }

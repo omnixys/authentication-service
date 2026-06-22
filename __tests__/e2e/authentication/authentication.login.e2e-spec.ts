@@ -19,7 +19,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { env } from '../../env.js';
 import { gqlRequest } from '../../utils/graphql-client.js';
-import { createTestApp } from '../setup-e2e.js';
+import { createTestApp, shutdownTestApp } from '../setup-e2e.js';
 import type { INestApplication } from '@nestjs/common';
 
 describe('🔐 Authentication E2E - Login/Refresh/Logout', () => {
@@ -33,7 +33,7 @@ describe('🔐 Authentication E2E - Login/Refresh/Logout', () => {
     app = setup.app;
   });
 
-  afterAll(async () => {});
+  afterAll(shutdownTestApp);
 
   it('should login successfully', async () => {
     const username = env.OMNIXYS_ADMIN_USERNAME;

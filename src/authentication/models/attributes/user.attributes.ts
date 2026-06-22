@@ -15,6 +15,7 @@
  * For more information, visit <https://www.gnu.org/licenses/>.
  */
 
+import { AuthenticationInputException } from '../../errors/authentication.error.js';
 import type { RealmRoleType } from '@omnixys/shared';
 
 // Zentrales, typsicheres Attribut-Schema für Keycloak-User-Attributes
@@ -83,7 +84,7 @@ export function normalizeAttributeValue<K extends KcAttributeKey>(
   if (def.kind === 'PHONE' && def.re) {
     for (const s of arr) {
       if (!def.re.test(s)) {
-        throw new Error(`Invalid phone format for ${key}: "${s}"`);
+        throw new AuthenticationInputException(`phone-format-invalid:${key}`);
       }
     }
   }

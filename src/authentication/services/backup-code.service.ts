@@ -35,8 +35,6 @@ export class BackupCodeService {
     for (const record of records) {
       const valid = await this.argon.verify(record.codeHash, code);
 
-      console.debug({ valid, record, code });
-
       if (valid) {
         await this.prisma.backupCode.update({
           where: { id: record.id },

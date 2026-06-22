@@ -5,6 +5,10 @@
 import { ResetTokenState } from '../../prisma/generated/client.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import {
+  AuthenticationInputException,
+  AuthenticationStateException,
+} from '../errors/authentication.error.js';
+import {
   MfaPreference,
   ResetVerificationResult,
 } from '../models/dtos/reset-verification-result.dto.js';
@@ -18,11 +22,11 @@ import { SecurityQuestionService } from './security-question.service.js';
 import { TotpService } from './totp.service.js';
 import { WebAuthnService } from './web-authn.service.js';
 import { HttpService } from '@nestjs/axios';
-import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import type { ClientContext } from '@omnixys/context';
 import { KafkaProducerService, KafkaTopics } from '@omnixys/kafka';
 import { OmnixysLogger } from '@omnixys/logger';
-import { HashService, HmacService } from '@omnixys/security';
-import { ClientContext } from '@omnixys/shared';
+import { HashService, HmacService, InvalidCredentialsException } from '@omnixys/security';
 import { AuthenticationResponseJSON } from '@simplewebauthn/server';
 import { randomBytes } from 'crypto';
 import { addMinutes } from 'date-fns';
@@ -91,20 +95,12 @@ export class ResetService extends AuthenticateBaseService {
       },
     });
 
-    console.debug({ rawToken });
-
-    this.logger.debug('Send Kafka Message: requestReset: %o', {
-      token: rawToken,
+    this.logger.debug('Password reset notification requested', {
       email: user.email,
-      username: user.username,
-      locale: context.locale ?? 'de-DE',
-      device: context.device ?? 'Unkown Device',
-      ip: context.ip ?? 'Unkown IP Address',
-      location: context.location ?? 'Germany',
+      userId: user.id,
     });
 
-    // TODO actorId in Http Header schreiben nach login oder signUp
-    void this.kafkaProducer.send({
+    await this.kafkaProducer.send({
       topic: KafkaTopics.notification.sendRequestReset,
       payload: {
         token: rawToken,
@@ -120,8 +116,6 @@ export class ResetService extends AuthenticateBaseService {
         version: '1',
         operation: 'send Request Email to User',
         type: 'EVENT',
-        actorId: 'tmp',
-        tenantId: 'omnixys',
       },
     });
   }
@@ -130,7 +124,7 @@ export class ResetService extends AuthenticateBaseService {
     const token = await this.validateAndLoadToken(rawToken);
 
     if (token.state !== ResetTokenState.ISSUED) {
-      throw new UnauthorizedException('Invalid token state');
+      throw new AuthenticationStateException('reset-token-state-invalid');
     }
 
     await this.prisma.passwordResetToken.update({
@@ -151,7 +145,7 @@ export class ResetService extends AuthenticateBaseService {
 
     // Enforce correct flow order
     if (token.state !== ResetTokenState.TOKEN_VERIFIED) {
-      throw new UnauthorizedException('Invalid token state');
+      throw new AuthenticationStateException('reset-token-state-invalid');
     }
 
     // Optional: user lockout check again (defense in depth)
@@ -166,12 +160,12 @@ export class ResetService extends AuthenticateBaseService {
 
         case 'TOTP': {
           if (!input.code) {
-            throw new BadRequestException('Missing TOTP code');
+            throw new AuthenticationInputException('totp-code-missing');
           }
           // Should verify against encrypted secret (service handles decrypt internally)
           const ok = await this.totpService.verifyForUser(token.userId, input.code);
           if (!ok) {
-            throw new UnauthorizedException('Invalid verification code');
+            throw new InvalidCredentialsException('Invalid verification code');
           }
           break;
         }
@@ -184,7 +178,7 @@ export class ResetService extends AuthenticateBaseService {
           );
 
           if (!valid) {
-            throw new UnauthorizedException();
+            throw new InvalidCredentialsException('WebAuthn verification failed');
           }
 
           // await this.webAuthnService.consumeAuthenticationChallenge(token.userId);
@@ -194,23 +188,23 @@ export class ResetService extends AuthenticateBaseService {
 
         case 'BACKUP_CODES': {
           if (!input.code) {
-            throw new BadRequestException('Missing backup code');
+            throw new AuthenticationInputException('backup-code-missing');
           }
           // consume() marks usedAt on success
           const ok = await this.backupCodeService.consume(token.userId, input.code);
           if (!ok) {
-            throw new UnauthorizedException('Invalid backup code');
+            throw new InvalidCredentialsException('Invalid backup code');
           }
           break;
         }
 
         case 'SECURITY_QUESTIONS': {
           if (!input.answers || input.answers.length === 0) {
-            throw new BadRequestException('Missing security question answers');
+            throw new AuthenticationInputException('security-question-answers-missing');
           }
           const ok = await this.securityQuestionService.verifyAnswers(token.userId, input.answers);
           if (!ok) {
-            throw new UnauthorizedException('Invalid security answers');
+            throw new InvalidCredentialsException('Invalid security answers');
           }
           break;
         }
@@ -218,7 +212,7 @@ export class ResetService extends AuthenticateBaseService {
         default: {
           // English comment tailored for VS:
           // Ensure we fail closed if the enum is expanded.
-          throw new UnauthorizedException('Unsupported MFA method');
+          throw new AuthenticationStateException('mfa-method-unsupported');
         }
       }
 
@@ -233,11 +227,11 @@ export class ResetService extends AuthenticateBaseService {
       await this.lockout.registerUserFailure(token.userId);
 
       // Re-throw but do NOT leak details
-      if (e instanceof BadRequestException) {
+      if (e instanceof AuthenticationInputException) {
         throw e;
       }
       this.logger.error(`Step-up verification failed: ${(e as Error).message}`);
-      throw new UnauthorizedException('Step-up verification failed');
+      throw new InvalidCredentialsException('Step-up verification failed');
     }
   }
 
@@ -246,12 +240,12 @@ export class ResetService extends AuthenticateBaseService {
 
     // 1️⃣ Enforce correct flow state
     if (token.state !== ResetTokenState.STEP_UP_VERIFIED) {
-      throw new UnauthorizedException('Step-up verification required');
+      throw new AuthenticationStateException('step-up-verification-required');
     }
 
     // 2️⃣ Optional: enforce password policy locally (length, complexity)
     if (!this.isPasswordValid(input.newPassword)) {
-      throw new UnauthorizedException('Invalid password format');
+      throw new AuthenticationInputException('password-policy-failed');
     }
 
     // 3️⃣ Update password in Keycloak
@@ -300,21 +294,21 @@ export class ResetService extends AuthenticateBaseService {
 
     if (!token) {
       await this.argon.dummyVerify(); // timing mitigation
-      throw new UnauthorizedException();
+      throw new InvalidCredentialsException('Invalid reset token');
     }
 
     const valid = await this.argon.verify(token.tokenHash, rawToken);
     if (!valid) {
       await this.incrementTokenAttempt(token.id);
-      throw new UnauthorizedException();
+      throw new InvalidCredentialsException('Invalid reset token');
     }
 
     if (token.state === ResetTokenState.LOCKED) {
-      throw new UnauthorizedException('Token locked');
+      throw new AuthenticationStateException('reset-token-locked');
     }
 
     if (token.state === ResetTokenState.EXPIRED) {
-      throw new UnauthorizedException('Token expired');
+      throw new AuthenticationStateException('reset-token-expired');
     }
 
     if (token.expiresAt < new Date()) {
@@ -322,7 +316,7 @@ export class ResetService extends AuthenticateBaseService {
         where: { id: token.id },
         data: { state: ResetTokenState.EXPIRED },
       });
-      throw new UnauthorizedException('Token expired');
+      throw new AuthenticationStateException('reset-token-expired');
     }
 
     return token;

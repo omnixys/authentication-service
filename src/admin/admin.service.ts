@@ -15,7 +15,6 @@
  * For more information, visit <https://www.gnu.org/licenses/>.
  */
 
-/* eslint-disable no-process-exit */
 import { Injectable } from '@nestjs/common';
 import { OmnixysLogger } from '@omnixys/logger';
 
@@ -48,7 +47,7 @@ export class AdminService {
    */
   async shutdown(): Promise<void> {
     this.logger.warn('Shutdown signal received — initiating graceful exit...');
-    setTimeout(() => process.exit(0), 1000);
+    process.kill(process.pid, 'SIGTERM');
   }
 
   /**
@@ -82,7 +81,7 @@ export class AdminService {
    */
   async restart(): Promise<void> {
     this.logger.warn('Restart requested — exiting process so container supervisor restarts it...');
-    setTimeout(() => process.exit(1), 1000);
+    process.kill(process.pid, 'SIGTERM');
   }
 
   /**

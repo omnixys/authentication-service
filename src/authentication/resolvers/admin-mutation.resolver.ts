@@ -22,10 +22,10 @@ import {
 } from '../models/inputs/update-user.input.js';
 import { TokenPayload } from '../models/payloads/token.payload.js';
 import { AdminWriteService } from '../services/admin-write.service.js';
-import { UseGuards, UseInterceptors } from '@nestjs/common';
+import { UseGuards } from '@nestjs/common';
 import { Args, ID, Mutation, Resolver } from '@nestjs/graphql';
 // import { GqlFastifyContext, gqlSetTokens } from '@omnixys/context';
-import { getLogger, LoggingInterceptor } from '@omnixys/logger';
+import { getLogger } from '@omnixys/logger';
 import { TraceRunner } from '@omnixys/observability';
 import {
   CookieAuthGuard,
@@ -51,7 +51,8 @@ import { RealmRoleType } from '@omnixys/shared';
  * realm roles (`ADMIN`) in production environments.
  */
 @Resolver()
-@UseInterceptors(LoggingInterceptor)
+@UseGuards(CookieAuthGuard, RoleGuard)
+@Roles(RealmRoleType.ADMIN)
 export class AdminMutationResolver {
   /** Internal logger instance used for diagnostic output. */
   private readonly logger = getLogger(AdminMutationResolver.name);
@@ -123,8 +124,6 @@ export class AdminMutationResolver {
    * @returns A boolean value indicating whether the user was deleted successfully.
    */
   @Mutation(() => Boolean, { name: 'deleteKcUser' })
-  @UseGuards(CookieAuthGuard, RoleGuard)
-  @Roles(RealmRoleType.ADMIN)
   async deleteUser(
     @Args('id', { type: () => ID }) id: string,
     @CurrentUser() currentUser: CurrentUserData,
@@ -175,7 +174,7 @@ export class AdminMutationResolver {
   async removeRealmRole(
     @Args('id', { type: () => ID }) id: string,
     @Args('roleName', { type: () => RealmRoleType }) roleName: RealmRoleType,
-  ): Promise<boolean> {   
+  ): Promise<boolean> {
     return TraceRunner.run('Remove Realm Role  Resolver', async () => {
       this.logger.debug('removeRealmRole: userId=%s, role=%s', id, roleName);
       await this.adminService.removeRealmRoleFromUser(id, roleName);
@@ -189,7 +188,7 @@ export class AdminMutationResolver {
     // @Context() ctx: GqlFastifyContext,
   ): Promise<TokenPayload> {
     return TraceRunner.run('admin SignUp Resolver', async () => {
-      this.logger.debug('signIn: input=%o', input);
+      this.logger.debug('Admin sign-up requested: username=%s', input.username);
       const result = await this.adminService.adminSignUp(input);
       // const res = ctx.reply;
       // gqlSetTokens(res, result.accessToken, result.expiresIn * 1000);

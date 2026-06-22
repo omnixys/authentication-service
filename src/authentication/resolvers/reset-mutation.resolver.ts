@@ -1,7 +1,7 @@
 import { JsonScalar } from '../../core/scalars/json.scalar.js';
+import { AuthenticationInputException } from '../errors/authentication.error.js';
 import { MfaPreference } from '../models/dtos/reset-verification-result.dto.js';
 import { ResetService } from '../services/reset.service.js';
-import { BadRequestException } from '@nestjs/common';
 import {
   Args,
   Field,
@@ -10,9 +10,8 @@ import {
   ObjectType,
   Resolver,
 } from '@nestjs/graphql';
-import { ClientInfo } from '@omnixys/context';
+import { ClientInfo, type ClientContext } from '@omnixys/context';
 import { OmnixysLogger } from '@omnixys/logger';
-import { ClientContext } from '@omnixys/shared';
 import { AuthenticationResponseJSON } from '@simplewebauthn/server';
 
 /* =======================================================
@@ -158,7 +157,7 @@ export class ResetMutationResolver {
     input: CompleteResetInputGql,
   ): Promise<boolean> {
     if (!input.newPassword || input.newPassword.length < 12) {
-      throw new BadRequestException('Password does not meet requirements');
+      throw new AuthenticationInputException('password-policy-failed');
     }
 
     await this.resetService.completeReset({

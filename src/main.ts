@@ -16,18 +16,20 @@
  */
 import { AppModule } from './app.module.js';
 import { corsOptions } from './config/cors.js';
+import { env } from './config/env.js';
 import compress from '@fastify/compress';
 import cookie from '@fastify/cookie';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
-// import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import {
   FastifyAdapter,
   type NestFastifyApplication,
 } from '@nestjs/platform-fastify';
+import { OmnixysLogger } from '@omnixys/logger';
 import { registerFastifyTracing } from '@omnixys/observability';
 import 'reflect-metadata';
 
@@ -71,7 +73,7 @@ async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
     new FastifyAdapter({
-      logger: true,
+      logger: false,
       /**
        * Optionaler JSON-Serializer für große numerische Werte.
        * Wandelt BigInt → Number um, um JSON-Parsing-Fehler zu vermeiden.
@@ -85,8 +87,7 @@ async function bootstrap(): Promise<void> {
 
   const fastify = app.getHttpAdapter().getInstance();
   registerFastifyTracing(fastify);
-  // const loggerService = app.get(LoggerPlusService);
-  // logger = loggerService.getLogger('Bootstrap');
+  const logger = app.get(OmnixysLogger).log('Bootstrap');
 
   // ======================================================
   // 🔐 SECURITY & MIDDLEWARE
@@ -135,7 +136,7 @@ async function bootstrap(): Promise<void> {
   });
 
   await app.register(cookie, {
-    secret: process.env.COOKIE_SECRET ?? 'omnixys-default-secret',
+    secret: env.COOKIE_SECRET,
   });
 
   // ======================================================
@@ -152,6 +153,7 @@ async function bootstrap(): Promise<void> {
 
   /** Port-Definition (Standard: 4000) */
   const port = Number(config.get('PORT') ?? 4000);
+  const service = config.get<string>('SERVICE') ?? env.SERVICE;
 
   // ======================================================
   // 🧩 VALIDATION
@@ -164,14 +166,14 @@ async function bootstrap(): Promise<void> {
    * - `whitelist: true`: entfernt unbekannte Felder
    * - `forbidNonWhitelisted: true`: blockiert ungültige Felder
    */
-  // app.useGlobalPipes(
-  //   new ValidationPipe({
-  //     transform: true,
-  //     whitelist: true,
-  //     forbidNonWhitelisted: false,
-  //     transformOptions: { enableImplicitConversion: true },
-  //   }),
-  // );
+  app.useGlobalPipes(
+    new ValidationPipe({
+      transform: true,
+      whitelist: false,
+      forbidNonWhitelisted: false,
+      transformOptions: { enableImplicitConversion: true },
+    }),
+  );
 
   // ======================================================
   // 🧹 LIFECYCLE & STARTUP
@@ -194,7 +196,7 @@ async function bootstrap(): Promise<void> {
    */
   await app.listen(port, '0.0.0.0');
 
-  console.debug(`✅ Authentication-Service läuft auf Port: ${port}`);
+  logger.info('Service started', { service, port });
 }
 
 // ======================================================

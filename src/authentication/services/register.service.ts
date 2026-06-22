@@ -1,23 +1,25 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import { env } from '../../config/env.js';
 import { paths } from '../../config/keycloak.js';
 import { MfaPreference } from '../../prisma/generated/enums.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
+import {
+  AuthenticationStateException,
+  AuthenticationUserNotFoundException,
+} from '../errors/authentication.error.js';
 import { KCSignUpDTO } from '../models/dtos/kc-sign-up.dto.js';
 import { SignUpPayload } from '../models/payloads/sign-in.payload.js';
 import { AdminWriteService } from './admin-write.service.js';
 import { AuthWriteService } from './authentication-write.service.js';
 import { AuthenticateBaseService } from './keycloak-base.service.js';
 import { HttpService } from '@nestjs/axios';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ValkeyKey, ValkeyService } from '@omnixys/cache';
+import type { SignUpTokenPayload } from '@omnixys/contracts';
 import { KafkaProducerService, KafkaTopics } from '@omnixys/kafka';
 import { OmnixysLogger } from '@omnixys/logger';
 import { TraceRunner } from '@omnixys/observability';
 import { EncryptionService } from '@omnixys/security';
-import { createTmpUsername, RealmRoleType, SignUpTokenPayload } from '@omnixys/shared';
+import { createTmpUsername, RealmRoleType } from '@omnixys/shared';
 import * as argon2 from 'argon2';
 
 const { SERVICE } = env;
@@ -39,10 +41,16 @@ export class RegisterService extends AuthenticateBaseService {
 
   async verifySignup(token: string): Promise<SignUpPayload> {
     return TraceRunner.run('Verify Keycloak SignUp', async () => {
-      const key = `verification:signup:auth:${token}`;
-
-      const decryptedToken = this.encryptionService.decrypt(token, true);
-      const { authKey } = JSON.parse(decryptedToken) as SignUpTokenPayload;
+      let authKey: string;
+      try {
+        const decryptedToken = this.encryptionService.decrypt(token, true);
+        ({ authKey } = JSON.parse(decryptedToken) as SignUpTokenPayload);
+        if (!authKey) {
+          throw new TypeError('authKey is missing');
+        }
+      } catch (error) {
+        throw new AuthenticationStateException('signup-token-invalid', error);
+      }
 
       const raw = await this.cache.get(ValkeyKey.signupVerificationAuth, authKey);
       if (!raw) {
@@ -56,11 +64,11 @@ export class RegisterService extends AuthenticateBaseService {
         const payload = await this.signUp(input, token);
 
         // Delete key
-        await this.cache.client.del(key);
+        await this.cache.delete(ValkeyKey.signupVerificationAuth, authKey);
         payload.message = 'OK';
         return payload;
-      } catch (e: any) {
-        this.logger.error(e);
+      } catch (error: unknown) {
+        this.logger.error('Sign-up verification failed', { error });
         return { message: 'ALREADY_REGISTERED' };
       }
     });
@@ -68,7 +76,7 @@ export class RegisterService extends AuthenticateBaseService {
 
   async signUp(input: KCSignUpDTO, signUpToken: string): Promise<SignUpPayload> {
     return TraceRunner.run('Keycloak Sign Up', async () => {
-      void this.logger.debug('signUp: input=%o', input);
+      this.logger.debug('User sign-up started', { username: input.username });
 
       const { firstName, lastName, email, username, password } = input;
 
@@ -93,13 +101,13 @@ export class RegisterService extends AuthenticateBaseService {
       // id ermitteln
       const userId = await this.findUserIdByUsername(username);
       if (!userId) {
-        throw new NotFoundException('User id could not be resolved after signUp');
+        throw new AuthenticationUserNotFoundException(username);
       }
 
       // Rolle zuweisen
       await this.adminService.assignRealmRoleToUser(userId, RealmRoleType.USER);
 
-      return this.prisma.$transaction(async (tx) => {
+      await this.prisma.$transaction(async (tx) => {
         /* ------------------------------------------------------------
          * 1. User (technical root)
          * ------------------------------------------------------------ */
@@ -133,8 +141,11 @@ export class RegisterService extends AuthenticateBaseService {
             data: hashedQuestions,
           });
         }
+      });
 
-        void this.producer.send({
+      const actorId = createTmpUsername(input.firstName, input.lastName);
+      await Promise.all([
+        this.producer.send({
           topic: KafkaTopics.user.createUser,
           payload: { userId, token: signUpToken },
           meta: {
@@ -142,12 +153,12 @@ export class RegisterService extends AuthenticateBaseService {
             operation: 'Add User ID from Kafka to UserService',
             version: '1',
             type: 'EVENT',
-            actorId: createTmpUsername(input.lastName, input.lastName),
+            actorId,
             tenantId: 'omnixys',
           },
-        });
+        }),
 
-        void this.producer.send({
+        this.producer.send({
           topic: KafkaTopics.address.createUserAddresses,
           payload: { userId, token: signUpToken },
           meta: {
@@ -155,14 +166,14 @@ export class RegisterService extends AuthenticateBaseService {
             operation: 'create User Addresses',
             version: '1',
             type: 'EVENT',
-            actorId: createTmpUsername(input.lastName, input.lastName),
+            actorId,
             tenantId: 'omnixys',
           },
-        });
+        }),
+      ]);
 
-        const token = await this.authService.passwordLogin({ username, password });
-        return { userId, token, username, password: '' };
-      });
+      const token = await this.authService.passwordLogin({ username, password });
+      return { userId, token, username, password: '' };
     });
   }
 }

@@ -18,6 +18,8 @@
 import { AdminWriteService } from '../authentication/services/admin-write.service.js';
 import { AuthenticateReadService } from '../authentication/services/read.service.js';
 import { Injectable } from '@nestjs/common';
+import { ContextAccessor } from '@omnixys/context';
+import type { UserIdDTO, UserIdListDTO } from '@omnixys/contracts';
 import {
   IKafkaEventContext,
   KAFKA_HEADERS,
@@ -27,7 +29,7 @@ import {
 } from '@omnixys/kafka';
 import { OmnixysLogger } from '@omnixys/logger';
 import { TraceRunner } from '@omnixys/observability';
-import { RealmRoleType, UserIdDTO, UserIdListDTO } from '@omnixys/shared';
+import { RealmRoleType } from '@omnixys/shared';
 
 /**
  * Central Kafka Authentication Handler.
@@ -65,7 +67,10 @@ export class InvitationHandler {
   ): Promise<void> {
     return TraceRunner.run('[HANDLER] Delete Guest', async () => {
       const headers = context.headers;
-      const actorId = headers[KAFKA_HEADERS.ACTOR_ID] ?? 'Unkown';
+      const actorId =
+        ContextAccessor.get()?.principal?.actorId ??
+        headers[KAFKA_HEADERS.ACTOR_ID] ??
+        'unknown';
 
       this.logger.debug(
         'handleDeleteGuestAccount: %s | actorId=%s',
@@ -90,7 +95,10 @@ export class InvitationHandler {
   ): Promise<void> {
     return TraceRunner.run('[HANDLER] Delete Guest List', async () => {
       const headers = context.headers;
-      const actorId = headers[KAFKA_HEADERS.ACTOR_ID] ?? 'Unkown';
+      const actorId =
+        ContextAccessor.get()?.principal?.actorId ??
+        headers[KAFKA_HEADERS.ACTOR_ID] ??
+        'unknown';
 
       this.logger.debug(
         'handleDeleteGuestAccountList: %o | actorId=%s',

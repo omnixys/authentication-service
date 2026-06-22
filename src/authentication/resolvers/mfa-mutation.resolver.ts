@@ -8,15 +8,14 @@ import {
   Resolver,
 } from '@nestjs/graphql';
 
-import {
-  BadRequestException,
-  UnauthorizedException,
-  UseGuards,
-  UseInterceptors,
-} from '@nestjs/common';
+import { UseGuards } from '@nestjs/common';
 
 import { JsonScalar } from '../../core/scalars/json.scalar.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
+import {
+  AuthenticationInputException,
+  AuthenticationStateException,
+} from '../errors/authentication.error.js';
 import { MfaPreference } from '../models/dtos/reset-verification-result.dto.js';
 import { SecurityQuestionMapper } from '../models/mappers/security-question.mapper.js';
 import { TotpSetupPayload } from '../models/payloads/mfa.types.js';
@@ -25,11 +24,11 @@ import { BackupCodeService } from '../services/backup-code.service.js';
 import { SecurityQuestionService } from '../services/security-question.service.js';
 import { TotpService } from '../services/totp.service.js';
 import { WebAuthnService } from '../services/web-authn.service.js';
-import { LoggingInterceptor } from '@omnixys/logger';
 import {
   CookieAuthGuard,
   CurrentUser,
   CurrentUserData,
+  InvalidCredentialsException,
 } from '@omnixys/security';
 import {
   AuthenticationResponseJSON,
@@ -61,7 +60,6 @@ export class WebAuthnDevicePayload {
 }
 
 @Resolver()
-@UseInterceptors(LoggingInterceptor)
 export class MfaMutationResolver {
   constructor(
     private readonly totpService: TotpService,
@@ -104,13 +102,15 @@ export class MfaMutationResolver {
     const userId = currentUser.id;
 
     if (!credentialId) {
-      throw new BadRequestException('Missing credentialId');
+      throw new AuthenticationInputException('credential-id-missing');
     }
 
     const ok = await this.webAuthnService.revokeDevice(userId, credentialId);
 
     if (!ok) {
-      throw new UnauthorizedException('Device not found or already revoked');
+      throw new AuthenticationStateException(
+        'webauthn-device-not-found-or-revoked',
+      );
     }
 
     return true;
@@ -197,7 +197,7 @@ export class MfaMutationResolver {
     const userId = currentUser.id;
 
     if (!response || typeof response !== 'object') {
-      throw new BadRequestException('Invalid WebAuthn response');
+      throw new AuthenticationInputException('webauthn-response-invalid');
     }
 
     const ok = await this.webAuthnService.verifyAuthenticationForUser(
@@ -206,7 +206,7 @@ export class MfaMutationResolver {
     );
 
     if (!ok) {
-      throw new UnauthorizedException('WebAuthn verification failed');
+      throw new InvalidCredentialsException('WebAuthn verification failed');
     }
 
     return true;
@@ -243,7 +243,7 @@ export class MfaMutationResolver {
     );
 
     if (!ok) {
-      throw new BadRequestException('Rename failed');
+      throw new AuthenticationInputException('webauthn-device-rename-failed');
     }
 
     return true;

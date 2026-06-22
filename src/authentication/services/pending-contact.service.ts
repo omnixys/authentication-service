@@ -1,6 +1,5 @@
-// TODO resolve eslint
-
 import { env } from '../../config/env.js';
+import { AuthenticationStateException } from '../errors/authentication.error.js';
 import { PendingContact } from '../models/dtos/pending-contact.dto.js';
 import { Injectable } from '@nestjs/common';
 import { ValkeyKey, ValkeyService } from '@omnixys/cache';
@@ -19,7 +18,7 @@ export class PendingContactService {
   private getKeyMaterial(): Uint8Array {
     const raw = PC_JWE_KEY;
     if (!raw) {
-      throw new Error('PC_JWE_KEY missing (should be 32 bytes, base64 recommended)');
+      throw new AuthenticationStateException('pending-contact-key-missing');
     }
 
     // Try base64 first
@@ -33,7 +32,11 @@ export class PendingContactService {
     }
 
     // Fallback: treat as UTF-8 secret
-    return new TextEncoder().encode(raw);
+    const key = new TextEncoder().encode(raw);
+    if (key.length !== 32) {
+      throw new AuthenticationStateException('pending-contact-key-invalid');
+    }
+    return key;
   }
 
   /**

@@ -2,14 +2,19 @@
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
 
 import { PrismaService } from '../../prisma/prisma.service.js';
+import {
+  AuthenticationInputException,
+  AuthenticationStateException,
+  IdentityProviderException,
+} from '../errors/authentication.error.js';
 import { AuthWriteService } from './authentication-write.service.js';
 import { AuthenticateBaseService } from './keycloak-base.service.js';
 import { UserWriteService } from './user-write.service.js';
 import { HttpService } from '@nestjs/axios';
-import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ValkeyKey, ValkeyService } from '@omnixys/cache';
+import type { ClientContext } from '@omnixys/context';
 import { OmnixysLogger } from '@omnixys/logger';
-import { ClientContext } from '@omnixys/shared';
 
 /* =========================================================
    TYPE DEFINITIONS
@@ -83,7 +88,7 @@ export class OAuthService extends AuthenticateBaseService {
       };
     }
 
-    throw new BadRequestException('Unsupported OAuth provider');
+    throw new AuthenticationInputException('oauth-provider-unsupported');
   }
 
   /* =====================================================
@@ -94,7 +99,7 @@ export class OAuthService extends AuthenticateBaseService {
     const stored = await this.cache.client.get(`oauth:state:${state}`);
 
     if (!stored || stored !== provider) {
-      throw new UnauthorizedException('Invalid OAuth state');
+      throw new AuthenticationStateException('oauth-state-invalid');
     }
 
     await this.cache.client.del(`oauth:state:${state}`);
@@ -108,10 +113,10 @@ export class OAuthService extends AuthenticateBaseService {
     }
 
     if (!['github', 'google'].includes(provider)) {
-      throw new BadRequestException('Unsupported provider');
+      throw new AuthenticationInputException('oauth-provider-unsupported');
     }
 
-    throw new BadRequestException('Unsupported OAuth provider');
+    throw new AuthenticationInputException('oauth-provider-unsupported');
   }
 
   /* =====================================================
@@ -130,7 +135,7 @@ export class OAuthService extends AuthenticateBaseService {
     });
 
     if (!tokenRes.ok) {
-      throw new UnauthorizedException('GitHub token exchange failed');
+      throw new IdentityProviderException('github', 'token-exchange', tokenRes.status);
     }
 
     const tokenData = (await tokenRes.json()) as GithubTokenResponse;
@@ -142,7 +147,7 @@ export class OAuthService extends AuthenticateBaseService {
     });
 
     if (!userRes.ok) {
-      throw new UnauthorizedException('GitHub user fetch failed');
+      throw new IdentityProviderException('github', 'user-profile', userRes.status);
     }
 
     const githubUser = (await userRes.json()) as GithubUser;
@@ -158,7 +163,7 @@ export class OAuthService extends AuthenticateBaseService {
       });
 
       if (!emailRes.ok) {
-        throw new UnauthorizedException('GitHub email fetch failed');
+        throw new IdentityProviderException('github', 'email-profile', emailRes.status);
       }
 
       const emails = (await emailRes.json()) as GithubEmail[];
@@ -167,7 +172,7 @@ export class OAuthService extends AuthenticateBaseService {
     }
 
     if (!email) {
-      throw new UnauthorizedException('No verified GitHub email found');
+      throw new AuthenticationStateException('verified-oauth-email-missing');
     }
 
     const user = await this.findOrCreateUser({
@@ -198,7 +203,7 @@ export class OAuthService extends AuthenticateBaseService {
     });
 
     if (!tokenRes.ok) {
-      throw new UnauthorizedException('Google token exchange failed');
+      throw new IdentityProviderException('google', 'token-exchange', tokenRes.status);
     }
 
     const tokenData = (await tokenRes.json()) as GoogleTokenResponse;
@@ -210,7 +215,7 @@ export class OAuthService extends AuthenticateBaseService {
     });
 
     if (!profileRes.ok) {
-      throw new UnauthorizedException('Google profile fetch failed');
+      throw new IdentityProviderException('google', 'user-profile', profileRes.status);
     }
 
     const googleUser = (await profileRes.json()) as GoogleUser;

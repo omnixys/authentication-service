@@ -19,7 +19,7 @@
 
 import { env } from '../../env.js';
 import { gqlRequest } from '../../utils/graphql-client.js';
-import { createTestApp } from '../setup-e2e.js';
+import { createTestApp, shutdownTestApp } from '../setup-e2e.js';
 import type { INestApplication } from '@nestjs/common';
 
 /**
@@ -63,7 +63,7 @@ describe('🛡️ Authentication E2E - Admin Operations (Full Flow)', () => {
     expect(accessToken).toBeDefined();
   });
 
-  afterAll(async () => {});
+  afterAll(shutdownTestApp);
 
   // -----------------------------------------------------
   // 🔹 ADMIN SIGN-UP (neuer Benutzer)

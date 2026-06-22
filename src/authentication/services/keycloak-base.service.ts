@@ -20,10 +20,15 @@
 
 import { env } from '../../config/env.js';
 import { keycloakConfig, paths } from '../../config/keycloak.js';
+import {
+  AuthenticationInputException,
+  AuthenticationStateException,
+  IdentityProviderException,
+} from '../errors/authentication.error.js';
 import type { HttpService } from '@nestjs/axios';
-import { BadRequestException, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import type { OmnixysLogger } from '@omnixys/logger';
 import { TraceRunner } from '@omnixys/observability';
+import { InvalidCredentialsException } from '@omnixys/security';
 import type { RoleData } from '@omnixys/shared';
 import { ENUM_TO_KC, type RealmRoleType } from '@omnixys/shared';
 import * as jose from 'jose';
@@ -125,7 +130,8 @@ export abstract class AuthenticateBaseService {
         );
         return res.data;
       } catch (err: any) {
-        const status = err.response?.status ?? 500;
+        const rawStatus: unknown = err.response?.status;
+        const status = typeof rawStatus === 'number' ? rawStatus : 500;
 
         if (behavior.mapTo === 'null-on-401' && (status === 400 || status === 401)) {
           void this.logger.warn(
@@ -147,10 +153,10 @@ export abstract class AuthenticateBaseService {
               : err.message;
 
         if (status === 401) {
-          throw new UnauthorizedException(msg);
+          throw new InvalidCredentialsException('Identity provider rejected credentials');
         }
         if (status === 404) {
-          throw new NotFoundException(msg);
+          throw new AuthenticationStateException('identity-resource-not-found', err);
         }
         if (status === 409 && behavior.returnNullOn409) {
           // do NOT throw → caller needs this info for fallback logic
@@ -163,14 +169,14 @@ export abstract class AuthenticateBaseService {
           return null as T;
         }
         if (status >= 400 && status < 500) {
-          throw new BadRequestException(msg);
+          throw new AuthenticationInputException('identity-provider-rejected-input');
         }
 
-        throw new Error(
-          `Keycloak request failed: ${method.toUpperCase()} ${url} -> ${status} ${msg}`,
-          {
-            cause: err,
-          },
+        throw new IdentityProviderException(
+          'keycloak',
+          `${method.toUpperCase()} ${url}`,
+          status,
+          err,
         );
       }
     });
@@ -252,19 +258,18 @@ export abstract class AuthenticateBaseService {
   protected async getRealmRole(roleName: RealmRoleType | string): Promise<RoleData> {
     const effective = this.mapRoleInput(roleName);
 
-    
     try {
       const role = await this.kcRequest<RoleData>(
         'get',
         `${paths.roles}/${encodeURIComponent(effective)}`,
       );
       if (!role?.id || !role?.name) {
-        throw new Error(`Incomplete role object (name='${effective}')`);
+        throw new AuthenticationStateException('realm-role-incomplete');
       }
       return { id: role.id, name: role.name };
     } catch (err) {
-      console.log(err)
-      throw new NotFoundException(`Realm role '${effective}' not found.`);
+      this.logger.warn('Realm role lookup failed', { role: effective, error: err });
+      throw new AuthenticationStateException('realm-role-not-found', err);
     }
   }
 

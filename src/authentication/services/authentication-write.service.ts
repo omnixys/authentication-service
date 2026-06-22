@@ -1,5 +1,3 @@
-// TODO resolve eslint
-
 /**
  * @license GPL-3.0-or-later
  * Copyright (C) 2025 Caleb Gyamfi - Omnixys Technologies
@@ -19,6 +17,7 @@
 
 import { keycloakConfig, paths } from '../../config/keycloak.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
+import { AuthenticationInputException } from '../errors/authentication.error.js';
 import type { KeycloakToken } from '../models/dtos/kc-token.dto.js';
 import type { LogInInput } from '../models/inputs/log-in.input.js';
 import { LoginTotpInput } from '../models/inputs/login-totp.input.js';
@@ -29,19 +28,20 @@ import { LockoutService } from './lockout.service.js';
 import { AuthenticateReadService } from './read.service.js';
 import { TotpService } from './totp.service.js';
 import { HttpService } from '@nestjs/axios';
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ValkeyKey, ValkeyService } from '@omnixys/cache';
+import type { ClientContext } from '@omnixys/context';
 import { KafkaProducerService, KafkaTopics } from '@omnixys/kafka';
 import { OmnixysLogger } from '@omnixys/logger';
 import {
   AccessBlockedException,
   DeviceService,
   HashService,
+  InvalidCredentialsException,
   RiskMemoryService,
   StepUpRequiredException,
   ZeroTrustService,
 } from '@omnixys/security';
-import { ClientContext } from '@omnixys/shared';
 import { randomBytes } from 'crypto';
 
 export interface RequestContext {
@@ -49,9 +49,6 @@ export interface RequestContext {
   userAgent?: string;
   acceptLanguage?: string;
   clientDeviceId?: string;
-}
-export interface RiskEvaluationRequest extends RequestContext {
-  username: string;
 }
 /**
  * @file Mutierende Operationen gegen Keycloak (Authentication-Flows & User-Mutationen).
@@ -87,10 +84,16 @@ export class AuthWriteService extends AuthenticateBaseService {
     const { username, password } = input;
 
     if (!username || !password) {
-      throw new UnauthorizedException('username oder passwort fehlt!');
+      throw new InvalidCredentialsException();
     }
 
-    const userId = (await this.readService.findByUsername(username)).id;
+    let userId: string;
+    try {
+      userId = (await this.readService.findByUsername(username)).id;
+    } catch {
+      await this.hashService.dummyVerify();
+      throw new InvalidCredentialsException();
+    }
 
     // const riskResult = await this.zeroTrustService.evaluate({
     //   userId,
@@ -133,7 +136,7 @@ export class AuthWriteService extends AuthenticateBaseService {
       if (!data) {
         await this.riskMemory.incrementFailures(userId);
 
-        throw new UnauthorizedException('username oder passwort falsch!');
+        throw new InvalidCredentialsException();
       }
 
       await this.riskMemory.resetFailures(userId);
@@ -213,7 +216,7 @@ export class AuthWriteService extends AuthenticateBaseService {
     if (riskResult.decision === 'STEP_UP') {
       const stepUpMethod = riskResult.stepUp;
       if (!stepUpMethod) {
-        throw new UnauthorizedException('Step-up method missing');
+        throw new AuthenticationInputException('step-up-method-missing');
       }
       throw new StepUpRequiredException(stepUpMethod, riskResult.reasons);
     }
@@ -250,7 +253,7 @@ export class AuthWriteService extends AuthenticateBaseService {
       if (!exchanged) {
         await this.riskMemory.incrementFailures(userId);
 
-        throw new UnauthorizedException('Token exchange failed');
+        throw new InvalidCredentialsException('Token exchange failed');
       }
 
       await this.riskMemory.resetFailures(userId);
@@ -272,10 +275,16 @@ export class AuthWriteService extends AuthenticateBaseService {
     const { username, code } = input;
 
     if (!username || !code) {
-      throw new UnauthorizedException('Missing credentials');
+      throw new InvalidCredentialsException();
     }
 
-    const userId = (await this.readService.findByUsername(username)).id;
+    let userId: string;
+    try {
+      userId = (await this.readService.findByUsername(username)).id;
+    } catch {
+      await this.hashService.dummyVerify();
+      throw new InvalidCredentialsException();
+    }
 
     const riskResult = await this.zeroTrustService.evaluate({
       userId,
@@ -295,7 +304,7 @@ export class AuthWriteService extends AuthenticateBaseService {
     if (riskResult.decision === 'STEP_UP') {
       const stepUpMethod = riskResult.stepUp;
       if (!stepUpMethod) {
-        throw new UnauthorizedException('Step-up method missing');
+        throw new AuthenticationInputException('step-up-method-missing');
       }
       throw new StepUpRequiredException(stepUpMethod, riskResult.reasons);
     }
@@ -306,13 +315,13 @@ export class AuthWriteService extends AuthenticateBaseService {
       });
 
       if (!user) {
-        throw new UnauthorizedException('Invalid credentials');
+        throw new InvalidCredentialsException();
       }
 
       const valid = await this.totpService.verifyForUser(user.id, code);
 
       if (!valid) {
-        throw new UnauthorizedException('Invalid TOTP code');
+        throw new InvalidCredentialsException();
       }
 
       // await this.riskMemory.markStepUpVerified(userId, {
@@ -372,7 +381,7 @@ export class AuthWriteService extends AuthenticateBaseService {
 
     // ActorId in den header setzen
 
-    void this.kafka.send({
+    await this.kafka.send({
       topic: KafkaTopics.notification.sendMagicLink,
       payload: {
         email: user.email,
@@ -385,11 +394,9 @@ export class AuthWriteService extends AuthenticateBaseService {
       },
       meta: {
         service: 'authentication-service',
-        operation: ' sending Magic Link Email Request tu User',
+        operation: 'send magic link email',
         version: '1',
         type: 'EVENT',
-        actorId: 'tmp',
-        tenantId: 'omnixys',
       },
     });
 
@@ -398,13 +405,13 @@ export class AuthWriteService extends AuthenticateBaseService {
 
   async loginWithMagicLink(token: string, context: RequestContext): Promise<TokenPayload> {
     if (!token || token.length < 32) {
-      throw new UnauthorizedException('Invalid token');
+      throw new InvalidCredentialsException('Invalid magic-link token');
     }
 
     // Atomic read + delete
     const raw = await this.cache.get(ValkeyKey.magicLinkToken, token);
     if (!raw) {
-      throw new UnauthorizedException('Invalid or expired magic link');
+      throw new InvalidCredentialsException('Invalid or expired magic link');
     }
 
     const payload = JSON.parse(raw) as {
@@ -433,7 +440,7 @@ export class AuthWriteService extends AuthenticateBaseService {
     if (riskResult.decision === 'STEP_UP') {
       const stepUpMethod = riskResult.stepUp;
       if (!stepUpMethod) {
-        throw new UnauthorizedException('Step-up method missing');
+        throw new AuthenticationInputException('step-up-method-missing');
       }
       throw new StepUpRequiredException(stepUpMethod, riskResult.reasons);
     }

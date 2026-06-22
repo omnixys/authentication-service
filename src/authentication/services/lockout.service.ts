@@ -1,5 +1,6 @@
 import { PrismaService } from '../../prisma/prisma.service.js';
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { InvalidCredentialsException } from '@omnixys/security';
 import { TooManyRequestsException } from '@omnixys/shared';
 import { addHours, addMinutes, isAfter } from 'date-fns';
 
@@ -26,7 +27,9 @@ export class LockoutService {
     }
 
     if (user.lockedUntil && isAfter(user.lockedUntil, new Date())) {
-      throw new UnauthorizedException({ message: 'Account temporarily locked' });
+      throw new InvalidCredentialsException('Account temporarily locked', {
+        reason: 'account-locked',
+      });
     }
   }
 

@@ -26,11 +26,13 @@ import { HandlerModule } from './handlers/handler.module.js';
 import { HealthModule } from './health/health.module.js';
 import { Module } from '@nestjs/common';
 import { ValkeyModule } from '@omnixys/cache';
+import { ContextModule } from '@omnixys/context';
 import { OmnixysGraphQLModule } from '@omnixys/graphql';
 import { KafkaModule } from '@omnixys/kafka';
 import { LoggerModule } from '@omnixys/logger';
 import { ObservabilityModule } from '@omnixys/observability';
 import { SecurityModule } from '@omnixys/security';
+import type { FastifyReply, FastifyRequest } from 'fastify';
 
 const {
   SCHEMA_TARGET,
@@ -47,10 +49,13 @@ const {
   MAGIC_LINK_HMAC_SECRET,
   ENCRYPTION_KEY,
   FINGERPRINT_SECRET,
+  NODE_ENV,
 } = env;
 
 @Module({
   imports: [
+    ContextModule.forRoot(),
+
     ValkeyModule.forRoot({
       serviceName: SERVICE,
       url: VALKEY_URL,
@@ -61,6 +66,7 @@ const {
     }),
 
     OmnixysGraphQLModule.forRoot({
+      context: (req: FastifyRequest, reply: FastifyReply) => ({ req, reply }),
       autoSchemaFile:
         SCHEMA_TARGET === 'tmp'
           ? { path: '/tmp/schema.gql', federation: 2 }
@@ -105,6 +111,11 @@ const {
       },
 
       fingerprintSecret: FINGERPRINT_SECRET,
+      cookie: {
+        secure: NODE_ENV === 'production',
+        sameSite: NODE_ENV === 'production' ? 'none' : 'lax',
+        path: '/',
+      },
       globalGuards: false,
     }),
     KafkaModule.forRoot({
@@ -131,6 +142,7 @@ const {
 
     LoggerModule.forRoot({
       serviceName: SERVICE,
+      registerGlobalInterceptor: true,
 
       kafka: {
         enabled: true,
@@ -152,9 +164,4 @@ const {
   controllers: [],
   providers: [BannerService],
 })
-// implements NestModule
-export class AppModule {
-  // configure(consumer: MiddlewareConsumer): void {
-  //   consumer.apply(RequestLoggerMiddleware).forRoutes('*');
-  // }
-}
+export class AppModule {}

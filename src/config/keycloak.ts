@@ -19,7 +19,13 @@ import { env } from './env.js';
 import { httpsOptions } from './https.js';
 import { Agent } from 'node:https';
 
-const { KC_CLIENT_ID, KC_REALM, KC_URL, KC_CLIENT_SECRET } = env;
+const {
+  KC_CLIENT_ID,
+  KC_REALM,
+  KC_URL,
+  KC_CLIENT_SECRET,
+  KC_TLS_REJECT_UNAUTHORIZED,
+} = env;
 
 export const keycloakConfig = {
   url: KC_URL,
@@ -41,6 +47,6 @@ export const paths = {
 /** Agent für Axios für Requests bei selbstsigniertem Zertifikat */
 export const httpsAgent = new Agent({
   requestCert: true,
-  rejectUnauthorized: false,
+  rejectUnauthorized: KC_TLS_REJECT_UNAUTHORIZED,
   ca: httpsOptions ? (httpsOptions.cert as Buffer) : undefined,
 });

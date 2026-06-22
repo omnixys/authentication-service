@@ -21,7 +21,7 @@ import { env } from '../../env.js';
 import type { GraphQLResponse } from '../../utils/graphql-client.js';
 import { gqlRequest } from '../../utils/graphql-client.js';
 import type { PayloadMap } from '../../utils/graphql-types.js';
-import { createTestApp } from '../setup-e2e.js';
+import { createTestApp, shutdownTestApp } from '../setup-e2e.js';
 import type { INestApplication } from '@nestjs/common';
 
 describe('👤 Authentication E2E - User Operations', () => {
@@ -54,7 +54,7 @@ describe('👤 Authentication E2E - User Operations', () => {
     authHeaders = { Authorization: `Bearer ${accessToken}` };
   });
 
-  afterAll(async () => {});
+  afterAll(shutdownTestApp);
 
   it('should query meAuth()', async () => {
     const query = `query { meAuth { id username email } }`;

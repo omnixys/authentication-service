@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
+import { AuthenticationInputException } from '../errors/authentication.error.js';
 import { OAuthService } from '../services/o-auth.service.js';
-import { Controller, Get, Param, Query, BadRequestException, Res } from '@nestjs/common';
-import { ClientInfo } from '@omnixys/context';
-import { ClientContext } from '@omnixys/shared';
+import { Controller, Get, Param, Query, Res } from '@nestjs/common';
+import { ClientInfo, type ClientContext } from '@omnixys/context';
 import { FastifyReply } from 'fastify';
 
 const isProd = process.env.NODE_ENV === 'production';
@@ -17,7 +17,7 @@ export class OAuthController {
   @Get(':provider')
   async redirect(@Param('provider') provider: string, @Res() reply: FastifyReply) {
     if (!['github', 'google'].includes(provider)) {
-      throw new BadRequestException('Unsupported provider');
+      throw new AuthenticationInputException('oauth-provider-unsupported');
     }
 
     const { url } = await this.oauthService.getAuthUrl(provider);
@@ -42,7 +42,7 @@ export class OAuthController {
     }
 
     if (!code || !state) {
-      throw new BadRequestException('Missing OAuth parameters');
+      throw new AuthenticationInputException('oauth-parameters-missing');
     }
 
     const token = await this.oauthService.handleCallback(provider, code, state, client);

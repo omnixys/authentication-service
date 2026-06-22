@@ -7,6 +7,7 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 
 import { PrismaService } from '../../prisma/prisma.service.js';
+import { AuthenticationStateException } from '../errors/authentication.error.js';
 import { Injectable } from '@nestjs/common';
 import { ValkeyKey, ValkeyService } from '@omnixys/cache';
 
@@ -64,7 +65,7 @@ export class WebAuthnService {
     });
 
     if (activeDevices <= 1) {
-      throw new Error('Cannot revoke last active device');
+      throw new AuthenticationStateException('cannot-revoke-last-webauthn-device');
     }
 
     const result = await this.prisma.webAuthnCredential.updateMany({
@@ -103,6 +104,10 @@ export class WebAuthnService {
   async verifyPasswordlessAuthentication(
     response: AuthenticationResponseJSON,
   ): Promise<string | null> {
+    if (!response?.id) {
+      return null;
+    }
+
     const credential = await this.prisma.webAuthnCredential.findUnique({
       where: { credentialId: response.id },
       include: { user: true },

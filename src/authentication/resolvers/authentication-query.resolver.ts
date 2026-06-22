@@ -1,5 +1,3 @@
-// TODO resolve eslint
-
 /**
  * @license GPL-3.0-or-later
  * Copyright (C) 2025 Caleb Gyamfi - Omnixys Technologies
@@ -19,19 +17,15 @@
 
 import { KcUser } from '../models/entitys/user.entity.js';
 import { AuthenticateReadService } from '../services/read.service.js';
-import {
-  BadRequestException,
-  UnauthorizedException,
-  UseGuards,
-  UseInterceptors,
-} from '@nestjs/common';
+import { UseGuards } from '@nestjs/common';
 import { Args, ID, Query, Resolver } from '@nestjs/graphql';
-import { getLogger, LoggingInterceptor } from '@omnixys/logger';
+import { getLogger } from '@omnixys/logger';
 import {
   CookieAuthGuard,
   CurrentUser,
   CurrentUserData,
   HeaderAuthGuard,
+  InvalidCredentialsException,
   Public,
   RoleGuard,
   Roles,
@@ -52,7 +46,6 @@ import { RealmRoleType } from '@omnixys/shared';
  */
 
 @Resolver()
-@UseInterceptors(LoggingInterceptor)
 /**
  * Stellt Queries rund um Benutzerinformationen bereit:
  * - `users`: Liste aller Realm-User
@@ -77,6 +70,8 @@ export class AuthQueryResolver {
    * ```
    */
   @Query(() => [KcUser], { name: 'kc_users' })
+  @UseGuards(CookieAuthGuard, RoleGuard)
+  @Roles(RealmRoleType.ADMIN)
   async getUsers(): Promise<KcUser[]> {
     this.logger.debug('Get All Users');
     return this.read.findAllUsers();
@@ -106,16 +101,14 @@ export class AuthQueryResolver {
 
     if (!currentUser) {
       this.logger.warn('me() aufgerufen ohne gültigen Benutzer im Kontext');
-      throw new BadRequestException(
-        'Ungültige Benutzeranfrage – kein User im Kontext',
-      );
+      throw new InvalidCredentialsException('Not authenticated');
     }
 
-    this.logger.debug('user=%o', currentUser);
+    this.logger.debug('Current user resolved: userId=%s', currentUser.id);
 
     if (!currentUser?.id) {
       // Kein authentifizierter Nutzer im Kontext
-      throw new UnauthorizedException('Not authenticated');
+      throw new InvalidCredentialsException('Not authenticated');
     }
 
     const user = await this.read.findById(currentUser.id);
@@ -130,16 +123,14 @@ export class AuthQueryResolver {
 
     if (!currentUser) {
       this.logger.warn('me() aufgerufen ohne gültigen Benutzer im Kontext');
-      throw new BadRequestException(
-        'Ungültige Benutzeranfrage – kein User im Kontext',
-      );
+      throw new InvalidCredentialsException('Not authenticated');
     }
 
-    this.logger.debug('user=%o', currentUser);
+    this.logger.debug('Current user resolved: userId=%s', currentUser.id);
 
     if (!currentUser?.id) {
       // Kein authentifizierter Nutzer im Kontext
-      throw new UnauthorizedException('Not authenticated');
+      throw new InvalidCredentialsException('Not authenticated');
     }
 
     const user = await this.read.findById(currentUser.id);
@@ -160,12 +151,16 @@ export class AuthQueryResolver {
    * ```
    */
   @Query(() => KcUser, { name: 'getById' })
+  @UseGuards(CookieAuthGuard, RoleGuard)
+  @Roles(RealmRoleType.ADMIN)
   async getById(@Args('id', { type: () => ID }) id: string): Promise<KcUser> {
     this.logger.debug('getById: id=%s', id);
     return this.read.findById(id);
   }
 
   @Query(() => KcUser, { name: 'getByUsername' })
+  @UseGuards(CookieAuthGuard, RoleGuard)
+  @Roles(RealmRoleType.ADMIN)
   async getByUsername(
     @Args('username', { type: () => String }) username: string,
   ): Promise<KcUser> {

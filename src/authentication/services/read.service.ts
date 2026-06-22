@@ -16,13 +16,17 @@
  */
 
 import { keycloakConfig, paths } from '../../config/keycloak.js';
+import {
+  AuthenticationStateException,
+  AuthenticationUserNotFoundException,
+} from '../errors/authentication.error.js';
 import type { KeycloakTokenPayload } from '../models/dtos/kc-token.dto.js';
 import type { KeycloakUser } from '../models/dtos/kc-user.dto.js';
 import type { KcUser } from '../models/entitys/user.entity.js';
 import { toUser, toUsers } from '../models/mappers/user.mapper.js';
 import { AuthenticateBaseService } from './keycloak-base.service.js';
 import { HttpService } from '@nestjs/axios';
-import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { OmnixysLogger } from '@omnixys/logger';
 import { TraceRunner } from '@omnixys/observability';
 import * as jose from 'jose';
@@ -68,7 +72,7 @@ export class AuthenticateReadService extends AuthenticateBaseService {
 
       if (rawData?.id !== id) {
         void this.logger.debug('findById: raw=%o', rawData);
-        throw new NotFoundException(`User '${id}' nicht gefunden.`);
+        throw new AuthenticationUserNotFoundException(id);
       }
 
       void this.logger.debug('findById: raw=%o', rawData);
@@ -100,7 +104,7 @@ export class AuthenticateReadService extends AuthenticateBaseService {
             );
 
             if (!rawData?.id || rawData.id !== id) {
-              throw new NotFoundException(`User '${id}' nicht gefunden.`);
+              throw new AuthenticationUserNotFoundException(id);
             }
 
             return toUser(rawData);
@@ -130,14 +134,14 @@ export class AuthenticateReadService extends AuthenticateBaseService {
 
     if (!Array.isArray(rawList) || rawList.length === 0) {
       this.logger.debug('findByUsername: no result for %s', username);
-      throw new NotFoundException(`User '${username}' nicht gefunden.`);
+      throw new AuthenticationUserNotFoundException(username);
     }
 
     const raw = rawList[0];
     // this.logger.debug('findByUsername: raw=%o', raw);
 
     if (raw?.username !== username) {
-      throw new NotFoundException(`User '${username}' nicht gefunden.`);
+      throw new AuthenticationUserNotFoundException(username);
     }
 
     const user = toUser(raw);
@@ -152,7 +156,7 @@ export class AuthenticateReadService extends AuthenticateBaseService {
     const decoded = jose.decodeJwt(accessToken);
     const iss = decoded.iss;
     if (!iss) {
-      throw new UnauthorizedException('Missing issuer');
+      throw new AuthenticationStateException('token-issuer-missing');
     }
     const payload = await this.verifyJwt<KeycloakTokenPayload>(accessToken, iss);
     return toUser(payload);

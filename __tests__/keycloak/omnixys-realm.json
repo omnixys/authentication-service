@@ -527,7 +527,7 @@
       ],
       "disableableCredentialTypes": [],
       "requiredActions": [],
-      "realmRoles": ["realm-admin", "Default user role"],
+      "realmRoles": ["realm-admin", "Default user role", "ADMIN"],
       "clientRoles": {
         "realm-management": ["manage-users", "manage-realm"]
       },

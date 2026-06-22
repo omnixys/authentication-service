@@ -21,7 +21,7 @@ import { env } from '../../env.js';
 import type { GraphQLResponse } from '../../utils/graphql-client.js';
 import { gqlRequest } from '../../utils/graphql-client.js';
 import type { PayloadMap } from '../../utils/graphql-types.js';
-import { createTestApp } from '../setup-e2e.js';
+import { createTestApp, shutdownTestApp } from '../setup-e2e.js';
 import type { INestApplication } from '@nestjs/common';
 
 describe('👑 Authentication E2E - User SignUp Flow (Full Lifecycle)', () => {
@@ -38,12 +38,26 @@ describe('👑 Authentication E2E - User SignUp Flow (Full Lifecycle)', () => {
     app = setup.app;
   });
 
-  afterAll(async () => {});
+  afterAll(shutdownTestApp);
 
   // -----------------------------------------------------
   // 🔹 SIGN UP NEW USER
   // -----------------------------------------------------
   it('should sign up a new user successfully', async () => {
+    const adminLogin = await gqlRequest(
+      app,
+      'credentialsLogin',
+      `mutation {
+        credentialsLogin(input: {
+          username: "${env.OMNIXYS_ADMIN_USERNAME}"
+          password: "${env.OMNIXYS_ADMIN_PASSWORD}"
+        }) { accessToken }
+      }`,
+    );
+    expect(adminLogin.errors).toBeUndefined();
+    const adminAccessToken = adminLogin.data?.credentialsLogin?.accessToken;
+    expect(adminAccessToken).toBeDefined();
+
     const unique = Date.now();
     createdUsername = `live-test-${unique}`;
     createdEmail = `caleb+${unique}@omnixys.com`;
@@ -66,7 +80,14 @@ describe('👑 Authentication E2E - User SignUp Flow (Full Lifecycle)', () => {
     `;
 
     const result: GraphQLResponse<Pick<PayloadMap, 'adminSignUp'>> =
-      await gqlRequest(app, 'adminSignUp', query);
+      await gqlRequest(
+        app,
+        'adminSignUp',
+        query,
+        undefined,
+        { Authorization: `Bearer ${adminAccessToken}` },
+        adminLogin.cookies,
+      );
 
     expect(result.errors).toBeUndefined();
     expect(result.data?.adminSignUp?.accessToken).toBeDefined();

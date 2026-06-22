@@ -16,7 +16,9 @@
  */
 
 import { AdminService } from './admin.service.js';
-import { Controller, Get, Post } from '@nestjs/common';
+import { Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { CookieAuthGuard, RoleGuard, Roles } from '@omnixys/security';
+import { RealmRoleType } from '@omnixys/shared';
 
 /**
  * Controller providing REST endpoints for administrative operations
@@ -31,6 +33,8 @@ import { Controller, Get, Post } from '@nestjs/common';
  * @since 1.0.0
  */
 @Controller('admin')
+@UseGuards(CookieAuthGuard, RoleGuard)
+@Roles(RealmRoleType.ADMIN)
 export class AdminController {
   /**
    * Creates a new instance of {@link AdminController}.

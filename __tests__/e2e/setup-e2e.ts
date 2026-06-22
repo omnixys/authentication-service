@@ -1,12 +1,11 @@
 import 'reflect-metadata';
 
-// 🔥 KEIN AppModule import hier!
-
-import {
-  FastifyAdapter,
-  NestFastifyApplication,
-} from '@nestjs/platform-fastify';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import cookie from '@fastify/cookie';
+import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import { Test } from '@nestjs/testing';
+import type { StartedTestContainer } from 'testcontainers';
 
 import { createKafkaContainer } from '../testcontainers/kafka.container.js';
 import { createKeycloakContainer } from '../testcontainers/keycloak.container.js';
@@ -14,93 +13,87 @@ import { createPostgresContainer } from '../testcontainers/postgres.container.js
 import { TempoContainer } from '../testcontainers/tempo.container.js';
 import { createValkeyContainer } from '../testcontainers/valkey.container.js';
 
-let app: NestFastifyApplication;
+let app: NestFastifyApplication | undefined;
+let pgContainer: StartedTestContainer | undefined;
+let valkeyContainer: StartedTestContainer | undefined;
+let kafkaContainer: StartedTestContainer | undefined;
+let keycloakContainer: StartedTestContainer | undefined;
+let tempoContainer: TempoContainer | undefined;
+const execFileAsync = promisify(execFile);
 
-let pgContainer: any;
-let valkeyContainer: any;
-let kafkaContainer: any;
-let keycloakContainer: any;
-let tempoContainer: any;
+export async function createTestApp(): Promise<{ app: NestFastifyApplication }> {
+  await shutdownTestApp();
 
-export async function createTestApp() {
-  console.log('🚀 Starting Postgres...');
-  const pg = await createPostgresContainer();
-  pgContainer = pg.container;
-  console.log('✅ Postgres ready');
+  try {
+    const pg = await createPostgresContainer();
+    pgContainer = pg.container;
 
-  console.log('🚀 Starting Valkey...');
-  const valkey = await createValkeyContainer();
-  valkeyContainer = valkey.container;
-  console.log('✅ Valkey ready');
+    const valkey = await createValkeyContainer();
+    valkeyContainer = valkey.container;
 
-  console.log('🚀 Starting Kafka...');
-  const kafka = await createKafkaContainer();
-  kafkaContainer = kafka.container;
-  console.log('✅ Kafka ready');
+    const kafka = await createKafkaContainer();
+    kafkaContainer = kafka.container;
 
-    console.log('🚀 Starting Keycloak...');
     const keycloak = await createKeycloakContainer();
     keycloakContainer = keycloak.container;
-  console.log('✅ Keycloak ready');
-  
-console.log('🚀 Starting Tempo...');
 
-const tempo = new TempoContainer();
-tempoContainer = tempo;
+    tempoContainer = new TempoContainer();
+    const { urlHttp, urlOtel } = await tempoContainer.start();
 
-const { urlHttp, urlOtel } = await tempo.start();
+    process.env.NODE_ENV = 'test';
+    process.env.DATABASE_URL = pg.url;
+    process.env.VALKEY_URL = valkey.url;
+    process.env.VALKEY_PASSWORD = valkey.password;
+    process.env.KAFKA_BROKER = kafka.broker;
+    process.env.KAFKAJS_NO_PARTITIONER_WARNING = '1';
+    process.env.KC_URL = keycloak.url;
+    process.env.KC_REALM = keycloak.realm;
+    process.env.KC_CLIENT_ID = keycloak.clientId;
+    process.env.KC_CLIENT_SECRET = keycloak.clientSecret;
+    process.env.TEMPO_URI = `${urlOtel}/v1/traces`;
+    process.env.TEMPO_HEALTH_URL = `${urlHttp}/metrics`;
 
-process.env.TEMPO_URI = `${urlOtel}/v1/traces`;
-process.env.TEMPO_HEALTH_URL = `${urlHttp}/metrics`;
+    await execFileAsync('pnpm', ['exec', 'prisma', 'migrate', 'deploy'], {
+      env: process.env,
+    });
 
-console.log('✅ Tempo ready', {
-  otel: process.env.TEMPO_URI,
-});
+    const { AppModule } = await import('../../src/app.module.js');
+    console.info('[e2e] compiling Nest module');
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
 
-  // 🔥 ENV HIER SETZEN (VOR IMPORT)
-  process.env.DATABASE_URL = pg.url;
-  process.env.VALKEY_URL = valkey.url;
-  process.env.VALKEY_PASSWORD = valkey.password;
-  process.env.KAFKA_BROKER = kafka.broker;
-  process.env.KAFKAJS_NO_PARTITIONER_WARNING = '1';
+    console.info('[e2e] initializing Nest application');
+    app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter());
+    await app.register(cookie, { secret: process.env.COOKIE_SECRET });
+    await app.init();
+    console.info('[e2e] waiting for Fastify readiness');
+    await app.getHttpAdapter().getInstance().ready();
+    console.info('[e2e] application ready');
 
-  process.env.KC_URL = keycloak.url;
-  process.env.KC_REALM = keycloak.realm;
-  process.env.KC_CLIENT_ID = keycloak.clientId;
-  process.env.KC_CLIENT_SECRET = keycloak.clientSecret;
-
-  console.log('🔥 ENV:', {
-    DATABASE_URL: process.env.DATABASE_URL,
-    VALKEY_URL: process.env.VALKEY_URL,
-    KAFKA_BROKER: process.env.KAFKA_BROKER,
-  });
-
-delete (global as any).env;
-
-// 🔥 DANN import
-const { AppModule } = await import('../../src/app.module.js');
-
-  console.log('🚀 Bootstrapping Nest...');
-
-  const moduleRef = await Test.createTestingModule({
-    imports: [AppModule],
-  }).compile();
-
-  app = moduleRef.createNestApplication(new FastifyAdapter());
-
-  await app.init();
-  await app.getHttpAdapter().getInstance().ready();
-
-  console.log('✅ Nest ready');
-
-  return { app };
+    return { app };
+  } catch (error) {
+    await shutdownTestApp();
+    throw error;
+  }
 }
 
-export async function shutdownTestApp() {
-  if (app) await app.close();
-  if (pgContainer) await pgContainer.stop();
-  if (valkeyContainer) await valkeyContainer.stop();
-  if (kafkaContainer) await kafkaContainer.stop();
-  if (keycloakContainer) await keycloakContainer.stop();
-  if (tempoContainer) await tempoContainer.stop()
+export async function shutdownTestApp(): Promise<void> {
+  await settle(app?.close());
+  await settle(tempoContainer?.stop());
+  await settle(keycloakContainer?.stop());
+  await settle(kafkaContainer?.stop());
+  await settle(valkeyContainer?.stop());
+  await settle(pgContainer?.stop());
+  app = undefined;
+  tempoContainer = undefined;
+  keycloakContainer = undefined;
+  kafkaContainer = undefined;
+  valkeyContainer = undefined;
+  pgContainer = undefined;
+}
+
+async function settle(operation: Promise<unknown> | undefined): Promise<void> {
+  if (!operation) {
+    return;
+  }
+  await operation.catch(() => undefined);
 }

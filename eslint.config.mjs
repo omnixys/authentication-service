@@ -14,7 +14,6 @@
  *
  * For more information, visit <https://www.gnu.org/licenses/>.
  */
- 
 
 // @ts-check
 /**
@@ -47,6 +46,7 @@ export default tseslint.config(
       'release.config.js',
       './.extras/**',
       './prisma/**',
+      'src/prisma/generated/**',
     ],
   },
 

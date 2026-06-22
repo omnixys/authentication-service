@@ -34,8 +34,12 @@ export interface GraphQLResponse<
     object | string | number | boolean | null | undefined
   >,
 > {
-  readonly data?: TData;
-  readonly errors?: ReadonlyArray<{ message: string; path?: string[] }>;
+  readonly data?: TData | null;
+  readonly errors?: ReadonlyArray<{
+    message: string;
+    path?: string[];
+    extensions?: Readonly<Record<string, unknown>>;
+  }>;
   readonly cookies?: string[];
   readonly res: Response;
 }
@@ -103,8 +107,12 @@ export async function gqlRequest<TKey extends GraphQLOperationKey>(
   // Strictly typed response
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const body: Readonly<{
-    data?: { [K in TKey]: PayloadMap[K] };
-    errors?: Array<{ message: string; path?: string[] }>;
+    data?: { [K in TKey]: PayloadMap[K] } | null;
+    errors?: Array<{
+      message: string;
+      path?: string[];
+      extensions?: Readonly<Record<string, unknown>>;
+    }>;
   }> = res.body;
 
   if (body.errors && body.errors.length > 0) {
@@ -173,8 +181,12 @@ export async function rawGqlRequest(
   }
 
   const body = res.body as {
-    data?: Record<string, object | string | number | boolean | null>;
-    errors?: Array<{ message: string; path?: string[] }>;
+    data?: Record<string, object | string | number | boolean | null> | null;
+    errors?: Array<{
+      message: string;
+      path?: string[];
+      extensions?: Readonly<Record<string, unknown>>;
+    }>;
   };
 
   return {

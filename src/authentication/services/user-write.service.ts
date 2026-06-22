@@ -19,6 +19,11 @@ import { env } from '../../config/env.js';
 import { paths } from '../../config/keycloak.js';
 import { MfaPreference } from '../../prisma/generated/client.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
+import {
+  AuthenticationStateException,
+  AuthenticationUserNotFoundException,
+  GuestSignupException,
+} from '../errors/authentication.error.js';
 import { KeycloakUser, KeycloakUserPatch } from '../models/dtos/kc-user.dto.js';
 import { updatePasswortDTO } from '../models/dtos/update-password.dto.js';
 import { UpdateMyProfileInput } from '../models/inputs/user-update.input.js';
@@ -27,19 +32,18 @@ import { AdminWriteService } from './admin-write.service.js';
 import { AuthWriteService } from './authentication-write.service.js';
 import { AuthenticateBaseService } from './keycloak-base.service.js';
 import { AuthenticateReadService } from './read.service.js';
+import { ResetService } from './reset.service.js';
 import { HttpService } from '@nestjs/axios';
-import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { DelayedJobKeys, DelayedJobService, ValkeyKey, ValkeyService } from '@omnixys/cache';
+import { ContextAccessor, type ClientContext } from '@omnixys/context';
+import { guestAuthKeySchema, guestSignUpTokenPayloadSchema } from '@omnixys/contracts';
 import { EventType, KafkaProducerService, KafkaTopics } from '@omnixys/kafka';
 import { OmnixysLogger } from '@omnixys/logger';
 import { TraceRunner } from '@omnixys/observability';
 import { EncryptionService } from '@omnixys/security';
-import {
-  ClientContext,
-  GuestAuthKey,
-  GuestSignUpTokenPayload,
-  RealmRoleType,
-} from '@omnixys/shared';
+import { RealmRoleType } from '@omnixys/shared';
+import { randomBytes, randomInt } from 'node:crypto';
 
 const { SERVICE } = env;
 
@@ -54,8 +58,6 @@ export interface GuestSignUp {
   users?: SignUpResult[];
   message?: string;
 }
-// TODO Enum statt strings bei guestVerify
-
 export enum VerifyGuestMessage {
   SUCCESS = 'SUCCESS',
   ALREADY_CONSUMED_OR_EXPIRED = 'ALREADY_CONSUMED_OR_EXPIRED',
@@ -81,6 +83,7 @@ export class UserWriteService extends AuthenticateBaseService {
     private readonly cacheService: ValkeyService,
     private readonly prisma: PrismaService,
     private readonly delayedJobService: DelayedJobService,
+    private readonly resetService: ResetService,
   ) {
     super(omnixysLogger, http);
   }
@@ -95,8 +98,13 @@ export class UserWriteService extends AuthenticateBaseService {
       /**
        * 1️⃣ Decrypt token
        */
-      const decryptedToken = this.encryptionServie.decrypt(signUpToken, true);
-      const { authKey } = JSON.parse(decryptedToken) as GuestSignUpTokenPayload;
+      let authKey: string;
+      try {
+        const decryptedToken = this.encryptionServie.decrypt(signUpToken, true);
+        ({ authKey } = guestSignUpTokenPayloadSchema.parse(JSON.parse(decryptedToken)));
+      } catch (error) {
+        throw new GuestSignupException('verification-token-invalid', error);
+      }
 
       /**
        * 2️⃣ Load auth payload
@@ -108,7 +116,7 @@ export class UserWriteService extends AuthenticateBaseService {
       }
 
       try {
-        const input = JSON.parse(raw) as GuestAuthKey;
+        const input = guestAuthKeySchema.parse(JSON.parse(raw));
 
         /**
          * 🔥 NEW: invitee-based processing
@@ -116,7 +124,7 @@ export class UserWriteService extends AuthenticateBaseService {
         const invitees = input.invitees ?? [];
 
         if (!invitees.length) {
-          throw new Error('No invitees found in payload');
+          throw new GuestSignupException('invitees-missing');
         }
 
         const results: SignUpResult[] = [];
@@ -132,6 +140,7 @@ export class UserWriteService extends AuthenticateBaseService {
             firstName: invitee.firstName,
             lastName: invitee.lastName,
             email: invitee.email,
+            eventEndsAt: input.eventEndsAt,
           });
 
           results.push(user);
@@ -139,7 +148,7 @@ export class UserWriteService extends AuthenticateBaseService {
           /**
            * 🔥 Kafka fan-out (deterministic via invitationId)
            */
-          await Promise.allSettled([
+          await Promise.all([
             this.kafkaProducer.send({
               topic: KafkaTopics.user.createGuest,
               payload: {
@@ -181,8 +190,11 @@ export class UserWriteService extends AuthenticateBaseService {
 
         return { users: results };
       } catch (e: unknown) {
-        this.logger.error(e instanceof Error ? e.message : String(e));
-        throw new Error('Guest signup failed', { cause: e });
+        this.logger.error('Guest sign-up failed', { error: e });
+        if (e instanceof GuestSignupException) {
+          throw e;
+        }
+        throw new GuestSignupException('invalid-or-incomplete-state', e);
       }
     });
   }
@@ -194,6 +206,7 @@ export class UserWriteService extends AuthenticateBaseService {
     firstName: string;
     lastName: string;
     email?: string;
+    eventEndsAt: Date;
   }): Promise<SignUpResult> {
     /**
      * Generate credentials
@@ -230,7 +243,7 @@ export class UserWriteService extends AuthenticateBaseService {
      */
     const userId = await this.findUserIdByUsername(username);
     if (!userId) {
-      throw new NotFoundException('User id could not be resolved after signUp');
+      throw new AuthenticationUserNotFoundException(username);
     }
 
     /**
@@ -250,10 +263,12 @@ export class UserWriteService extends AuthenticateBaseService {
       },
     });
 
+    const delayMs = Math.max(0, data.eventEndsAt.getTime() - Date.now());
+
     await this.delayedJobService.schedule({
       type: DelayedJobKeys.user.delete,
       payload: { userId },
-      delayMs: 30_000,
+      delayMs,
     });
 
     return {
@@ -296,27 +311,11 @@ export class UserWriteService extends AuthenticateBaseService {
       data.name ?? `${data.provider}_${data.providerId}`,
     );
     if (!userId) {
-      throw new NotFoundException('User id could not be resolved after signUp');
+      throw new AuthenticationUserNotFoundException(body.username);
     }
 
     // Rolle zuweisen
     await this.adminService.assignRealmRoleToUser(userId, RealmRoleType.USER);
-
-    // void this.kafka.createUser(
-    //   {
-    //     id: userId,
-    //     username: data.name ?? `${data.provider}_${data.providerId}`,
-    //     firstName: data.name ?? 'GitHub',
-    //     lastName: 'User',
-    //     email: data.email,
-    //   },
-    //   'authentication.userSignUp',
-    //   { traceId: sc.traceId, spanId: sc.spanId },
-    // );
-
-    if (!userId) {
-      throw new UnauthorizedException('Keycloak user creation failed');
-    }
 
     return userId;
   }
@@ -338,7 +337,20 @@ export class UserWriteService extends AuthenticateBaseService {
   }
 
   async sendPasswordResetNotification(id: string): Promise<void> {
-    throw new Error(`Method not implemented.${id}`);
+    const user = await this.authenticateReadService.findById(id);
+    if (!user.email) {
+      throw new AuthenticationStateException('user-email-missing');
+    }
+    const client = ContextAccessor.get()?.client;
+    await this.resetService.requestReset(user.email, {
+      ip: client?.ip,
+      userAgent: client?.userAgent,
+      device: client?.device?.model ?? client?.device?.type ?? 'Internal service',
+      browser: client?.browser?.name ?? 'Unknown browser',
+      os: client?.os?.name ?? 'Server',
+      location: [client?.location?.city, client?.location?.country].filter(Boolean).join(', '),
+      locale: client?.locale === 'en-US' ? 'en-US' : 'de-DE',
+    });
   }
 
   /**
@@ -363,7 +375,7 @@ export class UserWriteService extends AuthenticateBaseService {
       .toLowerCase()
       .replace(/[^a-z0-9]/g, '');
 
-    const randomSuffix = Math.floor(1000 + Math.random() * 9000).toString();
+    const randomSuffix = randomInt(1000, 10_000).toString();
     const baseUsername = `${base}${randomSuffix}`;
 
     let username = baseUsername;
@@ -375,7 +387,7 @@ export class UserWriteService extends AuthenticateBaseService {
       const emailTaken = await this.userExistsByEmail(email);
 
       if (!usernameTaken && !emailTaken) {
-        const password = Math.random().toString(36).slice(-8);
+        const password = randomBytes(18).toString('base64url');
         return { username, email, password };
       }
 
@@ -392,9 +404,7 @@ export class UserWriteService extends AuthenticateBaseService {
       }
     }
 
-    throw new Error(
-      `Could not generate unique username/email for ${input.firstName} ${input.lastName} after 10 attempts.`,
-    );
+    throw new GuestSignupException('unique-credentials-exhausted');
   }
 
   /** Check if Keycloak already has a user with this username */
@@ -433,12 +443,6 @@ export class UserWriteService extends AuthenticateBaseService {
       data: patch,
       headers: await this.adminJsonHeaders(),
     });
-
-    // void this.kafka.updateUser(
-    //   { id, firstName: patch.firstName, lastName: patch.lastName, email: patch.email },
-    //   'authentication-service',
-    //   { traceId: sc.traceId, spanId: sc.spanId },
-    // );
   }
 
   /**

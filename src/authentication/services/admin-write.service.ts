@@ -17,6 +17,7 @@
 
 import { paths } from '../../config/keycloak.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
+import { AuthenticationUserNotFoundException } from '../errors/authentication.error.js';
 import { KeycloakUserPatch } from '../models/dtos/kc-user.dto.js';
 import type { AdminSignUpInput } from '../models/inputs/sign-up.input.js';
 import { UpdateMyProfileInput } from '../models/inputs/user-update.input.js';
@@ -25,9 +26,8 @@ import { AuthWriteService } from './authentication-write.service.js';
 import { AuthenticateBaseService } from './keycloak-base.service.js';
 import { AuthenticateReadService } from './read.service.js';
 import { HttpService } from '@nestjs/axios';
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { DelayedJobKeys, DelayedJobService } from '@omnixys/cache';
-import { KafkaProducerService, KafkaTopics } from '@omnixys/kafka';
+import { Injectable } from '@nestjs/common';
+import { KafkaProducerService, KafkaTopics, type KafkaMetaInfo } from '@omnixys/kafka';
 import { OmnixysLogger } from '@omnixys/logger';
 import { RealmRoleType } from '@omnixys/shared';
 
@@ -47,14 +47,13 @@ export class AdminWriteService extends AuthenticateBaseService {
     http: HttpService,
     readonly kafka: KafkaProducerService,
     readonly prisma: PrismaService,
-    private readonly delayedJobService: DelayedJobService,
   ) {
     super(logger, http);
   }
 
   async adminSignUp(input: AdminSignUpInput): Promise<TokenPayload> {
     const { firstName, lastName, email, username, password } = input;
-    void this.logger.debug('signUp: input=%o', input);
+    this.logger.debug('Admin sign-up started', { username });
 
     const credentials: Array<Record<string, string | undefined | boolean>> = [
       { type: 'password', value: password, temporary: false },
@@ -78,17 +77,11 @@ export class AdminWriteService extends AuthenticateBaseService {
     // id ermitteln
     const userId = await this.findUserIdByUsername(username);
     if (!userId) {
-      throw new NotFoundException('User id could not be resolved after signUp');
+      throw new AuthenticationUserNotFoundException(username);
     }
 
     // Rolle zuweisen
     await this.assignRealmRoleToUser(userId, RealmRoleType.ADMIN);
-
-    await this.delayedJobService.schedule({
-      type: DelayedJobKeys.user.delete,
-      payload: { userId },
-      delayMs: 3_000,
-    });
 
     const token = await this.authService.passwordLogin({ username, password });
     return token;
@@ -100,85 +93,51 @@ export class AdminWriteService extends AuthenticateBaseService {
   async deleteUser(id: string, actorId: string): Promise<void> {
     await this.kcRequest('delete', `${paths.users}/${encodeURIComponent(id)}`);
 
-    await this.prisma.authUser.delete({ where: { id } });
+    await this.prisma.authUser.deleteMany({ where: { id } });
 
-    void this.kafka.send({
-      topic: KafkaTopics.user.deleteUser,
-      payload: { userId: id },
-      meta: {
-        operation: 'Deleting User from user-service',
-        service: 'authentication.service',
-        version: '1',
-        type: 'EVENT',
-        actorId,
-        tenantId: 'omnixys',
-      },
+    const metadata = (operation: string): KafkaMetaInfo => ({
+      operation,
+      service: 'authentication-service',
+      version: '1',
+      type: 'EVENT' as const,
+      actorId,
+      tenantId: 'omnixys',
     });
 
-    void this.kafka.send({
-      topic: KafkaTopics.address.deleteUserAddresses,
-      payload: { userId: id },
-      meta: {
-        operation: 'Deleting User Addresses from address-service',
-        service: 'authentication.service',
-        version: '1',
-        type: 'EVENT',
-        actorId,
-        tenantId: 'omnixys',
-      },
-    });
+    await Promise.all([
+      this.kafka.send({
+        topic: KafkaTopics.user.deleteUser,
+        payload: { userId: id },
+        meta: metadata('delete user profile'),
+      }),
+      this.kafka.send({
+        topic: KafkaTopics.address.deleteUserAddresses,
+        payload: { userId: id },
+        meta: metadata('delete user addresses'),
+      }),
+      this.kafka.send({
+        topic: KafkaTopics.event.delete,
+        payload: { userId: id },
+        meta: metadata('delete user events'),
+      }),
+      this.kafka.send({
+        topic: KafkaTopics.seat.removeGuestId,
+        payload: { userId: id },
+        meta: metadata('remove user seat assignments'),
+      }),
+      this.kafka.send({
+        topic: KafkaTopics.invitation.deleteUserInvitations,
+        payload: { userId: id },
+        meta: metadata('delete user invitations'),
+      }),
+      this.kafka.send({
+        topic: KafkaTopics.ticket.deleteUserTickets,
+        payload: { userId: id },
+        meta: metadata('delete user tickets'),
+      }),
+    ]);
 
-    void this.kafka.send({
-      topic: KafkaTopics.event.delete,
-      payload: { userId: id },
-      meta: {
-        operation: 'Deleting Events from event-service',
-        service: 'authentication.service',
-        version: '1',
-        type: 'EVENT',
-        actorId,
-        tenantId: 'omnixys',
-      },
-    });
-
-    void this.kafka.send({
-      topic: KafkaTopics.seat.removeGuestId,
-      payload: { userId: id },
-      meta: {
-        operation: 'Removing Seat Reservation from seat-service',
-        service: 'authentication.service',
-        version: '1',
-        type: 'EVENT',
-        actorId,
-        tenantId: 'omnixys',
-      },
-    });
-
-    void this.kafka.send({
-      topic: KafkaTopics.invitation.deleteUserInvitations,
-      payload: { userId: id },
-      meta: {
-        operation: 'Deleting Invitations from invitation-service',
-        service: 'authentication.service',
-        version: '1',
-        type: 'EVENT',
-        actorId,
-        tenantId: 'omnixys',
-      },
-    });
-
-    void this.kafka.send({
-      topic: KafkaTopics.ticket.deleteUserTickets,
-      payload: { userId: id },
-      meta: {
-        operation: 'Deleting Tickets from ticket-service',
-        service: 'authentication.service',
-        version: '1',
-        type: 'EVENT',
-        actorId,
-        tenantId: 'omnixys',
-      },
-    });
+    this.logger.info('User deletion propagated', { userId: id });
   }
 
   /**

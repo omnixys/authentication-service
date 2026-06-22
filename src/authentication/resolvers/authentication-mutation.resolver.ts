@@ -17,30 +17,31 @@
  */
 
 import { JsonScalar } from '../../core/scalars/json.scalar.js';
+import { AuthenticationInputException } from '../errors/authentication.error.js';
 import { LogInInput } from '../models/inputs/log-in.input.js';
 import { LoginTotpInput } from '../models/inputs/login-totp.input.js';
 import { SuccessPayload } from '../models/payloads/success.payload.js';
 import { TokenPayload } from '../models/payloads/token.payload.js';
 import { AuthWriteService } from '../services/authentication-write.service.js';
 import { WebAuthnService } from '../services/web-authn.service.js';
-import { BadUserInputException } from '../utils/error.util.js';
+import { UseGuards } from '@nestjs/common';
+import { Args, Context, Mutation, Resolver } from '@nestjs/graphql';
 import {
-  BadRequestException,
-  UnauthorizedException,
-  UseGuards,
-  UseInterceptors,
-} from '@nestjs/common';
-import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { ClientInfo } from '@omnixys/context';
-import { LoggingInterceptor, OmnixysLogger } from '@omnixys/logger';
+  ClientInfo,
+  type ClientContext,
+  type GqlFastifyContext,
+} from '@omnixys/context';
+import { OmnixysLogger } from '@omnixys/logger';
 import { TraceRunner } from '@omnixys/observability';
 import {
   CookieAuthGuard,
   CurrentUser,
   CurrentUserData,
+  InvalidCredentialsException,
   Public,
+  RefreshTokenExpiredException,
+  TokenCookieService,
 } from '@omnixys/security';
-import { ClientContext } from '@omnixys/shared';
 import { AuthenticationResponseJSON } from '@simplewebauthn/server';
 
 /**
@@ -49,7 +50,6 @@ import { AuthenticationResponseJSON } from '@simplewebauthn/server';
  * @public
  */
 @Resolver()
-@UseInterceptors(LoggingInterceptor)
 export class AuthMutationResolver {
   private readonly logger;
 
@@ -64,6 +64,7 @@ export class AuthMutationResolver {
     private readonly omnixysLogger: OmnixysLogger,
     private readonly authService: AuthWriteService,
     private readonly webAuthnService: WebAuthnService,
+    private readonly tokenCookies: TokenCookieService,
   ) {
     this.logger = this.omnixysLogger.log(AuthMutationResolver.name);
   }
@@ -85,23 +86,38 @@ export class AuthMutationResolver {
   async credentialsLogin(
     @Args('input', { type: () => LogInInput }) input: LogInInput,
     @ClientInfo() client: ClientContext,
+    @Context() context: GqlFastifyContext,
   ): Promise<TokenPayload> {
     return TraceRunner.run('Credentials Login Resolver', async () => {
       // const res = ctx?.reply;
-      this.logger.debug('login: input=%o', input);
+      this.logger.debug('Credentials login requested', {
+        username: input.username,
+      });
 
       const ip = client.ip;
       const userAgent = client.userAgent;
       const acceptLanguage = client.locale;
       const clientDeviceId = client.device;
 
-      return this.authService.passwordLogin({
+      const result = await this.authService.passwordLogin({
         ...input,
         ip,
         userAgent,
         acceptLanguage,
         clientDeviceId,
       });
+      this.tokenCookies.setTokens(
+        context.reply,
+        {
+          accessToken: result.accessToken,
+          refreshToken: result.refreshToken,
+        },
+        {
+          accessTokenMaxAgeMs: result.expiresIn * 1_000,
+          refreshTokenMaxAgeMs: result.refreshExpiresIn * 1_000,
+        },
+      );
+      return result;
     });
   }
 
@@ -119,7 +135,10 @@ export class AuthMutationResolver {
    */
   @Mutation(() => TokenPayload, { name: 'refresh' })
   @UseGuards(CookieAuthGuard)
-  async refresh(@CurrentUser() user: CurrentUserData): Promise<TokenPayload> {
+  async refresh(
+    @CurrentUser() user: CurrentUserData,
+    @Context() context: GqlFastifyContext,
+  ): Promise<TokenPayload> {
     return TraceRunner.run('Refresh Resolver', async () => {
       this.logger.debug(
         '[authentication-mutation.resolver.ts] Refresh %s accessToken...',
@@ -130,8 +149,20 @@ export class AuthMutationResolver {
 
       const result = await this.authService.refresh(refreshToken);
       if (!result) {
-        throw new BadUserInputException('Invalid or expired refresh token.');
+        throw new RefreshTokenExpiredException();
       }
+
+      this.tokenCookies.setTokens(
+        context.reply,
+        {
+          accessToken: result.accessToken,
+          refreshToken: result.refreshToken,
+        },
+        {
+          accessTokenMaxAgeMs: result.expiresIn * 1_000,
+          refreshTokenMaxAgeMs: result.refreshExpiresIn * 1_000,
+        },
+      );
 
       this.logger.info(
         '[authentication-mutation.resolver.ts] Refresh Success!',
@@ -149,10 +180,14 @@ export class AuthMutationResolver {
    */
   @UseGuards(CookieAuthGuard)
   @Mutation(() => SuccessPayload, { name: 'logout' })
-  async logout(@CurrentUser() user: CurrentUserData): Promise<SuccessPayload> {
+  async logout(
+    @CurrentUser() user: CurrentUserData,
+    @Context() context: GqlFastifyContext,
+  ): Promise<SuccessPayload> {
     return TraceRunner.run('Logout Resolver', async () => {
       const value = user.refresh_token;
       await this.authService.logout(value);
+      this.tokenCookies.clearTokens(context.reply);
       return { ok: true, message: 'Successfully logged out.' };
     });
   }
@@ -186,7 +221,7 @@ export class AuthMutationResolver {
   ): Promise<TokenPayload> {
     return TraceRunner.run('Verify Passwordless Auth Resolver', async () => {
       if (!response || typeof response !== 'object') {
-        throw new BadRequestException('Invalid WebAuthn response');
+        throw new AuthenticationInputException('webauthn-response-invalid');
       }
 
       const userId =
@@ -195,7 +230,7 @@ export class AuthMutationResolver {
         );
 
       if (!userId) {
-        throw new UnauthorizedException('Authentication failed');
+        throw new InvalidCredentialsException('WebAuthn authentication failed');
       }
 
       const token = await this.authService.createPasswordlessSession(
@@ -213,7 +248,7 @@ export class AuthMutationResolver {
   ): Promise<TokenPayload> {
     return TraceRunner.run('Verify WebAuthn Resolver', async () => {
       if (!response || typeof response !== 'object') {
-        throw new BadRequestException('Invalid WebAuthn response');
+        throw new AuthenticationInputException('webauthn-response-invalid');
       }
 
       const userId =
@@ -222,7 +257,7 @@ export class AuthMutationResolver {
         );
 
       if (!userId) {
-        throw new UnauthorizedException('Authentication failed');
+        throw new InvalidCredentialsException('WebAuthn authentication failed');
       }
 
       const token = await this.authService.createPasswordlessSession(
@@ -264,7 +299,7 @@ export class AuthMutationResolver {
   ): Promise<boolean> {
     return TraceRunner.run('Send Magic Link Resolver', async () => {
       try {
-        void this.authService.requestMagicLink(email, client);
+        await this.authService.requestMagicLink(email, client);
       } catch (error) {
         // Intentionally swallow errors to avoid leaking account existence.
         // Log internally for monitoring & auditing.

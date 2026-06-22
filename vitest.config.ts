@@ -8,7 +8,8 @@ export default defineConfig({
     testTimeout: 120000,
     hookTimeout: 120000,
     teardownTimeout: 30000,
-    isolate: false,
+    isolate: true,
+    fileParallelism: false,
     setupFiles: ['reflect-metadata'],
     coverage: {
       provider: 'v8',
@@ -19,5 +20,4 @@ export default defineConfig({
   esbuild: {
     tsconfigRaw: require('./tsconfig.test.json'),
   },
-
 });

@@ -2,8 +2,12 @@
 
 import { SecurityQuestion } from '../../prisma/generated/client.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
+import {
+  AuthenticationInputException,
+  AuthenticationStateException,
+} from '../errors/authentication.error.js';
 import { SecurityQuestionInput } from '../models/inputs/security-question.input.js';
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { HashService } from '@omnixys/security';
 
 export interface AddSecurityQuestionAnswerInput {
@@ -47,7 +51,7 @@ export class SecurityQuestionService {
     });
 
     if (!question) {
-      throw new BadRequestException('Invalid security question');
+      throw new AuthenticationInputException('security-question-invalid');
     }
 
     const existing = await this.prisma.userSecurityQuestion.findUnique({
@@ -60,7 +64,7 @@ export class SecurityQuestionService {
     });
 
     if (existing) {
-      throw new BadRequestException('Security question already configured');
+      throw new AuthenticationStateException('security-question-already-configured');
     }
 
     const answerHash = await this.argon.hash(input.answer);
