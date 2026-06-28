@@ -3,6 +3,16 @@
 All notable changes in this project will be documented in this file.
 
 
+## [2.0.1](https://github.com/omnixys/authentication-service/compare/v2.0.0...v2.0.1) (2026-06-28)
+
+### Dependencies
+
+* **Dependencies:** update Dependecies ([](https://github.com/omnixys/authentication-service/commit/5f2583b1dbc59e22670d3ef3f4b30157048468bf))
+
+### Other
+
+* **Other:** Merge branch 'main' of https://github.com/omnixys/authentication-service ([](https://github.com/omnixys/authentication-service/commit/cd6802a05649c0f1a4223f19b510ccca07f73d46))
+
 ## [2.0.0](https://github.com/omnixys/authentication-service/compare/v1.0.5...v2.0.0) (2026-06-28)
 
 ### Authentication
