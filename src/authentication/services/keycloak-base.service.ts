@@ -29,11 +29,11 @@ import {
   IdentityProviderException,
 } from '../errors/authentication.error.js';
 import type { HttpService } from '@nestjs/axios';
+import type { RoleData } from '@omnixys/contracts';
+import { ENUM_TO_KC, type RealmRoleType } from '@omnixys/contracts';
 import type { OmnixysLogger } from '@omnixys/logger';
 import { TraceRunner } from '@omnixys/observability';
 import { InvalidCredentialsException } from '@omnixys/security';
-import type { RoleData } from '@omnixys/contracts';
-import { ENUM_TO_KC, type RealmRoleType } from '@omnixys/contracts';
 import * as jose from 'jose';
 import { firstValueFrom } from 'rxjs';
 

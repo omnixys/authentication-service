@@ -38,11 +38,11 @@ import { Injectable } from '@nestjs/common';
 import { DelayedJobKeys, DelayedJobService, ValkeyKey, ValkeyService } from '@omnixys/cache';
 import { ContextAccessor, type ClientContext } from '@omnixys/context';
 import { guestAuthKeySchema, guestSignUpTokenPayloadSchema } from '@omnixys/contracts';
+import { RealmRoleType } from '@omnixys/contracts';
 import { EventType, KafkaProducerService, KafkaTopics } from '@omnixys/kafka';
 import { OmnixysLogger } from '@omnixys/logger';
 import { TraceRunner } from '@omnixys/observability';
 import { EncryptionService } from '@omnixys/security';
-import { RealmRoleType } from '@omnixys/contracts';
 import { randomBytes, randomInt } from 'node:crypto';
 
 const { SERVICE } = env;

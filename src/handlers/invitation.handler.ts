@@ -20,6 +20,7 @@ import { AuthenticateReadService } from '../authentication/services/read.service
 import { Injectable } from '@nestjs/common';
 import { ContextAccessor } from '@omnixys/context';
 import type { UserIdDTO, UserIdListDTO } from '@omnixys/contracts';
+import { RealmRoleType } from '@omnixys/contracts';
 import {
   IKafkaEventContext,
   KAFKA_HEADERS,
@@ -29,7 +30,6 @@ import {
 } from '@omnixys/kafka';
 import { OmnixysLogger } from '@omnixys/logger';
 import { TraceRunner } from '@omnixys/observability';
-import { RealmRoleType } from '@omnixys/contracts';
 
 /**
  * Central Kafka Authentication Handler.

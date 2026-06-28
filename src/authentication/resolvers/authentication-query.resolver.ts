@@ -19,6 +19,7 @@ import { KcUser } from '../models/entitys/user.entity.js';
 import { AuthenticateReadService } from '../services/read.service.js';
 import { UseGuards } from '@nestjs/common';
 import { Args, ID, Query, Resolver } from '@nestjs/graphql';
+import { RealmRoleType } from '@omnixys/contracts';
 import { getLogger } from '@omnixys/logger';
 import {
   CookieAuthGuard,
@@ -30,7 +31,6 @@ import {
   RoleGuard,
   Roles,
 } from '@omnixys/security';
-import { RealmRoleType } from '@omnixys/contracts';
 
 /**
  * @file GraphQL-Resolver für **lesende** Authentication-Abfragen (ME/USERS).

@@ -27,9 +27,9 @@ import { AuthenticateBaseService } from './keycloak-base.service.js';
 import { AuthenticateReadService } from './read.service.js';
 import { HttpService } from '@nestjs/axios';
 import { Injectable } from '@nestjs/common';
+import { RealmRoleType } from '@omnixys/contracts';
 import { KafkaProducerService, KafkaTopics, type KafkaMetaInfo } from '@omnixys/kafka';
 import { OmnixysLogger } from '@omnixys/logger';
-import { RealmRoleType } from '@omnixys/contracts';
 
 /**
  * @file Mutierende Operationen gegen Keycloak (Authentication-Flows & User-Mutationen).

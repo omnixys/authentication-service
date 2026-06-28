@@ -17,8 +17,8 @@
 
 import { AdminService } from './admin.service.js';
 import { Controller, Get, Post, UseGuards } from '@nestjs/common';
-import { CookieAuthGuard, RoleGuard, Roles } from '@omnixys/security';
 import { RealmRoleType } from '@omnixys/contracts';
+import { CookieAuthGuard, RoleGuard, Roles } from '@omnixys/security';
 
 /**
  * Controller providing REST endpoints for administrative operations

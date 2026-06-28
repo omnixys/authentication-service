@@ -18,11 +18,11 @@ import { HttpService } from '@nestjs/axios';
 import { Injectable } from '@nestjs/common';
 import { ValkeyKey, ValkeyService } from '@omnixys/cache';
 import type { SignUpTokenPayload } from '@omnixys/contracts';
+import { createTmpUsername, RealmRoleType } from '@omnixys/contracts';
 import { KafkaProducerService, KafkaTopics } from '@omnixys/kafka';
 import { OmnixysLogger } from '@omnixys/logger';
 import { TraceRunner } from '@omnixys/observability';
 import { EncryptionService } from '@omnixys/security';
-import { createTmpUsername, RealmRoleType } from '@omnixys/contracts';
 import * as argon2 from 'argon2';
 
 const { SERVICE } = env;
@@ -64,7 +64,10 @@ export class RegisterService extends AuthenticateBaseService {
       this.logger.trace('Raw sign-up data retrieved from cache: %o', raw);
 
       const input = JSON.parse(raw) as KCSignUpDTO;
-      this.logger.debug('[TRACE] Deserialized securityQuestions shape: %o', input.securityQuestions);
+      this.logger.debug(
+        '[TRACE] Deserialized securityQuestions shape: %o',
+        input.securityQuestions,
+      );
 
       try {
         const payload = await this.signUp(input, token);
