@@ -29,7 +29,7 @@ import {
 } from '@omnixys/kafka';
 import { OmnixysLogger } from '@omnixys/logger';
 import { TraceRunner } from '@omnixys/observability';
-import { RealmRoleType } from '@omnixys/shared';
+import { RealmRoleType } from '@omnixys/contracts';
 
 /**
  * Central Kafka Authentication Handler.

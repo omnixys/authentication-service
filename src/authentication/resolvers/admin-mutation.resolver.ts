@@ -34,7 +34,7 @@ import {
   RoleGuard,
   Roles,
 } from '@omnixys/security';
-import { RealmRoleType } from '@omnixys/shared';
+import { RealmRoleType } from '@omnixys/contracts';
 
 /**
  * @fileoverview

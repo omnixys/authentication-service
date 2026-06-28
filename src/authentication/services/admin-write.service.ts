@@ -29,7 +29,7 @@ import { HttpService } from '@nestjs/axios';
 import { Injectable } from '@nestjs/common';
 import { KafkaProducerService, KafkaTopics, type KafkaMetaInfo } from '@omnixys/kafka';
 import { OmnixysLogger } from '@omnixys/logger';
-import { RealmRoleType } from '@omnixys/shared';
+import { RealmRoleType } from '@omnixys/contracts';
 
 /**
  * @file Mutierende Operationen gegen Keycloak (Authentication-Flows & User-Mutationen).

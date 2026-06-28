@@ -15,6 +15,6 @@ export class ValkeyRateLimitStore implements RateLimitStore {
   }
 
   async ttl(key: string): Promise<number> {
-    return this.valkey.client.ttl(key);
+    return this.valkey.ttl(key);
   }
 }

@@ -3,7 +3,10 @@ import { paths } from '../../config/keycloak.js';
 import { MfaPreference } from '../../prisma/generated/enums.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import {
+  AuthenticationInputException,
   AuthenticationStateException,
+  AuthenticationUserAlreadyExistsException,
+  AuthenticationPasswordPolicyException,
   AuthenticationUserNotFoundException,
 } from '../errors/authentication.error.js';
 import { KCSignUpDTO } from '../models/dtos/kc-sign-up.dto.js';
@@ -19,7 +22,7 @@ import { KafkaProducerService, KafkaTopics } from '@omnixys/kafka';
 import { OmnixysLogger } from '@omnixys/logger';
 import { TraceRunner } from '@omnixys/observability';
 import { EncryptionService } from '@omnixys/security';
-import { createTmpUsername, RealmRoleType } from '@omnixys/shared';
+import { createTmpUsername, RealmRoleType } from '@omnixys/contracts';
 import * as argon2 from 'argon2';
 
 const { SERVICE } = env;
@@ -57,18 +60,30 @@ export class RegisterService extends AuthenticateBaseService {
         return { message: 'ALREADY_CONSUMED_OR_EXPIRED' };
       }
 
+      this.logger.debug('Sign-up verification started for authKey:%s', authKey);
+      this.logger.trace('Raw sign-up data retrieved from cache: %o', raw);
+
       const input = JSON.parse(raw) as KCSignUpDTO;
+      this.logger.debug('[TRACE] Deserialized securityQuestions shape: %o', input.securityQuestions);
 
       try {
-        // Call UserService
         const payload = await this.signUp(input, token);
 
-        // Delete key
         await this.cache.delete(ValkeyKey.signupVerificationAuth, authKey);
         payload.message = 'OK';
         return payload;
       } catch (error: unknown) {
-        this.logger.error('Sign-up verification failed', { error });
+        this.logger.error('Sign-up verification failed: %s', (error as Error)?.message ?? error, {
+          error,
+        });
+
+        if (
+          error instanceof AuthenticationUserAlreadyExistsException ||
+          error instanceof AuthenticationPasswordPolicyException
+        ) {
+          throw error;
+        }
+
         return { message: 'ALREADY_REGISTERED' };
       }
     });
@@ -76,7 +91,15 @@ export class RegisterService extends AuthenticateBaseService {
 
   async signUp(input: KCSignUpDTO, signUpToken: string): Promise<SignUpPayload> {
     return TraceRunner.run('Keycloak Sign Up', async () => {
-      this.logger.debug('User sign-up started', { username: input.username });
+      this.logger.debug(
+        'User sign-up started: username=%s email=%s firstName=%s lastName=%s passwordDefined=%s passwordLength=%s',
+        input.username,
+        input.email,
+        input.firstName,
+        input.lastName,
+        !!input.password,
+        input.password?.length ?? 0,
+      );
 
       const { firstName, lastName, email, username, password } = input;
 
@@ -98,19 +121,14 @@ export class RegisterService extends AuthenticateBaseService {
         headers: await this.adminJsonHeaders(),
       });
 
-      // id ermitteln
       const userId = await this.findUserIdByUsername(username);
       if (!userId) {
         throw new AuthenticationUserNotFoundException(username);
       }
 
-      // Rolle zuweisen
       await this.adminService.assignRealmRoleToUser(userId, RealmRoleType.USER);
 
       await this.prisma.$transaction(async (tx) => {
-        /* ------------------------------------------------------------
-         * 1. User (technical root)
-         * ------------------------------------------------------------ */
         const user = await tx.authUser.create({
           data: {
             id: userId,
@@ -120,10 +138,12 @@ export class RegisterService extends AuthenticateBaseService {
           },
         });
 
-        /* ------------------------------------------------------------
-         * 2. SecurityQuestions (optional)
-         * ------------------------------------------------------------ */
         if (input.securityQuestions?.length) {
+          if (!this.isValidSecurityQuestions(input.securityQuestions)) {
+            this.logger.warn('Malformed securityQuestions detected: %o', input.securityQuestions);
+            throw new AuthenticationInputException('security-questions-malformed');
+          }
+
           const hashedQuestions = await Promise.all(
             input.securityQuestions.map(async (q) => ({
               userId: user.id,
@@ -175,5 +195,27 @@ export class RegisterService extends AuthenticateBaseService {
       const token = await this.authService.passwordLogin({ username, password });
       return { userId, token, username, password: '' };
     });
+  }
+
+  /**
+   * Validates that securityQuestions is an array of objects with questionId and answer.
+   * Rejects malformed payloads like [[]] that would cause argon2.hash(undefined).
+   */
+  private isValidSecurityQuestions(
+    questions: Array<{ questionId?: string; answer?: string }>,
+  ): boolean {
+    if (!Array.isArray(questions)) {
+      return false;
+    }
+    return questions.every(
+      (q) =>
+        q &&
+        typeof q === 'object' &&
+        !Array.isArray(q) &&
+        typeof q.questionId === 'string' &&
+        q.questionId.length > 0 &&
+        typeof q.answer === 'string' &&
+        q.answer.length > 0,
+    );
   }
 }

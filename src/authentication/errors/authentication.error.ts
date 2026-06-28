@@ -70,6 +70,47 @@ export class GuestSignupException extends AuthenticationDomainException {
   }
 }
 
+export class AuthenticationUserAlreadyExistsException extends AuthenticationDomainException {
+  constructor(field: 'username' | 'email', value: string) {
+    super(
+      'AUTHENTICATION_USER_ALREADY_EXISTS',
+      `A user with this ${field} already exists`,
+      { field, value },
+    );
+  }
+}
+
+export class AuthenticationPasswordPolicyException extends AuthenticationDomainException {
+  constructor(detail: string) {
+    super(
+      'AUTHENTICATION_PASSWORD_POLICY',
+      'Password does not meet the policy requirements',
+      { detail },
+    );
+  }
+}
+
+export class AuthenticationUnauthorizedException extends AuthenticationDomainException {
+  constructor(operation: string) {
+    super(
+      'AUTHENTICATION_UNAUTHORIZED',
+      'Not authorized to perform this operation',
+      { operation },
+    );
+  }
+}
+
+export class AuthenticationInternalException extends AuthenticationDomainException {
+  constructor(operation: string, cause?: unknown) {
+    super(
+      'AUTHENTICATION_INTERNAL_ERROR',
+      'An internal authentication error occurred',
+      { operation },
+      cause,
+    );
+  }
+}
+
 export class IdentityProviderException extends AuthenticationDomainException {
   constructor(
     provider: string,

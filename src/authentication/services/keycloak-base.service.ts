@@ -22,15 +22,18 @@ import { env } from '../../config/env.js';
 import { keycloakConfig, paths } from '../../config/keycloak.js';
 import {
   AuthenticationInputException,
+  AuthenticationPasswordPolicyException,
   AuthenticationStateException,
+  AuthenticationUnauthorizedException,
+  AuthenticationUserAlreadyExistsException,
   IdentityProviderException,
 } from '../errors/authentication.error.js';
 import type { HttpService } from '@nestjs/axios';
 import type { OmnixysLogger } from '@omnixys/logger';
 import { TraceRunner } from '@omnixys/observability';
 import { InvalidCredentialsException } from '@omnixys/security';
-import type { RoleData } from '@omnixys/shared';
-import { ENUM_TO_KC, type RealmRoleType } from '@omnixys/shared';
+import type { RoleData } from '@omnixys/contracts';
+import { ENUM_TO_KC, type RealmRoleType } from '@omnixys/contracts';
 import * as jose from 'jose';
 import { firstValueFrom } from 'rxjs';
 
@@ -118,6 +121,15 @@ export abstract class AuthenticateBaseService {
       }
 
       try {
+        this.logger.debug(
+          'KC request → %s %s | body: %o',
+          method.toUpperCase(),
+          url,
+          cfg.data && typeof cfg.data === 'object'
+            ? this.sanitizeLogPayload(cfg.data as Record<string, unknown>)
+            : cfg.data,
+        );
+
         const res = await firstValueFrom(
           this.http.request<T>({
             method,
@@ -133,24 +145,28 @@ export abstract class AuthenticateBaseService {
         const rawStatus: unknown = err.response?.status;
         const status = typeof rawStatus === 'number' ? rawStatus : 500;
 
+        const responseData = err.response?.data;
+        const errorMessage =
+          typeof responseData === 'string'
+            ? responseData
+            : responseData && typeof responseData === 'object'
+              ? ((responseData as Record<string, unknown>).errorMessage ??
+                (responseData as Record<string, unknown>).error_description ??
+                JSON.stringify(responseData))
+              : err.message;
+
+        this.logger.warn(
+          'Keycloak %s %s → status=%s body=%s',
+          method.toUpperCase(),
+          url,
+          status,
+          errorMessage,
+        );
+
         if (behavior.mapTo === 'null-on-401' && (status === 400 || status === 401)) {
-          void this.logger.warn(
-            '%s %s -> %s %o',
-            method.toUpperCase(),
-            url,
-            status,
-            err.response?.data,
-          );
+          void this.logger.warn('%s %s -> %s %o', method.toUpperCase(), url, status, responseData);
           return null as T;
         }
-
-        const body = err.response?.data;
-        const msg =
-          typeof body === 'string'
-            ? body
-            : body && typeof body === 'object'
-              ? JSON.stringify(body)
-              : err.message;
 
         if (status === 401) {
           throw new InvalidCredentialsException('Identity provider rejected credentials');
@@ -159,17 +175,36 @@ export abstract class AuthenticateBaseService {
           throw new AuthenticationStateException('identity-resource-not-found', err);
         }
         if (status === 409 && behavior.returnNullOn409) {
-          // do NOT throw → caller needs this info for fallback logic
           this.logger.warn(
             'KC 409 Conflict on %s %s → returning null for fallback logic: %o',
             method.toUpperCase(),
             url,
-            msg,
+            errorMessage,
           );
           return null as T;
         }
+
+        if (status === 409) {
+          throw new AuthenticationUserAlreadyExistsException(
+            'username',
+            this.extractConflictField(responseData),
+          );
+        }
+
+        if (status === 403) {
+          throw new AuthenticationUnauthorizedException(`${method.toUpperCase()} ${url}`);
+        }
+
+        if (status === 400) {
+          this.logger.warn('KC 400 on %s %s — body: %s', method.toUpperCase(), url, errorMessage);
+          if (this.isPasswordPolicyError(responseData)) {
+            throw new AuthenticationPasswordPolicyException(String(errorMessage));
+          }
+          throw new AuthenticationInputException(String(errorMessage));
+        }
+
         if (status >= 400 && status < 500) {
-          throw new AuthenticationInputException('identity-provider-rejected-input');
+          throw new AuthenticationInputException(String(errorMessage));
         }
 
         throw new IdentityProviderException(
@@ -308,6 +343,58 @@ export abstract class AuthenticateBaseService {
   protected mapRoleInput(input: RealmRoleType | string): string {
     const key = String(input).toUpperCase() as RealmRoleType;
     return ENUM_TO_KC[key] ?? String(input);
+  }
+
+  /**
+   * Strips sensitive fields from a payload object for safe debug logging.
+   */
+  private sanitizeLogPayload(data: Record<string, unknown>): Record<string, unknown> {
+    const safe = { ...data };
+    if ('password' in safe) {
+      const pwLen = typeof safe.password === 'string' ? safe.password.length : 0;
+      safe.password = safe.password ? `[defined len=${pwLen}]` : '[undefined]';
+    }
+    if ('credentials' in safe && Array.isArray(safe.credentials)) {
+      safe.credentials = safe.credentials.map((c: Record<string, unknown>) => ({
+        ...c,
+        value: c.value ? '[REDACTED]' : '[undefined]',
+      }));
+    }
+    return safe;
+  }
+
+  /**
+   * Extracts the conflicting field (username/email) from a Keycloak 409 response.
+   */
+  private extractConflictField(responseData: unknown): 'username' | 'email' {
+    if (responseData && typeof responseData === 'object') {
+      const body = responseData as Record<string, unknown>;
+      const msg =
+        typeof body.errorMessage === 'string'
+          ? body.errorMessage
+          : typeof body.error === 'string'
+            ? body.error
+            : '';
+      if (msg.toLowerCase().includes('email')) {
+        return 'email';
+      }
+      if (msg.toLowerCase().includes('username')) {
+        return 'username';
+      }
+    }
+    return 'username';
+  }
+
+  /**
+   * Checks whether a Keycloak 400 response indicates a password policy violation.
+   */
+  private isPasswordPolicyError(responseData: unknown): boolean {
+    if (responseData && typeof responseData === 'object') {
+      const body = responseData as Record<string, unknown>;
+      const msg = typeof body.errorMessage === 'string' ? body.errorMessage : '';
+      return msg.toLowerCase().includes('password policy');
+    }
+    return false;
   }
 
   /**

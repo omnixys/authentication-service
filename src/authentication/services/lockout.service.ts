@@ -1,7 +1,7 @@
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { Injectable } from '@nestjs/common';
 import { InvalidCredentialsException } from '@omnixys/security';
-import { TooManyRequestsException } from '@omnixys/shared';
+import { TooManyRequestsException } from '@omnixys/contracts';
 import { addHours, addMinutes, isAfter } from 'date-fns';
 
 @Injectable()

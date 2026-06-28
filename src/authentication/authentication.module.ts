@@ -41,7 +41,6 @@ import { UserWriteService } from './services/user-write.service.js';
 import { WebAuthnService } from './services/web-authn.service.js';
 import { Module } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
-import { DeviceService } from '@omnixys/security';
 
 @Module({
   imports: [CoreHttpModule, PrismaModule, ScheduleModule.forRoot()],
@@ -67,7 +66,6 @@ import { DeviceService } from '@omnixys/security';
     ResetService,
     LockoutService,
     SecurityQuestionService,
-    DeviceService,
     OAuthService,
     // CronSchedulerService,
   ],

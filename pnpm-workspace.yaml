@@ -9,6 +9,8 @@ allowBuilds:
   prisma: true
   protobufjs: true
   ssh2: true
+minimumReleaseAgeExclude:
+  - '@omnixys/contracts@2.0.0'
 onlyBuiltDependencies:
   - '@apollo/protobufjs'
   - '@nestjs/core'
