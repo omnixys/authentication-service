@@ -3,6 +3,20 @@
 All notable changes in this project will be documented in this file.
 
 
+## [2.0.0](https://github.com/omnixys/authentication-service/compare/v1.0.5...v2.0.0) (2026-06-28)
+
+### Authentication
+
+* **Authentication:** harden identity context and lifecycle ([](https://github.com/omnixys/authentication-service/commit/5fa74da7a0b23616d0d6c38537f3ea68f50fbeb9))
+
+### Dependencies
+
+* **Dependencies:** update Dependecies ([](https://github.com/omnixys/authentication-service/commit/12ffaa7f75044e3ddef217f9a0f908d61525833f))
+
+### Other
+
+* **Other:** Merge branch 'main' of https://github.com/omnixys/authentication-service ([](https://github.com/omnixys/authentication-service/commit/975d7e939ada8466a96f50e07dcf5c87c0005fbe))
+
 ## [1.0.5](https://github.com/omnixys/authentication-service/compare/v1.0.4...v1.0.5) (2026-05-25)
 
 ### Docker
