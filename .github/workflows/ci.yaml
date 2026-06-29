@@ -69,7 +69,6 @@ jobs:
       - name: ⚙️ Enable Corepack (pnpm)
         run: |
           corepack enable
-          corepack prepare pnpm@latest --activate
 
       - name: ⚙️ Setup Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
@@ -132,7 +131,6 @@ jobs:
       - name: ⚙️ Enable Corepack (pnpm)
         run: |
           corepack enable
-          corepack prepare pnpm@latest --activate
 
       - name: ⚙️ Setup Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v6
@@ -169,9 +167,16 @@ jobs:
           NPM_TOKEN: ${{ secrets.OMNIXYS_TOKEN }}
 
       - name: Read version
+        id: read_version
         run: |
-          echo "CURRENT_VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
-          echo "CURRENT_DATE=$(date -u +'%Y-%m-%d')" >> $GITHUB_ENV
+          VERSION=$(node -p "require('./package.json').version")
+          DATE=$(date -u +'%Y-%m-%d')
+
+          echo "CURRENT_VERSION=$VERSION" >> $GITHUB_ENV
+          echo "CURRENT_DATE=$DATE" >> $GITHUB_ENV
+
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "date=$DATE" >> $GITHUB_OUTPUT
 
       - name: Update repo variable
         env:
@@ -193,6 +198,8 @@ jobs:
   push-docker:
     needs: release
     if: needs.release.outputs.released == 'true'
+    env:
+      CURRENT_VERSION: ${{ needs.release.outputs.version }}
     name: 🐳 Build & Push Multi-Arch Images (Docker)
     runs-on: ubuntu-latest
     strategy:
@@ -255,17 +262,17 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64
           tags: |
-            ${{ env.IMAGE_NAME }}:${{ vars.CURRENT_VERSION }}
+            ${{ env.IMAGE_NAME }}:${{ needs.release.outputs.version }}
             ${{ env.IMAGE_NAME }}:latest
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
-            org.opencontainers.image.version=${{ vars.CURRENT_VERSION }}
+            org.opencontainers.image.version=${{ needs.release.outputs.version }}
             org.opencontainers.image.description=Omnixys Microservice – ${{ env.IMAGE_NAME }}
             org.opencontainers.image.licenses=GPL-3.0-or-later
           build-args: |
             REVISION=${{ github.sha }}
             CREATED=${{ vars.CURRENT_DATE }}
-            APP_VERSION=${{ vars.CURRENT_VERSION }}
+            APP_VERSION=${{ needs.release.outputs.version }}
             APP_NAME=${{ vars.SERVICE }}
             NODE_VERSION=${{ matrix.node-version }}
           cache-from: type=local,src=/tmp/.buildx-cache
@@ -277,12 +284,14 @@ jobs:
       - name: Sign Docker Image with cosign (OIDC/GitHub)
         if: steps.check_tag.outputs.exists == 'false'
         run: |
-          cosign sign --yes --recursive ${{ env.IMAGE_NAME }}:${{ vars.CURRENT_VERSION }}
+          cosign sign --yes --recursive ${{ env.IMAGE_NAME }}:${{ needs.release.outputs.version }}
           cosign sign --yes --recursive ${{ env.IMAGE_NAME }}:latest
 
   push-github:
     needs: release
     if: needs.release.outputs.released == 'true'
+    env:
+      CURRENT_VERSION: ${{ needs.release.outputs.version }}
     name: 🐳 Build & Push Multi-Arch Images (Github)
     runs-on: ubuntu-latest
     strategy:
@@ -339,17 +348,17 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64
           tags: |
-            ${{ env.IMAGE_NAME_REPOSITORY }}:${{ vars.CURRENT_VERSION }}
+            ${{ env.IMAGE_NAME_REPOSITORY }}:${{ needs.release.outputs.version }}
             ${{ env.IMAGE_NAME_REPOSITORY }}:latest
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
-            org.opencontainers.image.version=${{ vars.CURRENT_VERSION }}
+            org.opencontainers.image.version=${{ needs.release.outputs.version }}
             org.opencontainers.image.description=Omnixys Microservice – ${{ env.IMAGE_NAME }}
             org.opencontainers.image.licenses=GPL-3.0-or-later
           build-args: |
             REVISION=${{ github.sha }}
             CREATED=${{ vars.CURRENT_DATE }}
-            APP_VERSION=${{ vars.CURRENT_VERSION }}
+            APP_VERSION=${{ needs.release.outputs.version }}
             APP_NAME=${{ vars.SERVICE }}
             NODE_VERSION=${{ matrix.node-version }}
           cache-from: type=local,src=/tmp/.buildx-cache
@@ -361,7 +370,7 @@ jobs:
       - name: Sign Docker Image with cosign (OIDC/GitHub)
         if: steps.check_tag.outputs.exists == 'false'
         run: |
-          cosign sign --yes --recursive ${{ env.IMAGE_NAME_REPOSITORY }}:${{ vars.CURRENT_VERSION }}
+          cosign sign --yes --recursive ${{ env.IMAGE_NAME_REPOSITORY }}:${{ needs.release.outputs.version }}
           cosign sign --yes --recursive ${{ env.IMAGE_NAME_REPOSITORY }}:latest
 
   # deploy:
