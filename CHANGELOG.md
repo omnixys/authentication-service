@@ -3,6 +3,12 @@
 All notable changes in this project will be documented in this file.
 
 
+## [2.1.0](https://github.com/omnixys/authentication-service/compare/v2.0.2...v2.1.0) (2026-07-02)
+
+### Deps
+
+* **Deps:** update dependencys ([](https://github.com/omnixys/authentication-service/commit/cfc8482a683a54b245680c288cd33de5603ec40f))
+
 ## [2.0.2](https://github.com/omnixys/authentication-service/compare/v2.0.1...v2.0.2) (2026-06-29)
 
 ### Kafka
