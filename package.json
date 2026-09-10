@@ -80,7 +80,7 @@
     "@omnixys/cache-ts": "^4.1.0",
     "@omnixys/context-ts": "^4.1.0",
     "@omnixys/contracts-ts": "^4.1.0",
-    "@omnixys/graphql-ts": "^4.1.0",
+    "@omnixys/graphql-ts": "^4.3.0",
     "@omnixys/grpc-ts": "^2.1.0",
     "@omnixys/http-ts": "^2.1.0",
     "@omnixys/kafka-ts": "^4.1.0",

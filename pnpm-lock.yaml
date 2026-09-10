@@ -81,8 +81,8 @@ importers:
         specifier: ^4.1.0
         version: 4.1.0(@nestjs/common@11.2.3(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1))
       '@omnixys/graphql-ts':
-        specifier: ^4.1.0
-        version: 4.1.0(88d3b25b1a85c14ec2256d2175e57501)
+        specifier: ^4.3.0
+        version: 4.3.0(88d3b25b1a85c14ec2256d2175e57501)
       '@omnixys/grpc-ts':
         specifier: ^2.1.0
         version: 2.1.0(9df7a9763722830676408f635f7af116)
@@ -1557,8 +1557,8 @@ packages:
     peerDependencies:
       '@nestjs/common': ^11.1.27
 
-  '@omnixys/graphql-ts@4.1.0':
-    resolution: {integrity: sha512-gqeP06UFd6OF9UI19OOBtRN/QoglEbGZhL+qoyN53x6YL8DS/gnu1mhESwGquTmYmhSpn2Tz0799nCNhnBaZjA==, tarball: https://npm.pkg.github.com/download/@omnixys/graphql-ts/4.1.0/66a7ea15be338c177315f5890e66d5a1d9e61931}
+  '@omnixys/graphql-ts@4.3.0':
+    resolution: {integrity: sha512-DdZFjLmz4YcgNtCdZ2sbHTkp+GcbyfJVErcnkkgb4zg1J2uzveea6ylH6IOg2n5DQ1q8nzcayXE1c+zpssldGg==, tarball: https://npm.pkg.github.com/download/@omnixys/graphql-ts/4.3.0/722f1d2e9598a4b44fd56bf69b55b6fa8bbbf5af}
     engines: {node: '>=26.8.1 <27'}
     peerDependencies:
       '@apollo/server': ^5.5.0
@@ -1567,7 +1567,7 @@ packages:
       '@nestjs/core': ^11.1.17
       '@nestjs/graphql': ^13.2.4
       '@omnixys/context-ts': ^4.1.0
-      '@omnixys/contracts-ts': ^4.1.0
+      '@omnixys/contracts-ts': ^4.3.0
       '@omnixys/logger-ts': ^4.1.0
       class-transformer: ^0.5.1
       class-validator: ^0.15.1
@@ -8633,7 +8633,7 @@ snapshots:
       '@nestjs/common': 11.2.3(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1)
       zod: 4.4.3
 
-  '@omnixys/graphql-ts@4.1.0(88d3b25b1a85c14ec2256d2175e57501)':
+  '@omnixys/graphql-ts@4.3.0(88d3b25b1a85c14ec2256d2175e57501)':
     dependencies:
       '@apollo/server': 5.5.1(graphql@16.14.2)(supports-color@8.1.1)
       '@nestjs/apollo': 13.4.5(@apollo/server@5.5.1(graphql@16.14.2)(supports-color@8.1.1))(@apollo/subgraph@2.14.4(graphql@16.14.2))(@as-integrations/fastify@3.1.0(@apollo/server@5.5.1(graphql@16.14.2)(supports-color@8.1.1))(fastify@5.8.5))(@nestjs/common@11.2.3(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1))(@nestjs/core@11.2.3)(@nestjs/graphql@13.4.5(@apollo/subgraph@2.14.4(graphql@16.14.2))(@nestjs/common@11.2.3(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1))(@nestjs/core@11.2.3)(class-transformer@0.5.1)(class-validator@0.14.4)(graphql@16.14.2)(reflect-metadata@0.2.2)(ts-morph@27.0.2))(graphql@16.14.2)

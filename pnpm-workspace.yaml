@@ -13,7 +13,7 @@ minimumReleaseAgeExclude:
   - '@omnixys/contracts-ts@4.0.0 || 4.1.0'
   - '@omnixys/cache-ts@4.0.0 || 4.1.0'
   - '@omnixys/context-ts@4.0.2 || 4.0.3 || 4.1.0'
-  - '@omnixys/graphql-ts@4.0.0 || 4.1.0'
+  - '@omnixys/graphql-ts@4.0.0 || 4.1.0 || 4.3.0'
   - '@omnixys/grpc-ts@2.0.0 || 2.1.0'
   - '@omnixys/http-ts@2.0.0 || 2.1.0'
   - '@omnixys/kafka-ts@4.0.0 || 4.1.0'
