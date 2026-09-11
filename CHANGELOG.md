@@ -3,6 +3,12 @@
 All notable changes in this project will be documented in this file.
 
 
+## [4.0.2](https://github.com/omnixys/authentication-service/compare/v4.0.1...v4.0.2) (2026-09-11)
+
+### Deps
+
+* **Deps:** update omnixys contracts-ts package ([](https://github.com/omnixys/authentication-service/commit/8277ff2c60f09d9819efc9cc88c58ea7e9e46256))
+
 ## [4.0.1](https://github.com/omnixys/authentication-service/compare/v4.0.0...v4.0.1) (2026-09-10)
 
 ### Deps
