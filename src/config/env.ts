@@ -81,6 +81,12 @@ export const env = {
     transform: toNumber,
   }),
 
+  GUEST_SIGNUP_PROVISION_TIMEOUT_MS: getEnv(
+    'GUEST_SIGNUP_PROVISION_TIMEOUT_MS',
+    '10000',
+    { transform: toNumber },
+  ),
+
   VALKEY_URL: getEnv('VALKEY_URL', 'valkey://localhost:6380'),
   VALKEY_PASSWORD: getEnv('VALKEY_PASSWORD', '', { required: true }),
 

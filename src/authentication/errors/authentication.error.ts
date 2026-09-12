@@ -72,8 +72,9 @@ export class GuestSignupException extends AuthenticationDomainException {
     super(
       'GUEST_SIGNUP_FAILED',
       'Guest sign-up could not be completed',
-      { reason },
+      {},
       cause,
+      { reason },
     );
   }
 }

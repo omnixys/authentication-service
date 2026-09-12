@@ -49,6 +49,20 @@ import { randomBytes, randomInt } from 'node:crypto';
 
 const { SERVICE } = env;
 
+/**
+ * Upper bound the sign-up waits for the seat → ticket → link chain completion
+ * marker before failing closed and rolling the created guests back.
+ */
+const GUEST_SIGNUP_PROVISION_TIMEOUT_MS = env.GUEST_SIGNUP_PROVISION_TIMEOUT_MS;
+
+/**
+ * Marker key the Invitation service writes once an invitation is linked to a
+ * guest. Value is intentionally not sensitive (handshake only).
+ */
+function guestSignupMarkerKey(invitationId: string, userId: string): string {
+  return `guest-signup:${invitationId}:${userId}`;
+}
+
 export interface SignUpResult {
   userId: string;
   keycloakSub: string;
@@ -94,6 +108,14 @@ export class UserWriteService extends AuthenticateBaseService {
 
   /**
    * Guest signup flow (deterministic & invitee-based)
+   *
+   * Strict provisioning invariant: a guest account may only exist when the full
+   * chain seat → ticket → invitation-link completed. After the Kafka fan-out we
+   * therefore wait for the completion marker the Invitation service writes once
+   * the guest profile is linked. If the chain does not complete within the
+   * timeout, every guest created in this call is rolled back (Keycloak + local
+   * DB + downstream cleanup events) and the mutation fails without consuming the
+   * verification token, so no orphaned guest account can ever be left behind.
    */
   async guestSignUp(signUpToken: string, clientInfo: ClientContext): Promise<GuestSignUp> {
     return TraceRunner.run('Sign UP Guest Account', async (): Promise<GuestSignUp> => {
@@ -119,6 +141,8 @@ export class UserWriteService extends AuthenticateBaseService {
         return { message: 'ALREADY_CONSUMED_OR_EXPIRED' };
       }
 
+      const createdUsers: SignUpResult[] = [];
+
       try {
         const input = guestAuthKeySchema.parse(JSON.parse(raw));
 
@@ -131,15 +155,11 @@ export class UserWriteService extends AuthenticateBaseService {
           throw new GuestSignupException('invitees-missing');
         }
 
-        const results: SignUpResult[] = [];
-
         /**
-         * 3️⃣ Process ALL invitees (main + plusOnes)
+         * 3️⃣ Process ALL invitees (main + plusOnes). Each invitee is only
+         * accepted once its seat → ticket → link chain has fully completed.
          */
         for (const invitee of invitees) {
-          /**
-           * Create user
-           */
           const user = await this.createGuestUser({
             firstName: invitee.firstName,
             lastName: invitee.lastName,
@@ -148,47 +168,23 @@ export class UserWriteService extends AuthenticateBaseService {
             tenantId: input.tenantId,
           });
 
-          results.push(user);
+          createdUsers.push(user);
 
-          /**
-           * 🔥 Kafka fan-out (deterministic via invitationId)
-           */
-          await Promise.all([
-            this.kafkaProducer.send({
-              topic: KafkaTopics.user.createGuest,
-              payload: {
-                userId: user.userId,
-                keycloakSub: user.keycloakSub,
-                invitationId: invitee.invitationId,
-                token: signUpToken,
-                username: user.username,
-                email: user.email,
-              },
-              meta: this.meta(user.userId, 'create guest user', input.tenantId),
-            }),
+          await this.publishGuestSignupFanOut(user, invitee.invitationId, signUpToken, input.tenantId);
 
-            this.kafkaProducer.send({
-              topic: KafkaTopics.event.addRole,
-              payload: {
-                userId: user.userId,
-                keycloakSub: user.keycloakSub,
-                invitationId: invitee.invitationId,
-                token: signUpToken,
-              },
-              meta: this.meta(user.userId, 'assign role', input.tenantId),
-            }),
+          const provisioned = await this.awaitGuestProvisioning(
+            invitee.invitationId,
+            user.userId,
+          );
 
-            this.kafkaProducer.send({
-              topic: KafkaTopics.seat.addGuestId,
-              payload: {
-                userId: user.userId,
-                keycloakSub: user.keycloakSub,
-                invitationId: invitee.invitationId,
-                token: signUpToken,
-              },
-              meta: this.meta(user.userId, 'assign seat', input.tenantId),
-            }),
-          ]);
+          if (!provisioned) {
+            this.logger.warn(
+              'Guest provisioning did not complete: invitationId=%s userId=%s',
+              invitee.invitationId,
+              user.userId,
+            );
+            throw new GuestSignupException('provisioning-incomplete');
+          }
         }
 
         /**
@@ -196,15 +192,144 @@ export class UserWriteService extends AuthenticateBaseService {
          */
         await this.cacheService.delete(ValkeyKey.guestVerificationAuth, authKey);
 
-        return { users: results };
+        return { users: createdUsers };
       } catch (e: unknown) {
         this.logger.error('Guest sign-up failed: %o', { error: e });
+
+        await this.compensateGuestUsers(createdUsers);
+
         if (e instanceof GuestSignupException) {
           throw e;
         }
         throw new GuestSignupException('invalid-or-incomplete-state', e);
       }
     });
+  }
+
+  /**
+   * Publishes the deterministic guest provisioning fan-out for one invitee.
+   */
+  private async publishGuestSignupFanOut(
+    user: SignUpResult,
+    invitationId: string,
+    signUpToken: string,
+    tenantId: string,
+  ): Promise<void> {
+    await Promise.all([
+      this.kafkaProducer.send({
+        topic: KafkaTopics.user.createGuest,
+        payload: {
+          userId: user.userId,
+          keycloakSub: user.keycloakSub,
+          invitationId,
+          token: signUpToken,
+          username: user.username,
+          email: user.email,
+        },
+        meta: this.meta(user.userId, 'create guest user', tenantId),
+      }),
+
+      this.kafkaProducer.send({
+        topic: KafkaTopics.event.addRole,
+        payload: {
+          userId: user.userId,
+          keycloakSub: user.keycloakSub,
+          invitationId,
+          token: signUpToken,
+        },
+        meta: this.meta(user.userId, 'assign role', tenantId),
+      }),
+
+      this.kafkaProducer.send({
+        topic: KafkaTopics.seat.addGuestId,
+        payload: {
+          userId: user.userId,
+          keycloakSub: user.keycloakSub,
+          invitationId,
+          token: signUpToken,
+        },
+        meta: this.meta(user.userId, 'assign seat', tenantId),
+      }),
+    ]);
+  }
+
+  /**
+   * Waits until the invitation link completion marker is present, i.e. the
+   * invitee's seat → ticket → link chain has run end-to-end. Because a ticket
+   * requires a seat and the invitation is linked only after ticket creation,
+   * the marker proves seat AND ticket exist for the guest.
+   */
+  private async awaitGuestProvisioning(
+    invitationId: string,
+    userId: string,
+  ): Promise<boolean> {
+    const markerKey = guestSignupMarkerKey(invitationId, userId);
+    const deadline = Date.now() + GUEST_SIGNUP_PROVISION_TIMEOUT_MS;
+    let delayMs = 200;
+
+    for (;;) {
+      const marker = await this.cacheService.rawGet(markerKey);
+      if (marker) {
+        return true;
+      }
+      if (Date.now() >= deadline) {
+        return false;
+      }
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+      delayMs = Math.min(500, Math.round(delayMs * 1.6));
+    }
+  }
+
+  /**
+   * Rolls back every guest created during a failed sign-up: Keycloak user,
+   * local auth record and the downstream cleanup fan-out (seat claims,
+   * invitation links, tickets, event access and user profile). Best-effort per
+   * user so one failure never blocks the cleanup of the remaining guests.
+   */
+  private async compensateGuestUsers(users: SignUpResult[]): Promise<void> {
+    for (const user of users) {
+      try {
+        await this.kcRequest('delete', `${paths.users}/${encodeURIComponent(user.keycloakSub)}`);
+
+        await this.prisma.authUser.deleteMany({ where: { id: user.userId } });
+
+        await Promise.all([
+          this.kafkaProducer.send({
+            topic: KafkaTopics.user.deleteUser,
+            payload: { userId: user.userId },
+            meta: this.meta(user.userId, 'compensate guest user'),
+          }),
+          this.kafkaProducer.send({
+            topic: KafkaTopics.event.delete,
+            payload: { userId: user.userId },
+            meta: this.meta(user.userId, 'compensate guest events'),
+          }),
+          this.kafkaProducer.send({
+            topic: KafkaTopics.seat.removeGuestId,
+            payload: { userId: user.userId },
+            meta: this.meta(user.userId, 'compensate guest seats'),
+          }),
+          this.kafkaProducer.send({
+            topic: KafkaTopics.invitation.deleteUserInvitations,
+            payload: { userId: user.userId },
+            meta: this.meta(user.userId, 'compensate guest invitations'),
+          }),
+          this.kafkaProducer.send({
+            topic: KafkaTopics.ticket.deleteUserTickets,
+            payload: { userId: user.userId },
+            meta: this.meta(user.userId, 'compensate guest tickets'),
+          }),
+        ]);
+
+        this.logger.info('Guest sign-up compensated: userId=%s', user.userId);
+      } catch (error) {
+        this.logger.error(
+          'Guest compensation failed: userId=%s error=%o',
+          user.userId,
+          error,
+        );
+      }
+    }
   }
 
   /**
