@@ -170,12 +170,14 @@ export class UserWriteService extends AuthenticateBaseService {
 
           createdUsers.push(user);
 
-          await this.publishGuestSignupFanOut(user, invitee.invitationId, signUpToken, input.tenantId);
-
-          const provisioned = await this.awaitGuestProvisioning(
+          await this.publishGuestSignupFanOut(
+            user,
             invitee.invitationId,
-            user.userId,
+            signUpToken,
+            input.tenantId,
           );
+
+          const provisioned = await this.awaitGuestProvisioning(invitee.invitationId, user.userId);
 
           if (!provisioned) {
             this.logger.warn(
@@ -259,16 +261,13 @@ export class UserWriteService extends AuthenticateBaseService {
    * requires a seat and the invitation is linked only after ticket creation,
    * the marker proves seat AND ticket exist for the guest.
    */
-  private async awaitGuestProvisioning(
-    invitationId: string,
-    userId: string,
-  ): Promise<boolean> {
+  private async awaitGuestProvisioning(invitationId: string, userId: string): Promise<boolean> {
     const markerKey = guestSignupMarkerKey(invitationId, userId);
     const deadline = Date.now() + GUEST_SIGNUP_PROVISION_TIMEOUT_MS;
     let delayMs = 200;
 
     for (;;) {
-      const marker = await this.cacheService.rawGet(markerKey);
+      const marker = await this.cacheService.getShared(markerKey);
       if (marker) {
         return true;
       }
@@ -323,11 +322,7 @@ export class UserWriteService extends AuthenticateBaseService {
 
         this.logger.info('Guest sign-up compensated: userId=%s', user.userId);
       } catch (error) {
-        this.logger.error(
-          'Guest compensation failed: userId=%s error=%o',
-          user.userId,
-          error,
-        );
+        this.logger.error('Guest compensation failed: userId=%s error=%o', user.userId, error);
       }
     }
   }
