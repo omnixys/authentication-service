@@ -3,6 +3,12 @@
 All notable changes in this project will be documented in this file.
 
 
+## [4.1.1](https://github.com/omnixys/authentication-service/compare/v4.1.0...v4.1.1) (2026-09-13)
+
+### Deps
+
+* **Deps:** update omnixys packages ([](https://github.com/omnixys/authentication-service/commit/0b7038e72de9c2512e1cf85776850e918f5c2efd))
+
 ## [4.1.0](https://github.com/omnixys/authentication-service/compare/v4.0.2...v4.1.0) (2026-09-13)
 
 ### Auth
