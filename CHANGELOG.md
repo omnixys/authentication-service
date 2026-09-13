@@ -3,6 +3,14 @@
 All notable changes in this project will be documented in this file.
 
 
+## [4.1.0](https://github.com/omnixys/authentication-service/compare/v4.0.2...v4.1.0) (2026-09-13)
+
+### Auth
+
+* **Auth:** fail closed when guest provisioning is incomplete ([](https://github.com/omnixys/authentication-service/commit/346aa3052c41d1b5b16d99cea74afdc8962623d6))
+* **Auth:** expose guest signup reason in public error metadata ([](https://github.com/omnixys/authentication-service/commit/8afb90b9290ccdd839bd964f4f28dc3f3afa91ee))
+* **Auth:** read guest signup marker from service-agnostic cache key ([](https://github.com/omnixys/authentication-service/commit/c28cf7cfce5ebf886e02b2ebfad94e52b5415eed))
+
 ## [4.0.2](https://github.com/omnixys/authentication-service/compare/v4.0.1...v4.0.2) (2026-09-11)
 
 ### Deps
