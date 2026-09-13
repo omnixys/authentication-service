@@ -22,6 +22,7 @@ import {
   AuthenticationInputException,
   AuthenticationUserNotFoundException,
 } from '../errors/authentication.error.js';
+import { GuestMagicLinkMetricsService } from '../metrics/guest-magic-link.metrics.service.js';
 import type { KeycloakToken } from '../models/dtos/kc-token.dto.js';
 import type { LogInInput } from '../models/inputs/log-in.input.js';
 import { LoginTotpInput } from '../models/inputs/login-totp.input.js';
@@ -32,9 +33,13 @@ import { LockoutService } from './lockout.service.js';
 import { AuthenticateReadService } from './read.service.js';
 import { TotpService } from './totp.service.js';
 import { HttpService } from '@nestjs/axios';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { ValkeyKey, ValkeyService } from '@omnixys/cache-ts';
 import type { ClientContext } from '@omnixys/context-ts';
+import type {
+  GuestMagicLinkNotificationDTO,
+  GuestMagicLinkRequestDTO,
+} from '@omnixys/contracts-ts';
 import { KafkaProducerService, KafkaTopics } from '@omnixys/kafka-ts';
 import { OmnixysLogger } from '@omnixys/logger-ts';
 import {
@@ -46,13 +51,14 @@ import {
   StepUpRequiredException,
   ZeroTrustService,
 } from '@omnixys/security-ts';
-import { randomBytes } from 'crypto';
 
 export interface RequestContext {
   ip?: string;
   userAgent?: string;
   acceptLanguage?: string;
   clientDeviceId?: string;
+  correlationId?: string;
+  traceId?: string;
 }
 /**
  * @file Mutierende Operationen gegen Keycloak (Authentication-Flows & User-Mutationen).
@@ -77,6 +83,7 @@ export class AuthWriteService extends AuthenticateBaseService {
     private readonly hashService: HashService,
     private readonly zeroTrustService: ZeroTrustService,
     private readonly analyticsOutbox: AnalyticsOutboxService,
+    @Optional() private readonly magicLinkMetrics?: GuestMagicLinkMetricsService,
   ) {
     super(logger, http);
   }
@@ -498,9 +505,6 @@ export class AuthWriteService extends AuthenticateBaseService {
       return true;
     }
 
-    // 32 bytes → 64 hex chars
-    const token = randomBytes(32).toString('hex');
-
     const payload = {
       userId: user.id,
       email,
@@ -508,14 +512,7 @@ export class AuthWriteService extends AuthenticateBaseService {
       ip: context.ip,
     };
 
-    await this.cache.set(
-      ValkeyKey.magicLinkToken,
-      {
-        token,
-        payload: JSON.stringify(payload),
-      },
-      5 * 60,
-    );
+    const token = await this.cache.set(ValkeyKey.magicLinkToken, JSON.stringify(payload), 5 * 60);
 
     // ActorId in den header setzen
 
@@ -541,24 +538,93 @@ export class AuthWriteService extends AuthenticateBaseService {
     return true;
   }
 
+  async requestGuestMagicLink(input: GuestMagicLinkRequestDTO): Promise<void> {
+    await this.lockout.checkIpRateLimit(input.ip, 'magic-link');
+
+    const user = await this.prisma.authUser.findUnique({
+      where: { id: input.userId },
+      select: { id: true, username: true },
+    });
+    if (!user) {
+      this.logger.warn('guest_magic_link_issue: %o', {
+        result: 'USER_NOT_FOUND',
+        correlationId: input.correlationId,
+        channel: input.channel,
+      });
+      return;
+    }
+
+    const token = await this.cache.set(
+      ValkeyKey.magicLinkToken,
+      JSON.stringify({ userId: user.id, channel: input.channel }),
+      5 * 60,
+    );
+
+    const payload: GuestMagicLinkNotificationDTO = {
+      ...input,
+      username: user.username,
+      token,
+    };
+    await this.kafka.send({
+      topic: KafkaTopics.notification.sendGuestMagicLink,
+      payload,
+      meta: {
+        service: 'authentication-service',
+        operation: 'send guest magic link',
+        version: '1',
+        type: 'EVENT',
+        tenantId: input.tenantId,
+      },
+    });
+    this.magicLinkMetrics?.issue(input.channel);
+    this.logger.info('guest_magic_link_issue: %o', {
+      result: 'DISPATCH_QUEUED',
+      correlationId: input.correlationId,
+      channel: input.channel,
+    });
+  }
+
   async loginWithMagicLink(token: string, context: RequestContext): Promise<TokenPayload> {
     if (!token || token.length < 32) {
-      throw new InvalidCredentialsException('Invalid magic-link token');
+      return this.rejectMagicLink(context);
     }
 
-    // Atomic read + delete
-    const raw = await this.cache.get(ValkeyKey.magicLinkToken, token);
+    // Atomic read + delete: concurrent replays can never both create a session.
+    let serialized: string | null;
+    try {
+      serialized = await this.cache.client.getDel(ValkeyKey.magicLinkToken.key(token));
+    } catch (error) {
+      this.logger.error('magic_link_verification: %o', {
+        result: 'INTERNAL_FAILURE',
+        correlationId: context.correlationId,
+        traceId: context.traceId,
+      });
+      throw error;
+    }
+    let raw: string | null = null;
+    try {
+      raw = serialized === null ? null : (JSON.parse(serialized) as string);
+    } catch {
+      return this.rejectMagicLink(context);
+    }
     if (!raw) {
-      throw new InvalidCredentialsException('Invalid or expired magic link');
+      return this.rejectMagicLink(context);
     }
 
-    const payload = JSON.parse(raw) as {
+    let payload: {
       userId: string;
-      email: string;
+      email?: string;
+      channel?: 'EMAIL' | 'WHATSAPP';
       ip?: string;
     };
-
-    await this.cache.delete(ValkeyKey.magicLinkToken, token);
+    try {
+      payload = JSON.parse(raw) as typeof payload;
+    } catch {
+      return this.rejectMagicLink(context);
+    }
+    if (!payload.userId) {
+      return this.rejectMagicLink(context);
+    }
 
     const riskResult = await this.zeroTrustService.evaluate({
       userId: payload.userId,
@@ -572,12 +638,24 @@ export class AuthWriteService extends AuthenticateBaseService {
     });
 
     if (riskResult.decision === 'BLOCK') {
+      this.magicLinkMetrics?.recordVerifyError();
+      this.logger.warn('magic_link_verification: %o', {
+        result: 'RISK_BLOCKED',
+        correlationId: context.correlationId,
+        traceId: context.traceId,
+      });
       throw new AccessBlockedException(riskResult.reasons);
     }
 
     if (riskResult.decision === 'STEP_UP') {
       const stepUpMethod = riskResult.stepUp;
       if (!stepUpMethod) {
+        this.magicLinkMetrics?.recordVerifyError();
+        this.logger.warn('magic_link_verification: %o', {
+          result: 'STEP_UP_REJECTED',
+          correlationId: context.correlationId,
+          traceId: context.traceId,
+        });
         throw new AuthenticationInputException('step-up-method-missing');
       }
       throw new StepUpRequiredException(stepUpMethod, riskResult.reasons);
@@ -592,10 +670,27 @@ export class AuthWriteService extends AuthenticateBaseService {
 
       await this.deviceService.register(payload.userId, context.clientDeviceId ?? 'unknown');
 
-      return this.createPasswordlessSession(payload.userId, context);
+      const session = await this.createPasswordlessSession(payload.userId, context);
+      this.magicLinkMetrics?.recordVerified();
+      this.logger.info('magic_link_verification: %o', {
+        result: 'VERIFIED',
+        correlationId: context.correlationId,
+        traceId: context.traceId,
+      });
+      return session;
     } catch (err) {
       await this.hashService.dummyVerify();
       throw err;
     }
+  }
+
+  private rejectMagicLink(context: RequestContext): never {
+    this.magicLinkMetrics?.recordVerifyError();
+    this.logger.warn('magic_link_verification: %o', {
+      result: 'INVALID_OR_EXPIRED',
+      correlationId: context.correlationId,
+      traceId: context.traceId,
+    });
+    throw new InvalidCredentialsException('Invalid or expired magic link');
   }
 }

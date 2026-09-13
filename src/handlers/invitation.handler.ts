@@ -15,11 +15,17 @@
  * For more information, visit <https://www.gnu.org/licenses/>.
  */
 
+import { GuestMagicLinkMetricsService } from '../authentication/metrics/guest-magic-link.metrics.service.js';
 import { AdminWriteService } from '../authentication/services/admin-write.service.js';
+import { AuthWriteService } from '../authentication/services/authentication-write.service.js';
 import { AuthenticateReadService } from '../authentication/services/read.service.js';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { ContextAccessor } from '@omnixys/context-ts';
-import type { UserIdDTO, UserIdListDTO } from '@omnixys/contracts-ts';
+import type {
+  GuestMagicLinkRequestDTO,
+  UserIdDTO,
+  UserIdListDTO,
+} from '@omnixys/contracts-ts';
 import { RealmRoleType } from '@omnixys/contracts-ts';
 import {
   IKafkaEventContext,
@@ -56,11 +62,38 @@ export class InvitationHandler {
     private readonly omnixysLogger: OmnixysLogger,
     private readonly adminWriteService: AdminWriteService,
     private readonly authenticationReadService: AuthenticateReadService,
+    private readonly authWriteService: AuthWriteService,
+    @Optional()
+    private readonly magicLinkMetrics?: GuestMagicLinkMetricsService,
   ) {
     this.logger = this.omnixysLogger.log(
       this.constructor.name,
       'service:authentication',
     );
+  }
+
+  @KafkaEvent(KafkaTopics.authentication.requestGuestMagicLink)
+  async handleRequestGuestMagicLink(
+    payload: GuestMagicLinkRequestDTO,
+  ): Promise<void> {
+    return TraceRunner.run('[HANDLER] Request Guest Magic Link', async () => {
+      try {
+        await this.authWriteService.requestGuestMagicLink(payload);
+      } catch (error) {
+        const result =
+          error instanceof Error && error.name === 'TooManyRequestsException'
+            ? 'RATE_LIMITED'
+            : 'INTERNAL_FAILURE';
+        if (result === 'RATE_LIMITED') {
+          this.magicLinkMetrics?.recordRateLimit();
+        }
+        this.logger.warn('guest_magic_link_issue: %o', {
+          result,
+          correlationId: payload.correlationId,
+          channel: payload.channel,
+        });
+      }
+    });
   }
 
   @KafkaEvent(KafkaTopics.authentication.deleteGuest)

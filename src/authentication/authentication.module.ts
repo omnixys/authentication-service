@@ -22,6 +22,7 @@ import { OAuthController } from './controllers/o-auth.controller.js';
 import { MailTokenController } from './mail/mail-token.controller.js';
 import { MAIL_TOKEN_JWE, mailTokenJweProvider } from './mail/mail-token.crypto.js';
 import { MailTokenService } from './mail/mail-token.service.js';
+import { GuestMagicLinkMetricsService } from './metrics/guest-magic-link.metrics.service.js';
 import { AdminMutationResolver } from './resolvers/admin-mutation.resolver.js';
 import { AuthMutationResolver } from './resolvers/authentication-mutation.resolver.js';
 import { AuthQueryResolver } from './resolvers/authentication-query.resolver.js';
@@ -73,6 +74,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     SecurityQuestionService,
     OAuthService,
     TenantMembershipClient,
+    GuestMagicLinkMetricsService,
     mailTokenJweProvider,
     MailTokenService,
     // CronSchedulerService,
@@ -84,6 +86,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     AuthWriteService,
     PendingContactService,
     RegisterService,
+    GuestMagicLinkMetricsService,
     MAIL_TOKEN_JWE,
   ],
 })
