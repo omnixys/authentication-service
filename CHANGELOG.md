@@ -3,6 +3,16 @@
 All notable changes in this project will be documented in this file.
 
 
+## [4.1.2](https://github.com/omnixys/authentication-service/compare/v4.1.1...v4.1.2) (2026-09-13)
+
+### Guest-signup
+
+* **Guest-signup:** extend provisioning completion window ([](https://github.com/omnixys/authentication-service/commit/f54e81a9c803a9753737e42000261f0a48ee376a))
+
+### Other
+
+* **Other:** Merge branch 'main' of https://github.com/omnixys/authentication-service ([](https://github.com/omnixys/authentication-service/commit/b145cb8aa5acb1c2bee0395283de5bd98d1ded12))
+
 ## [4.1.1](https://github.com/omnixys/authentication-service/compare/v4.1.0...v4.1.1) (2026-09-13)
 
 ### Deps
