@@ -114,6 +114,10 @@ export const env = {
   KC_BACKCHANNEL_URL: getEnv('KC_BACKCHANNEL_URL', keycloakIssuerUrl),
   KC_REALM: getEnv('KC_REALM', 'camunda-platform'),
   KC_CLIENT_ID: getEnv('KC_CLIENT_ID', 'camunda-identity'),
+  KC_AUTH_CLIENT_ID: getEnv('KC_AUTH_CLIENT_ID', '', { required: true }),
+  KC_AUTH_CLIENT_SECRET: getEnv('KC_AUTH_CLIENT_SECRET', '', {
+    required: true,
+  }),
   KC_ADMIN_USERNAME: getEnv('KC_ADMIN_USERNAME', 'admin', { required: true }),
   KC_ADMIN_PASSWORD: getEnv('KC_ADMIN_PASSWORD', '', { required: true }),
   KC_TLS_REJECT_UNAUTHORIZED: getEnv('KC_TLS_REJECT_UNAUTHORIZED', 'true', {

@@ -26,6 +26,8 @@ const {
   KC_BACKCHANNEL_URL,
   KC_CLIENT_SECRET,
   KC_TLS_REJECT_UNAUTHORIZED,
+  KC_AUTH_CLIENT_ID,
+  KC_AUTH_CLIENT_SECRET,
 } = env;
 
 export const keycloakConfig = {
@@ -34,6 +36,16 @@ export const keycloakConfig = {
   realm: KC_REALM,
   clientId: KC_CLIENT_ID,
   clientSecret: KC_CLIENT_SECRET,
+};
+
+/**
+ * Dedizierter Service-Account-Client für die passwordlose Session-Impersonation
+ * (OAuth2 token-exchange mit requested_subject). In Keycloak ist ihm nur
+ * realm-management/impersonation zugewiesen, kein Admin-Zugriff.
+ */
+export const authClientConfig = {
+  clientId: KC_AUTH_CLIENT_ID,
+  clientSecret: KC_AUTH_CLIENT_SECRET,
 };
 
 /** Pfade für den REST-Client zu Keycloak */

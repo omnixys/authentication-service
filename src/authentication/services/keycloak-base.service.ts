@@ -16,7 +16,7 @@
  */
 
 import { env } from '../../config/env.js';
-import { keycloakConfig, paths } from '../../config/keycloak.js';
+import { authClientConfig, keycloakConfig, paths } from '../../config/keycloak.js';
 import {
   AuthenticationInputException,
   AuthenticationPasswordPolicyException,
@@ -76,6 +76,19 @@ const NETWORK_ERROR_CODES = new Set([
 export abstract class AuthenticateBaseService {
   /** Basic authentication headers for token/logout requests. */
   protected readonly loginHeaders: Record<string, string>;
+
+  /**
+   * Basic authentication headers for the dedicated impersonation client
+   * (authClientConfig), used only for passwordless session token exchange.
+   */
+  protected get authClientLoginHeaders(): Record<string, string> {
+    const { clientId, clientSecret } = authClientConfig;
+    const authorization = Buffer.from(`${clientId}:${clientSecret}`, 'utf8').toString('base64');
+    return {
+      Authorization: `Basic ${authorization}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+    };
+  }
 
   protected readonly logger;
 

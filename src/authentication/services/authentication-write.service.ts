@@ -16,7 +16,7 @@
  */
 
 import { AnalyticsOutboxService } from '../../analytics/analytics-outbox.service.js';
-import { keycloakConfig, paths } from '../../config/keycloak.js';
+import { authClientConfig, keycloakConfig, paths } from '../../config/keycloak.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import {
   AuthenticationInputException,
@@ -366,20 +366,20 @@ export class AuthWriteService extends AuthenticateBaseService {
     try {
       const body = new URLSearchParams({
         grant_type: 'client_credentials',
-        client_id: keycloakConfig.clientId,
-        client_secret: keycloakConfig.clientSecret,
+        client_id: authClientConfig.clientId,
+        client_secret: authClientConfig.clientSecret,
       });
 
       const serviceToken = await this.kcRequest<KeycloakToken>('post', paths.accessToken, {
         data: body.toString(),
-        headers: this.loginHeaders,
+        headers: this.authClientLoginHeaders,
         adminAuth: false,
       });
 
       // Jetzt impersonation: requested_subject muss Keycloak-Subject (K) sein.
       const exchangeBody = new URLSearchParams({
         grant_type: 'urn:ietf:params:oauth:grant-type:token-exchange',
-        client_id: keycloakConfig.clientId,
+        client_id: authClientConfig.clientId,
         subject_token: serviceToken.access_token,
         subject_token_type: 'urn:ietf:params:oauth:token-type:access_token',
         requested_subject: keycloakSub,
@@ -388,7 +388,7 @@ export class AuthWriteService extends AuthenticateBaseService {
 
       const exchanged = await this.kcRequest<KeycloakToken>('post', paths.accessToken, {
         data: exchangeBody.toString(),
-        headers: this.loginHeaders,
+        headers: this.authClientLoginHeaders,
         adminAuth: false,
       });
 

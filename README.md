@@ -522,6 +522,8 @@ to maintain consistency across all microservices.
     <tr><td><code>KC_REALM</code></td><td>Keycloak realm name</td><td><code>camunda-platform</code></td></tr>
     <tr><td><code>KC_CLIENT_ID</code></td><td>Registered Keycloak client ID</td><td><code>camunda-identity</code></td></tr>
     <tr><td><code>KC_CLIENT_SECRET</code></td><td>Secret for the configured Keycloak client</td><td><em>none</em></td></tr>
+    <tr><td><code>KC_AUTH_CLIENT_ID</code></td><td>Dedicated service-account client used for passwordless-session token exchange (impersonation)</td><td><em>none</em></td></tr>
+    <tr><td><code>KC_AUTH_CLIENT_SECRET</code></td><td>Secret of the dedicated impersonation client (<code>KC_AUTH_CLIENT_ID</code>)</td><td><em>none</em></td></tr>
     <tr><td><code>KC_ADMIN_USERNAME</code></td><td>Keycloak admin username</td><td><code>admin</code></td></tr>
     <tr><td><code>KC_ADMIN_PASS</code></td><td>Keycloak admin password</td><td><code>change-me</code></td></tr>
   </tbody>
