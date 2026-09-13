@@ -63,6 +63,12 @@ function guestSignupMarkerKey(invitationId: string, userId: string): string {
   return `guest-signup:${invitationId}:${userId}`;
 }
 
+interface GuestProvisioningWaitResult {
+  completed: boolean;
+  elapsedMs: number;
+  attempts: number;
+}
+
 export interface SignUpResult {
   userId: string;
   keycloakSub: string;
@@ -177,13 +183,33 @@ export class UserWriteService extends AuthenticateBaseService {
             input.tenantId,
           );
 
-          const provisioned = await this.awaitGuestProvisioning(invitee.invitationId, user.userId);
+          const provisioning = await this.awaitGuestProvisioning(invitee.invitationId, user.userId);
 
-          if (!provisioned) {
+          if (!provisioning.completed) {
+            // The marker may be committed immediately after the final polling
+            // interval. Check once more before compensating an otherwise valid
+            // guest account.
+            const completedBeforeCompensation = await this.cacheService.getShared(
+              guestSignupMarkerKey(invitee.invitationId, user.userId),
+            );
+            if (completedBeforeCompensation) {
+              this.logger.info(
+                'Guest provisioning completed during final confirmation: invitationId=%s userId=%s elapsedMs=%d attempts=%d',
+                invitee.invitationId,
+                user.userId,
+                provisioning.elapsedMs,
+                provisioning.attempts,
+              );
+              continue;
+            }
             this.logger.warn(
-              'Guest provisioning did not complete: invitationId=%s userId=%s',
+              'Guest provisioning timed out: invitationId=%s userId=%s markerKey=%s elapsedMs=%d timeoutMs=%d attempts=%d',
               invitee.invitationId,
               user.userId,
+              guestSignupMarkerKey(invitee.invitationId, user.userId),
+              provisioning.elapsedMs,
+              GUEST_SIGNUP_PROVISION_TIMEOUT_MS,
+              provisioning.attempts,
             );
             throw new GuestSignupException('provisioning-incomplete');
           }
@@ -261,18 +287,24 @@ export class UserWriteService extends AuthenticateBaseService {
    * requires a seat and the invitation is linked only after ticket creation,
    * the marker proves seat AND ticket exist for the guest.
    */
-  private async awaitGuestProvisioning(invitationId: string, userId: string): Promise<boolean> {
+  private async awaitGuestProvisioning(
+    invitationId: string,
+    userId: string,
+  ): Promise<GuestProvisioningWaitResult> {
     const markerKey = guestSignupMarkerKey(invitationId, userId);
+    const startedAt = Date.now();
     const deadline = Date.now() + GUEST_SIGNUP_PROVISION_TIMEOUT_MS;
     let delayMs = 200;
+    let attempts = 0;
 
     for (;;) {
+      attempts += 1;
       const marker = await this.cacheService.getShared(markerKey);
       if (marker) {
-        return true;
+        return { completed: true, elapsedMs: Date.now() - startedAt, attempts };
       }
       if (Date.now() >= deadline) {
-        return false;
+        return { completed: false, elapsedMs: Date.now() - startedAt, attempts };
       }
       await new Promise((resolve) => setTimeout(resolve, delayMs));
       delayMs = Math.min(500, Math.round(delayMs * 1.6));

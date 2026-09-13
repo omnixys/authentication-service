@@ -83,7 +83,7 @@ export const env = {
 
   GUEST_SIGNUP_PROVISION_TIMEOUT_MS: getEnv(
     'GUEST_SIGNUP_PROVISION_TIMEOUT_MS',
-    '10000',
+    '60000',
     { transform: toNumber },
   ),
 
