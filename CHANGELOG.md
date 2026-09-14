@@ -3,6 +3,12 @@
 All notable changes in this project will be documented in this file.
 
 
+## [4.2.0](https://github.com/omnixys/authentication-service/compare/v4.1.2...v4.2.0) (2026-09-14)
+
+### Authentication
+
+* **Authentication:** impersonate guest sessions via dedicated omnixys-auth client ([](https://github.com/omnixys/authentication-service/commit/139560a6f60473d554c19b6f71a5f5a43fa56bf9))
+
 ## [4.1.2](https://github.com/omnixys/authentication-service/compare/v4.1.1...v4.1.2) (2026-09-13)
 
 ### Guest-signup
