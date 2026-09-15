@@ -140,6 +140,7 @@ export abstract class AuthenticateBaseService {
     behavior: {
       mapTo?: 'null-on-401' | 'throw-on-error';
       returnNullOn409?: boolean;
+      ignoreNotFound?: boolean;
     } = {
       mapTo: 'throw-on-error',
     },
@@ -210,6 +211,15 @@ export abstract class AuthenticateBaseService {
         }
 
         if (status === 404) {
+          if (behavior.ignoreNotFound) {
+            this.logger.warn(
+              'KC 404 on %s %s → treated as idempotent not-found no-op: %o',
+              method.toUpperCase(),
+              url,
+              safeMessage,
+            );
+            return null as T;
+          }
           throw new AuthenticationStateException('identity-resource-not-found', err);
         }
         if (status === 409 && behavior.returnNullOn409) {

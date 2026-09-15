@@ -103,12 +103,36 @@ export class AdminWriteService extends AuthenticateBaseService {
   }
 
   /**
-   * Benutzer löschen.
+   * Benutzer vollständig löschen (U und Keycloak):
+   *  - Keycloak-User (K) wird über dessen `keycloakSub` gelöscht (nicht über U!),
+   *  - AuthUser (U) inkl. aller abhängigen Datensätze via Cascade,
+   *  - Kafka-Fan-Out (User, Address, Event, Seat, Invitation, Ticket) mit `userId = U`.
+   *
+   * `id` darf die interne Omnixys-User-ID (U) oder der Keycloak-Subject (K) sein –
+   * beides wird aufgelöst. Idempotent: existiert der AuthUser nicht mehr, ist der
+   * Aufruf ein No-op (wichtig für Delayed-Jobs / Duplicate-Events).
    */
   async deleteUser(id: string, actorId: string): Promise<void> {
-    await this.kcRequest('delete', `${paths.users}/${encodeURIComponent(id)}`);
+    const authUser = await this.resolveAuthUser(id);
 
-    await this.prisma.authUser.deleteMany({ where: { id } });
+    if (!authUser) {
+      this.logger.warn('User deletion skipped: authUser not found: id=%s', id);
+      return;
+    }
+
+    const userId = authUser.id;
+
+    // 1) Keycloak: externer User (K) über dessen Subject löschen.
+    //    404 → bereits gelöscht → als Erfolg behandeln.
+    await this.kcRequest(
+      'delete',
+      `${paths.users}/${encodeURIComponent(authUser.keycloakSub)}`,
+      {},
+      { ignoreNotFound: true },
+    );
+
+    // 2) Lokale AuthUser (U) inkl. MFA/Credentials via Cascade.
+    await this.prisma.authUser.deleteMany({ where: { id: userId } });
 
     const metadata = (operation: string): KafkaMetaInfo => ({
       operation,
@@ -119,40 +143,90 @@ export class AdminWriteService extends AuthenticateBaseService {
       tenantId: 'omnixys',
     });
 
+    // 3) Fan-Out überall mit der internen User-ID (U).
     await Promise.all([
       this.kafka.send({
         topic: KafkaTopics.user.deleteUser,
-        payload: { userId: id },
+        payload: { userId },
         meta: metadata('delete user profile'),
       }),
       this.kafka.send({
         topic: KafkaTopics.address.deleteUserAddresses,
-        payload: { userId: id },
+        payload: { userId },
         meta: metadata('delete user addresses'),
       }),
       this.kafka.send({
         topic: KafkaTopics.event.delete,
-        payload: { userId: id },
+        payload: { userId },
         meta: metadata('delete user events'),
       }),
       this.kafka.send({
         topic: KafkaTopics.seat.removeGuestId,
-        payload: { userId: id },
+        payload: { userId },
         meta: metadata('remove user seat assignments'),
       }),
       this.kafka.send({
         topic: KafkaTopics.invitation.deleteUserInvitations,
-        payload: { userId: id },
+        payload: { userId },
         meta: metadata('delete user invitations'),
       }),
       this.kafka.send({
         topic: KafkaTopics.ticket.deleteUserTickets,
-        payload: { userId: id },
+        payload: { userId },
         meta: metadata('delete user tickets'),
       }),
     ]);
 
-    this.logger.info('User deletion propagated: %o', { userId: id });
+    this.logger.info('User deletion propagated: %o', { userId });
+  }
+
+  /**
+   * Löst eine übergebene ID auf: zuerst interne User-ID (U), sonst Keycloak-Subject (K).
+   */
+  private async resolveAuthUser(id: string): Promise<{
+    id: string;
+    keycloakSub: string;
+  } | null> {
+    const byId = await this.prisma.authUser.findUnique({
+      where: { id },
+      select: { id: true, keycloakSub: true },
+    });
+    if (byId) {
+      return byId;
+    }
+    const bySub = await this.prisma.authUser.findUnique({
+      where: { keycloakSub: id },
+      select: { id: true, keycloakSub: true },
+    });
+    return bySub ?? null;
+  }
+
+  /**
+   * Prüft, ob der User (U) die Realm-Rolle GUEST besitzt. Robust bei bereits gelöschtem
+   * Keycloak-Nutzer: existiert der Keycloak-User nicht mehr (404), wird `true` geliefert,
+   * damit der idempotente Aufräum-Flow fortgesetzt wird.
+   */
+  async isGuest(userId: string): Promise<boolean> {
+    const authUser = await this.prisma.authUser.findUnique({
+      where: { id: userId },
+      select: { keycloakSub: true },
+    });
+    if (!authUser) {
+      return false;
+    }
+
+    const roles = await this.kcRequest<Array<{ name?: string }>>(
+      'get',
+      `${paths.users}/${encodeURIComponent(authUser.keycloakSub)}/role-mappings/realm`,
+      {},
+      { ignoreNotFound: true },
+    );
+
+    if (!roles) {
+      return true;
+    }
+
+    return roles.some((role) => role.name === this.mapRoleInput(RealmRoleType.GUEST));
   }
 
   /**

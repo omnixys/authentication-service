@@ -18,7 +18,6 @@
 import { GuestMagicLinkMetricsService } from '../authentication/metrics/guest-magic-link.metrics.service.js';
 import { AdminWriteService } from '../authentication/services/admin-write.service.js';
 import { AuthWriteService } from '../authentication/services/authentication-write.service.js';
-import { AuthenticateReadService } from '../authentication/services/read.service.js';
 import { Injectable, Optional } from '@nestjs/common';
 import { ContextAccessor } from '@omnixys/context-ts';
 import type {
@@ -26,7 +25,6 @@ import type {
   UserIdDTO,
   UserIdListDTO,
 } from '@omnixys/contracts-ts';
-import { RealmRoleType } from '@omnixys/contracts-ts';
 import {
   IKafkaEventContext,
   KAFKA_HEADERS,
@@ -61,7 +59,6 @@ export class InvitationHandler {
   constructor(
     private readonly omnixysLogger: OmnixysLogger,
     private readonly adminWriteService: AdminWriteService,
-    private readonly authenticationReadService: AuthenticateReadService,
     private readonly authWriteService: AuthWriteService,
     @Optional()
     private readonly magicLinkMetrics?: GuestMagicLinkMetricsService,
@@ -114,10 +111,15 @@ export class InvitationHandler {
         actorId,
       );
 
-      const user = await this.authenticationReadService.findById(
-        payload.userId,
-      );
-      if (user.role !== RealmRoleType.GUEST) {
+      // payload.userId is the internal user id (U), NOT the Keycloak subject. The
+      // GUEST role check must therefore resolve the identity via the local auth DB
+      // (and, if the Keycloak user is already gone, proceed to the idempotent cleanup).
+      const isGuest = await this.adminWriteService.isGuest(payload.userId);
+      if (!isGuest) {
+        this.logger.debug(
+          'handleDeleteGuestAccount: not a guest, skipped: %s',
+          payload.userId,
+        );
         return;
       }
       await this.adminWriteService.deleteUser(payload.userId, actorId);
@@ -142,13 +144,18 @@ export class InvitationHandler {
         actorId,
       );
 
-      const users = await this.authenticationReadService.findByIds(
-        payload.userIds,
-      );
+      const guestUserIds = (
+        await Promise.all(
+          payload.userIds.map(async (userId) =>
+            (await this.adminWriteService.isGuest(userId)) ? userId : null,
+          ),
+        )
+      ).filter((userId): userId is string => userId !== null);
 
-      const guestUsers = users.filter((u) => u.role === RealmRoleType.GUEST);
       await Promise.all(
-        guestUsers.map((u) => this.adminWriteService.deleteUser(u.id, actorId)),
+        guestUserIds.map((userId) =>
+          this.adminWriteService.deleteUser(userId, actorId),
+        ),
       );
     });
   }

@@ -115,12 +115,17 @@ export class AdminMutationResolver {
   }
 
   /**
-   * Permanently deletes a user from the Keycloak realm.
+   * Permanently deletes a user and all related data across services.
    *
-   * @mutation deleteUser
+   * This is the canonical account-deletion entry point. It performs the full
+   * cascade: Keycloak user (K), local AuthUser (U) with all dependent records,
+   * and the Kafka fan-out (user, address, event, seat, invitation, ticket).
+   *
+   * @mutation deleteKcUser
    * @public
    *
-   * @param id - The unique Keycloak user ID to delete.
+   * @param id - The internal Omnixys user ID (`U`, i.e. `AuthUser.id`) or the
+   *   Keycloak subject (`K`, i.e. `AuthUser.keycloakSub`). Both are resolved.
    * @returns A boolean value indicating whether the user was deleted successfully.
    */
   @Mutation(() => Boolean, { name: 'deleteKcUser' })

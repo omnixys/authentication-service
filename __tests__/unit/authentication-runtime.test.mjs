@@ -77,7 +77,44 @@ test('unknown usernames are mapped to InvalidCredentials without leaking existen
   assert.equal(dummyVerifications, 1);
 });
 
-test('user deletion awaits every downstream event and uses idempotent local deletion', async () => {
+test('user deletion deletes Keycloak by K, local authUser by U, and fan-outs every downstream event', async () => {
+  const sent = [];
+  const deletedKc = [];
+  const service = new AdminWriteService(
+    logger,
+    {},
+    {},
+    {},
+    { send: async (event) => { sent.push(event); } },
+    {
+      authUser: {
+        findUnique: async ({ where }) =>
+          where.id === 'user-1' || where.keycloakSub === 'kc-1'
+            ? { id: 'user-1', keycloakSub: 'kc-1' }
+            : null,
+        deleteMany: async ({ where }) => ({ count: where.id === 'user-1' ? 1 : 0 }),
+      },
+    },
+  );
+  service.kcRequest = async (method, path, _cfg, behavior) => {
+    deletedKc.push({ method, path, behavior });
+    return undefined;
+  };
+
+  await service.deleteUser('user-1', 'actor-1');
+
+  // Keycloak deletion targets the external subject K (never U) and tolerates 404.
+  assert.equal(deletedKc.length, 1);
+  assert.equal(deletedKc[0].method, 'delete');
+  assert.ok(deletedKc[0].path.endsWith(encodeURIComponent('kc-1')));
+  assert.equal(deletedKc[0].behavior.ignoreNotFound, true);
+
+  assert.equal(sent.length, 6);
+  assert.deepEqual(new Set(sent.map(({ payload }) => payload.userId)), new Set(['user-1']));
+  assert.ok(sent.every(({ meta }) => meta.actorId === 'actor-1'));
+});
+
+test('deleteUser accepts the Keycloak subject (K) and still propagates the internal U', async () => {
   const sent = [];
   const service = new AdminWriteService(
     logger,
@@ -85,15 +122,83 @@ test('user deletion awaits every downstream event and uses idempotent local dele
     {},
     {},
     { send: async (event) => { sent.push(event); } },
-    { authUser: { deleteMany: async ({ where }) => ({ count: where.id === 'user-1' ? 1 : 0 }) } },
+    {
+      authUser: {
+        findUnique: async ({ where }) =>
+          where.keycloakSub === 'kc-1' ? { id: 'user-1', keycloakSub: 'kc-1' } : null,
+        deleteMany: async ({ where }) => ({ count: where.id === 'user-1' ? 1 : 0 }),
+      },
+    },
   );
   service.kcRequest = async () => undefined;
 
-  await service.deleteUser('user-1', 'actor-1');
+  await service.deleteUser('kc-1', 'actor-1');
 
   assert.equal(sent.length, 6);
   assert.deepEqual(new Set(sent.map(({ payload }) => payload.userId)), new Set(['user-1']));
-  assert.ok(sent.every(({ meta }) => meta.actorId === 'actor-1'));
+});
+
+test('deleteUser is an idempotent no-op when the authUser is already gone', async () => {
+  let sent = 0;
+  let kcCalls = 0;
+  const service = new AdminWriteService(
+    logger,
+    {},
+    {},
+    {},
+    { send: async () => { sent += 1; } },
+    { authUser: { findUnique: async () => null, deleteMany: async () => ({ count: 0 }) } },
+  );
+  service.kcRequest = async () => { kcCalls += 1; };
+
+  await service.deleteUser('missing-user', 'actor-1');
+
+  assert.equal(sent, 0);
+  assert.equal(kcCalls, 0);
+});
+
+test('isGuest resolves the GUEST role via Keycloak on the subject K', async () => {
+  const service = new AdminWriteService(logger, {}, {}, {}, {}, {
+    authUser: {
+      findUnique: async ({ where }) =>
+        where.id === 'user-1' ? { keycloakSub: 'kc-1' } : null,
+    },
+  });
+  service.mapRoleInput = (role) => `${role}-realm`;
+  service.kcRequest = async (_method, path) => {
+    assert.ok(path.endsWith(`${encodeURIComponent('kc-1')}/role-mappings/realm`));
+    return [{ name: 'GUEST-realm' }];
+  };
+
+  assert.equal(await service.isGuest('user-1'), true);
+});
+
+test('isGuest returns false for non-guests and for missing users without calling Keycloak', async () => {
+  let kcCalls = 0;
+  const service = new AdminWriteService(logger, {}, {}, {}, {}, {
+    authUser: {
+      findUnique: async ({ where }) =>
+        where.id === 'user-1' ? { keycloakSub: 'kc-1' } : null,
+    },
+  });
+  service.mapRoleInput = (role) => `${role}-realm`;
+  service.kcRequest = async () => { kcCalls += 1; return [{ name: 'USER-realm' }]; };
+
+  assert.equal(await service.isGuest('user-1'), false);
+  assert.equal(await service.isGuest('missing-user'), false);
+  assert.equal(kcCalls, 1);
+});
+
+test('isGuest treats a vanished Keycloak user (404) as a guest to keep cleanup idempotent', async () => {
+  const service = new AdminWriteService(logger, {}, {}, {}, {}, {
+    authUser: { findUnique: async () => ({ keycloakSub: 'kc-gone' }) },
+  });
+  service.kcRequest = async (_method, _path, _cfg, behavior) => {
+    assert.equal(behavior.ignoreNotFound, true);
+    return null;
+  };
+
+  assert.equal(await service.isGuest('user-1'), true);
 });
 
 test('tenant resolution prefers an explicit verified UUID and rejects invalid values', () => {
