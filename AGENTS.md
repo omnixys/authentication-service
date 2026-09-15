@@ -109,6 +109,22 @@ Seed fixtures: use a single shared `U` per logical user across services (same UU
 the `AuthUser.id` here and the `User.id` in the user service), and a distinct valid `K` for
 `keycloak_sub` that differs from `U`. Fixture UUIDs must be valid UUIDv7, not v1/v4.
 
+User deletion contract: the canonical account-deletion entry point is `AdminWriteService.deleteUser`
+(triggered by the `deleteKcUser` mutation or the `user.delete` delayed job). It deletes the Keycloak
+user via its subject `K`, the local `AuthUser` (`U`, with cascades), and publishes six fan-out events
+(user, address, event, seat, invitation, ticket) — always with `userId = U`. It is idempotent: a
+missing `AuthUser` is a no-op and a Keycloak 404 is treated as success (`ignoreNotFound`). Guest
+cleanup events (`authentication.deleteGuest` / `-List`) first validate the realm `GUEST` role via
+`AdminWriteService.isGuest` (resolving `K` from `U`). The Kafka handler path (`user.deleteUser`) is the
+authoritative trigger; the user-service `deleteUser` GraphQL mutation is deprecated and rejects.
+
+Known gaps (documented, out of scope for the core fix): the fan-out does NOT cover tenant
+`TenantMembership`, notification targets, chat conversation participants/messages/read-states, and the
+`EventRoleProjection.role` rows a user holds in events they do not own (per policy non-owner events stay,
+only seats/invitations/tickets drop). `UserPresence` has no FK to `AuthUser` (minor) and
+`Contact.contactId` (user referenced as a contact) is not cleaned. Evaluate these before extending the
+workflow.
+
 ## Development Skill
 
 This repository ships `SKILL.md` — the development workflow skill. Read and follow it
