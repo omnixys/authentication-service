@@ -3,6 +3,13 @@
 All notable changes in this project will be documented in this file.
 
 
+## [4.2.1](https://github.com/omnixys/authentication-service/compare/v4.2.0...v4.2.1) (2026-09-15)
+
+### Identity
+
+* **Identity:** document user deletion contract and known fan-out gaps ([](https://github.com/omnixys/authentication-service/commit/a3727a478f07fb6f9021d3feff167fadc363b139))
+* **Identity:** resolve U/K and fan out on internal user id for deletion ([](https://github.com/omnixys/authentication-service/commit/fbea6c9713c8a58c98cf479aeb345486e32e5750))
+
 ## [4.2.0](https://github.com/omnixys/authentication-service/compare/v4.1.2...v4.2.0) (2026-09-14)
 
 ### Authentication
