@@ -3,6 +3,12 @@
 All notable changes in this project will be documented in this file.
 
 
+## [4.2.2](https://github.com/omnixys/authentication-service/compare/v4.2.1...v4.2.2) (2026-09-16)
+
+### Deps
+
+* **Deps:** update omnixys logger-ts package ([](https://github.com/omnixys/authentication-service/commit/5f559804763639fc56ba03c151df5f3c03a1c16a))
+
 ## [4.2.1](https://github.com/omnixys/authentication-service/compare/v4.2.0...v4.2.1) (2026-09-15)
 
 ### Identity
