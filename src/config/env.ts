@@ -36,10 +36,12 @@ function getEnv(
 
 const toBool = (value: string): boolean => value === 'true';
 const toNumber = (value: string): number => Number(value);
-const keycloakIssuerUrl = getEnv('KC_URL', 'http://localhost:18080/auth');
+const keycloakIssuerUrl = getEnv('KC_URL', 'http://localhost:18080/auth', {
+  required: true,
+});
 
 export const env = {
-  NODE_ENV: getEnv('NODE_ENV', 'development'),
+  NODE_ENV: getEnv('NODE_ENV', 'development', { required: true }),
   PORT: getEnv('PORT', '4000', { transform: toNumber }),
   SERVICE: getEnv('SERVICE', 'authentication'),
 
@@ -61,18 +63,20 @@ export const env = {
   }),
 
   OTEL_LOGS_ENABLED: getEnv('OTEL_LOGS_ENABLED', 'true', { transform: toBool }),
-  OTEL_URI: getEnv('OTEL_EXPORTER_OTLP_ENDPOINT', 'http://localhost:4318'),
+  OTEL_URI: getEnv('OTEL_EXPORTER_OTLP_ENDPOINT', 'http://localhost:4318', {
+    required: true,
+  }),
   OTEL_TRANSPORT_MODE: getEnv('OTEL_TRANSPORT_MODE', 'http', {
     required: true,
   }),
   OTEL_SAMPLING_RATIO: getEnv('OTEL_SAMPLING_RATIO', '1', {
     transform: toNumber,
   }),
-  TEMPO_URI: getEnv('TEMPO_URI', 'http://localhost:4318'),
+  TEMPO_URI: getEnv('TEMPO_URI', 'http://localhost:4318', { required: true }),
   PROMETHEUS_ENABLE: getEnv('PROMETHEUS_ENABLE', 'true', { transform: toBool }),
   PROMETHEUS_PORT: getEnv('PROMETHEUS_PORT', '17501', { transform: toNumber }),
 
-  KAFKA_BROKER: getEnv('KAFKA_BROKER', 'localhost:9092'),
+  KAFKA_BROKER: getEnv('KAFKA_BROKER', 'localhost:9092', { required: true }),
   KAFKA_RETRY: getEnv('KAFKA_RETRY', '5', { transform: toNumber }),
   KAFKA_IDEMPOTENCY_ENABLE: getEnv('KAFKA_IDEMPOTENCY_ENABLE', 'true', {
     transform: toBool,
@@ -87,7 +91,9 @@ export const env = {
     { transform: toNumber },
   ),
 
-  VALKEY_URL: getEnv('VALKEY_URL', 'valkey://localhost:6380'),
+  VALKEY_URL: getEnv('VALKEY_URL', 'valkey://localhost:6380', {
+    required: true,
+  }),
   VALKEY_PASSWORD: getEnv('VALKEY_PASSWORD', '', { required: true }),
 
   INTERNAL_GATEWAY_TOKEN: getEnv('INTERNAL_GATEWAY_TOKEN', '', {
@@ -111,9 +117,11 @@ export const env = {
 
   KC_CLIENT_SECRET: getEnv('KC_CLIENT_SECRET', '', { required: true }),
   KC_URL: keycloakIssuerUrl,
-  KC_BACKCHANNEL_URL: getEnv('KC_BACKCHANNEL_URL', keycloakIssuerUrl),
-  KC_REALM: getEnv('KC_REALM', 'camunda-platform'),
-  KC_CLIENT_ID: getEnv('KC_CLIENT_ID', 'camunda-identity'),
+  KC_BACKCHANNEL_URL: getEnv('KC_BACKCHANNEL_URL', keycloakIssuerUrl, {
+    required: true,
+  }),
+  KC_REALM: getEnv('KC_REALM', 'camunda-platform', { required: true }),
+  KC_CLIENT_ID: getEnv('KC_CLIENT_ID', 'camunda-identity', { required: true }),
   KC_AUTH_CLIENT_ID: getEnv('KC_AUTH_CLIENT_ID', '', { required: true }),
   KC_AUTH_CLIENT_SECRET: getEnv('KC_AUTH_CLIENT_SECRET', '', {
     required: true,
@@ -139,7 +147,7 @@ export const env = {
   ENCRYPTION_KEY: getEnv('ENCRYPTION_KEY', '', { required: true }),
   FINGERPRINT_SECRET: getEnv('FINGERPRINT_SECRET', '', { required: true }),
 
-  DEFAULT_TENANT_ID: getEnv('DEFAULT_TENANT_ID', ''),
+  DEFAULT_TENANT_ID: getEnv('DEFAULT_TENANT_ID', '', { required: true }),
 
   TENANT_SERVICE_URL: getEnv('TENANT_SERVICE_URL', 'localhost:50052', {
     required: true,
@@ -155,9 +163,11 @@ export const env = {
     { required: true },
   ),
 
-  KEYCLOAK_HEALTH_URL: getEnv('KEYCLOAK_HEALTH_URL', ''),
-  TEMPO_HEALTH_URL: getEnv('TEMPO_HEALTH_URL', ''),
-  PROMETHEUS_HEALTH_URL: getEnv('PROMETHEUS_HEALTH_URL', ''),
+  KEYCLOAK_HEALTH_URL: getEnv('KEYCLOAK_HEALTH_URL', '', { required: true }),
+  TEMPO_HEALTH_URL: getEnv('TEMPO_HEALTH_URL', '', { required: true }),
+  PROMETHEUS_HEALTH_URL: getEnv('PROMETHEUS_HEALTH_URL', '', {
+    required: true,
+  }),
 
   PC_JWE_KEY: getEnv('PC_JWE_KEY', '', { required: true }),
   PC_TTL_SEC: getEnv('PC_TTL_SEC', String(60 * 60 * 24 * 30), {
@@ -175,6 +185,6 @@ export const env = {
   GOOGLE_REDIRECT_URI: getEnv('GOOGLE_REDIRECT_URI', ''),
   GOOGLE_CLIENT_SECRET: getEnv('GOOGLE_CLIENT_SECRET', ''),
 
-  WEBAUTHN_RP_ID: getEnv('WEBAUTHN_RP_ID', ''),
-  WEBAUTHN_ORIGIN: getEnv('WEBAUTHN_ORIGIN', ''),
+  WEBAUTHN_RP_ID: getEnv('WEBAUTHN_RP_ID', '', { required: true }),
+  WEBAUTHN_ORIGIN: getEnv('WEBAUTHN_ORIGIN', '', { required: true }),
 } as const;
