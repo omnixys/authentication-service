@@ -24,7 +24,12 @@ function getEnv(
 ): EnvValue {
   const raw = process.env[key];
   if (!raw) {
-    if (options?.required && process.env.NODE_ENV === 'production') {
+    if (
+      options?.required &&
+      ['production', 'development', 'staging'].includes(
+        process.env.NODE_ENV ?? '',
+      )
+    ) {
       throw new Error(`[ENV] Missing required env: ${key}`);
     }
     return options?.transform && fallback !== undefined
