@@ -3,6 +3,12 @@
 All notable changes in this project will be documented in this file.
 
 
+## [4.2.4](https://github.com/omnixys/authentication-service/compare/v4.2.3...v4.2.4) (2026-09-21)
+
+### Authentication
+
+* **Authentication:** resolve lint warnings ([](https://github.com/omnixys/authentication-service/commit/40c6980cf28ab92cd803ca9275952ab7eea1eb8d))
+
 ## [4.2.3](https://github.com/omnixys/authentication-service/compare/v4.2.2...v4.2.3) (2026-09-21)
 
 ### Config
