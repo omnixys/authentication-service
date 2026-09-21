@@ -3,6 +3,17 @@
 All notable changes in this project will be documented in this file.
 
 
+## [4.2.3](https://github.com/omnixys/authentication-service/compare/v4.2.2...v4.2.3) (2026-09-21)
+
+### Config
+
+* **Config:** require critical env vars in development and staging ([](https://github.com/omnixys/authentication-service/commit/dcbf7b14163a272bcc0b227312303db5e6c69782))
+* **Config:** require critical env vars in production ([](https://github.com/omnixys/authentication-service/commit/3e47477fb3f3e11a0f6a8fdc3e5fe40f5f4abe46))
+
+### Deps
+
+* **Deps:** update omnixys packages ([](https://github.com/omnixys/authentication-service/commit/b0a97cf4958df50b42a2b949990128b521c419f6))
+
 ## [4.2.2](https://github.com/omnixys/authentication-service/compare/v4.2.1...v4.2.2) (2026-09-16)
 
 ### Deps
