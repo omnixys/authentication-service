@@ -34,7 +34,14 @@ export class GuestMagicLinkMetricsService {
     this.rateLimited += 1;
   }
 
-  snapshot() {
+  snapshot(): {
+    issued: number;
+    dispatched: number;
+    verified: number;
+    verifyErrors: number;
+    rateLimited: number;
+    byChannel: Record<GuestMagicLinkChannel, number>;
+  } {
     return {
       issued: this.issued,
       dispatched: this.dispatched,
