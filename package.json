@@ -54,7 +54,8 @@
     "test:watch": "vitest",
     "test:cov": "vitest run --coverage",
     "test22": "vitest run __tests__/e2e/authentication/test2.e2e-spec.ts",
-    "test223": "vitest run __tests__/e2e/authentication/test2.e2e-spec.ts --reporter=verbose --silent=false"
+    "test223": "vitest run __tests__/e2e/authentication/test2.e2e-spec.ts --reporter=verbose --silent=false",
+    "migrate": "prisma migrate deploy"
   },
   "dependencies": {
     "@apollo/server": "^5.5.1",
