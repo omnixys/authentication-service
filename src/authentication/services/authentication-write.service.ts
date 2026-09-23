@@ -601,13 +601,7 @@ export class AuthWriteService extends AuthenticateBaseService {
       });
       throw error;
     }
-    let raw: string | null = null;
-    try {
-      raw = serialized === null ? null : (JSON.parse(serialized) as string);
-    } catch {
-      return this.rejectMagicLink(context);
-    }
-    if (!raw) {
+    if (serialized === null) {
       return this.rejectMagicLink(context);
     }
 
@@ -618,7 +612,7 @@ export class AuthWriteService extends AuthenticateBaseService {
       ip?: string;
     };
     try {
-      payload = JSON.parse(raw) as typeof payload;
+      payload = JSON.parse(serialized) as typeof payload;
     } catch {
       return this.rejectMagicLink(context);
     }
