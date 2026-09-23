@@ -3,6 +3,12 @@
 All notable changes in this project will be documented in this file.
 
 
+## [4.2.6](https://github.com/omnixys/authentication-service/compare/v4.2.5...v4.2.6) (2026-09-23)
+
+### Magic-link
+
+* **Magic-link:** parse token payload once ([](https://github.com/omnixys/authentication-service/commit/fbe484e4f5e152430f4e94eabc72241d70f1de71))
+
 ## [4.2.5](https://github.com/omnixys/authentication-service/compare/v4.2.4...v4.2.5) (2026-09-22)
 
 ### Deps
